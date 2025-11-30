@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { PanelLeft, Plus, Settings, CreditCard, User, LogOut, MoreVertical, Star, Search, UserIcon, Sparkles, Trash2, Pencil, X } from "lucide-react";
+import { PanelLeft, Plus, CreditCard, User, LogOut, MoreVertical, Star, Search, UserIcon, Sparkles, Trash2, Pencil, X, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -105,8 +105,7 @@ export function Sidebar({
       </div>
 
       {/* Chat List - Only show when expanded */}
-      {!isCollapsed && (
-        <ScrollArea className="flex-1">
+      {!isCollapsed && <ScrollArea className="flex-1">
           <div className="space-y-1 p-2">
           {/* Favorites Chats */}
           {getStarredChats().length > 0 && <div className="space-y-0.5">
@@ -185,8 +184,7 @@ export function Sidebar({
               </div>)}
           </div>
           </div>
-        </ScrollArea>
-      )}
+        </ScrollArea>}
 
       {/* User Profile */}
       <div className="mt-auto border-t border-border">
@@ -201,7 +199,7 @@ export function Sidebar({
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-surface-hover">
-                  <Settings className="h-4 w-4 text-muted-foreground" />
+                  <ChevronUp className="h-4 w-4 text-muted-foreground" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
