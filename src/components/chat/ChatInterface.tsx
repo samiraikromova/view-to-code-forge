@@ -6,7 +6,7 @@ import { FileText, X, ArrowDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 const mockProjects: Project[] = [{
   id: "cb4",
-  name: "CB4 (Cam's Brain)",
+  name: "CB4",
   icon: "🧠",
   description: "Vector search integration with personal knowledge base"
 }, {

@@ -13,7 +13,7 @@ export interface Project {
 const mockProjects: Project[] = [
   {
     id: "cb4",
-    name: "CB4 (Cam's Brain)",
+    name: "CB4",
     icon: "🧠",
     description: "Vector search integration with personal knowledge base",
   },
