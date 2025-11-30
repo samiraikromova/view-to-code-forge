@@ -39,8 +39,8 @@ export function ProjectSelector({
         </Tooltip>
 
         {/* Selected project pill */}
-        {selected && <div className="flex items-center gap-2 rounded-full border border-border/50 bg-surface px-2.5 py-1.5">
-            <span className="text-xs text-foreground">{selected.name}</span>
+        {selected && <div className="flex items-center gap-2 rounded-full border border-accent bg-surface px-2.5 py-1.5">
+            <span className="text-xs text-muted-foreground">{selected.name}</span>
             <button onClick={e => {
           e.stopPropagation();
           onChange(null);
