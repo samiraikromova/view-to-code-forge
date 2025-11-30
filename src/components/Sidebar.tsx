@@ -1,4 +1,4 @@
-import { Plus, Settings, User, Sidebar } from "lucide-react";
+import { Plus, Settings, User, PanelLeft } from "lucide-react";
 import { Button } from "./ui/button";
 import { ScrollArea } from "./ui/scroll-area";
 import { cn } from "@/lib/utils";
@@ -47,7 +47,7 @@ export function Sidebar({
       {/* Header with hamburger */}
       <div className="flex items-center justify-between border-b border-border p-3">
         <Button variant="ghost" size="icon" onClick={() => setIsCollapsed(!isCollapsed)} className="h-8 w-8 rounded-lg hover:bg-surface-hover">
-          <Sidebar className="h-4 w-4 text-muted-foreground" />
+          <PanelLeft className="h-4 w-4 text-muted-foreground" />
         </Button>
         {!isCollapsed && <span className="text-sm font-medium text-foreground">Leveraged Creator</span>}
       </div>
