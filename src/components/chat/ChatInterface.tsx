@@ -1,8 +1,34 @@
 import { useState, useRef, useEffect } from "react";
 import { MessageList } from "./MessageList";
 import { ChatInput } from "./ChatInput";
-import { EmptyState } from "./EmptyState";
 import { Project } from "./ChatHeader";
+
+const mockProjects: Project[] = [
+  {
+    id: "cb4",
+    name: "CB4 (Cam's Brain)",
+    icon: "🧠",
+    description: "Vector search integration with personal knowledge base",
+  },
+  {
+    id: "contract",
+    name: "Contract Writer",
+    icon: "📄",
+    description: "Generate professional contracts and legal documents",
+  },
+  {
+    id: "ad-writing",
+    name: "Ad Writing",
+    icon: "📢",
+    description: "Create compelling ad copy for various platforms",
+  },
+  {
+    id: "sales-review",
+    name: "Sales Call Review",
+    icon: "📞",
+    description: "Analyze and summarize sales call transcripts",
+  },
+];
 
 interface Message {
   id: string;
@@ -100,24 +126,58 @@ export function ChatInterface({ chatId, onNewChat }: ChatInterfaceProps) {
   return (
     <div className="flex h-full flex-1 flex-col">
       {isEmpty ? (
-        <EmptyState 
-          selectedProject={selectedProject}
-          onSelectProject={setSelectedProject}
-        />
+        <div className="flex flex-1 flex-col items-center justify-center px-4">
+          <h1 className="mb-16 bg-gradient-to-r from-purple-400 to-purple-600 bg-clip-text text-5xl font-medium text-transparent">
+            Hello, Cam
+          </h1>
+          
+          <div className="w-full max-w-4xl">
+            <ChatInput 
+              onSendMessage={handleSendMessage} 
+              disabled={isStreaming}
+              selectedProject={selectedProject}
+              onSelectProject={setSelectedProject}
+              selectedModel={selectedModel}
+              onSelectModel={setSelectedModel}
+              extendedThinking={extendedThinking}
+              onToggleExtendedThinking={() => setExtendedThinking(!extendedThinking)}
+              isEmptyState={true}
+            />
+          </div>
+
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+            {mockProjects.map((project) => (
+              <button
+                key={project.id}
+                onClick={() => setSelectedProject(project)}
+                className={`flex items-center gap-2 rounded-full border px-4 py-2.5 text-sm transition-all ${
+                  selectedProject?.id === project.id
+                    ? "border-accent bg-accent/10 text-foreground"
+                    : "border-border bg-surface hover:bg-surface-hover text-foreground"
+                }`}
+              >
+                <span className="text-base">{project.icon}</span>
+                <span>{project.name}</span>
+              </button>
+            ))}
+          </div>
+        </div>
       ) : (
-        <MessageList messages={messages} isStreaming={isStreaming} />
+        <>
+          <MessageList messages={messages} isStreaming={isStreaming} />
+          <div ref={messagesEndRef} />
+          <ChatInput 
+            onSendMessage={handleSendMessage} 
+            disabled={isStreaming}
+            selectedProject={selectedProject}
+            onSelectProject={setSelectedProject}
+            selectedModel={selectedModel}
+            onSelectModel={setSelectedModel}
+            extendedThinking={extendedThinking}
+            onToggleExtendedThinking={() => setExtendedThinking(!extendedThinking)}
+          />
+        </>
       )}
-      <div ref={messagesEndRef} />
-      <ChatInput 
-        onSendMessage={handleSendMessage} 
-        disabled={isStreaming}
-        selectedProject={selectedProject}
-        onSelectProject={setSelectedProject}
-        selectedModel={selectedModel}
-        onSelectModel={setSelectedModel}
-        extendedThinking={extendedThinking}
-        onToggleExtendedThinking={() => setExtendedThinking(!extendedThinking)}
-      />
     </div>
   );
 }

@@ -44,6 +44,7 @@ interface ChatInputProps {
   onSelectModel: (modelId: string) => void;
   extendedThinking: boolean;
   onToggleExtendedThinking: () => void;
+  isEmptyState?: boolean;
 }
 
 export function ChatInput({ 
@@ -54,7 +55,8 @@ export function ChatInput({
   selectedModel,
   onSelectModel,
   extendedThinking,
-  onToggleExtendedThinking 
+  onToggleExtendedThinking,
+  isEmptyState = false
 }: ChatInputProps) {
   const [message, setMessage] = useState("");
   const [files, setFiles] = useState<File[]>([]);
@@ -86,8 +88,8 @@ export function ChatInput({
   };
 
   return (
-    <div className="border-t border-border/50 bg-background p-6">
-      <div className="mx-auto max-w-4xl">
+    <div className={cn("w-full", !isEmptyState && "border-t border-border/50 bg-background p-6")}>
+      <div className={cn(!isEmptyState && "mx-auto max-w-4xl")}>
         <div className="relative rounded-3xl border border-border/50 bg-surface shadow-lg">
           <div className="flex items-end gap-2 p-3">
             {/* Left controls */}
