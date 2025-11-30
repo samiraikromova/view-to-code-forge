@@ -77,7 +77,7 @@ export function ChatInput({
     if (message.trim() && !disabled) {
       onSendMessage(message, files.length > 0 ? files : undefined);
       setMessage("");
-      setFiles([]);
+      // Keep files attached - don't clear them
       if (textareaRef.current) {
         textareaRef.current.style.height = "auto";
       }
@@ -98,11 +98,11 @@ export function ChatInput({
   const hasContent = hasText || files.length > 0;
   return <div className={cn("w-full", !isEmptyState && "border-t border-border/50 bg-background p-6")}>
       <div className={cn(!isEmptyState && "mx-auto max-w-4xl")}>
-        <div className="relative rounded-3xl border border-border/50 bg-surface shadow-lg">
+        <div className="relative rounded-3xl border border-border/50 bg-surface shadow-lg focus-within:ring-2 focus-within:ring-accent/50 focus-within:border-accent focus-within:shadow-[0_0_20px_rgba(155,115,175,0.3)] transition-all duration-200">
           {/* Top row - Text input full width */}
           <div className="px-4 pt-4">
-            {files.length > 0 && <div className="mb-2 flex flex-wrap gap-2">
-                {files.map((file, index) => <div key={index} className="flex items-center gap-2 rounded-full bg-accent/10 px-3 py-1 text-xs text-foreground">
+            {files.length > 0 && <div className="mb-2 flex gap-2 overflow-x-auto flex-nowrap">
+                {files.map((file, index) => <div key={index} className="flex items-center gap-2 rounded-full bg-accent/10 px-3 py-1 text-xs text-foreground flex-shrink-0">
                     <Plus className="h-3 w-3" />
                     <span className="max-w-[200px] truncate">{file.name}</span>
                     <button onClick={() => setFiles(files.filter((_, i) => i !== index))} className="text-muted-foreground hover:text-foreground">
