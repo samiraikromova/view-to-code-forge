@@ -9,7 +9,7 @@ interface Model {
 const models: Model[] = [{
   id: "claude-opus-4",
   name: "Opus 4.5",
-  description: "Most capable"
+  description: "Most capable for complex work"
 }, {
   id: "claude-sonnet-4-5",
   name: "Sonnet 4.5",
