@@ -172,12 +172,12 @@ export function ChatInput({
         !isEmptyState && "border-t border-border/50 bg-background p-6",
         isFullScreen && "fixed inset-0 z-50 flex items-center justify-center bg-background/95 backdrop-blur-sm p-6"
       )}>
-        <div className={cn(!isEmptyState && !isFullScreen && "mx-auto max-w-4xl", isFullScreen && "w-full max-w-4xl")}>
+        <div className={cn(!isEmptyState && !isFullScreen && "mx-auto max-w-2xl", isFullScreen && "w-full max-w-2xl")}>
           <div 
             className={cn(
               "relative rounded-3xl border border-border/50 bg-surface shadow-lg transition-all duration-500",
               isDragging && "border-accent bg-accent/5",
-              "focus-within:ring-2 focus-within:ring-accent/50 focus-within:border-accent focus-within:shadow-[0_0_20px_rgba(155,115,175,0.3)] focus-within:animate-shimmer-border"
+              "focus-within:ring-2 focus-within:ring-accent/50 focus-within:border-accent transition-shadow"
             )}
             onDragEnter={handleDragEnter}
             onDragOver={handleDragOver}
@@ -222,7 +222,7 @@ export function ChatInput({
           </div>
 
           {/* Bottom row - All buttons */}
-          <div className="flex items-center justify-between pb-2 pt-2 px-2">
+          <div className="flex items-center justify-between pb-3 pt-2 px-3">
             {/* Left controls */}
             <div className="flex items-center gap-0">
               <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 rounded-full hover:bg-surface-hover" onClick={() => fileInputRef.current?.click()} disabled={disabled}>
@@ -236,7 +236,7 @@ export function ChatInput({
             </div>
 
             {/* Right controls */}
-            <div className="gap-2 flex items-center justify-start px-0 py-0">
+            <div className="gap-3 flex items-center justify-start px-0 py-0">
               <ModelThinkingSelector selectedModel={selectedModel} onSelectModel={onSelectModel} extendedThinking={extendedThinking} onToggleExtendedThinking={onToggleExtendedThinking} />
               <Button size="icon" className={cn("h-8 w-8 shrink-0 rounded-full transition-all flex items-center justify-center", hasContent ? "bg-accent text-accent-foreground hover:bg-accent-hover shadow-lg" : "bg-surface-hover text-muted-foreground")} onClick={handleSend} disabled={!message.trim() || disabled}>
                 <ArrowUp className="h-4 w-4" />

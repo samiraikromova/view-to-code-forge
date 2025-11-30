@@ -141,30 +141,5 @@
 }
 
 @layer utilities {
-  @keyframes shimmer-border {
-    0% {
-      box-shadow: 0 0 20px rgba(155, 115, 175, 0.3), 
-                  -2px -2px 10px rgba(155, 115, 175, 0.2);
-    }
-    25% {
-      box-shadow: 0 0 20px rgba(155, 115, 175, 0.4), 
-                  2px -2px 10px rgba(155, 115, 175, 0.3);
-    }
-    50% {
-      box-shadow: 0 0 20px rgba(155, 115, 175, 0.3), 
-                  2px 2px 10px rgba(155, 115, 175, 0.2);
-    }
-    75% {
-      box-shadow: 0 0 20px rgba(155, 115, 175, 0.4), 
-                  -2px 2px 10px rgba(155, 115, 175, 0.3);
-    }
-    100% {
-      box-shadow: 0 0 20px rgba(155, 115, 175, 0.3), 
-                  -2px -2px 10px rgba(155, 115, 175, 0.2);
-    }
-  }
-
-  .animate-shimmer-border {
-    animation: shimmer-border 3s ease-in-out infinite;
-  }
+  /* Removed shimmer animation - using smooth fade transition instead */
 }

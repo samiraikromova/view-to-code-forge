@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { PanelLeft, Plus, User, ChevronDown, ChevronRight, Settings, Pencil, Trash2, FolderInput, Folder as FolderIcon, FolderPlus, UserIcon, Sparkles, CreditCard, LogOut } from "lucide-react";
+import { PanelLeft, Plus, User, ChevronDown, ChevronRight, Settings, Pencil, Trash2, FolderInput, Folder as FolderIcon, FolderPlus, UserIcon, Sparkles, CreditCard, LogOut, MoreVertical, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -26,6 +26,7 @@ interface Chat {
   id: string;
   title: string;
   folderId?: string;
+  starred?: boolean;
 }
 
 interface Folder {
@@ -63,6 +64,7 @@ export function Sidebar({ currentChatId, onChatSelect, onNewChat }: SidebarProps
   const [editingTitle, setEditingTitle] = useState("");
   const [editingFolderId, setEditingFolderId] = useState<string | null>(null);
   const [editingFolderName, setEditingFolderName] = useState("");
+  const [hoveredChatId, setHoveredChatId] = useState<string | null>(null);
 
   // Chat operations
   const handleRenameChat = (chatId: string, currentTitle: string) => {
@@ -92,6 +94,12 @@ export function Sidebar({ currentChatId, onChatSelect, onNewChat }: SidebarProps
   const handleMoveToFolder = (chatId: string, folderId: string | null) => {
     setChats(chats.map(chat => 
       chat.id === chatId ? { ...chat, folderId: folderId || undefined } : chat
+    ));
+  };
+
+  const handleStarChat = (chatId: string) => {
+    setChats(chats.map(chat => 
+      chat.id === chatId ? { ...chat, starred: !chat.starred } : chat
     ));
   };
 
@@ -178,11 +186,10 @@ export function Sidebar({ currentChatId, onChatSelect, onNewChat }: SidebarProps
         ) : (
           <Button
             onClick={onNewChat}
-            variant="ghost"
             size="icon"
-            className="h-8 w-8 rounded-lg hover:bg-surface-hover"
+            className="h-8 w-8 rounded-lg bg-primary text-primary-foreground hover:bg-accent-hover"
           >
-            <Plus className="h-4 w-4 text-muted-foreground" />
+            <Plus className="h-4 w-4" />
           </Button>
         )}
       </div>
@@ -237,25 +244,30 @@ export function Sidebar({ currentChatId, onChatSelect, onNewChat }: SidebarProps
               
               <CollapsibleContent className="pl-6 space-y-1">
                 {getChatsInFolder(folder.id).map((chat) => (
-                  <ContextMenu key={chat.id}>
-                    <ContextMenuTrigger asChild>
-                      {editingChatId === chat.id ? (
-                        <Input
-                          value={editingTitle}
-                          onChange={(e) => setEditingTitle(e.target.value)}
-                          onBlur={saveChatRename}
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") saveChatRename();
-                            if (e.key === "Escape") cancelChatRename();
-                          }}
-                          autoFocus
-                          className="h-7 text-xs bg-muted/50"
-                        />
-                      ) : (
+                  <div 
+                    key={chat.id} 
+                    className="group relative"
+                    onMouseEnter={() => setHoveredChatId(chat.id)}
+                    onMouseLeave={() => setHoveredChatId(null)}
+                  >
+                    {editingChatId === chat.id ? (
+                      <Input
+                        value={editingTitle}
+                        onChange={(e) => setEditingTitle(e.target.value)}
+                        onBlur={saveChatRename}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") saveChatRename();
+                          if (e.key === "Escape") cancelChatRename();
+                        }}
+                        autoFocus
+                        className="h-7 text-xs bg-muted/50"
+                      />
+                    ) : (
+                      <div className="flex items-center gap-1">
                         <button
                           onClick={() => onChatSelect(chat.id)}
                           className={cn(
-                            "w-full text-left px-2 py-1.5 rounded-lg text-xs transition-colors truncate",
+                            "flex-1 text-left px-2 py-1.5 rounded-lg text-xs transition-colors truncate",
                             currentChatId === chat.id
                               ? "bg-surface-hover text-foreground"
                               : "text-muted-foreground hover:bg-surface-hover hover:text-foreground"
@@ -263,40 +275,38 @@ export function Sidebar({ currentChatId, onChatSelect, onNewChat }: SidebarProps
                         >
                           {chat.title}
                         </button>
-                      )}
-                    </ContextMenuTrigger>
-                    <ContextMenuContent>
-                      <ContextMenuItem onClick={() => handleRenameChat(chat.id, chat.title)}>
-                        <Pencil className="mr-2 h-4 w-4" />
-                        Rename
-                      </ContextMenuItem>
-                      <ContextMenuSub>
-                        <ContextMenuSubTrigger>
-                          <FolderInput className="mr-2 h-4 w-4" />
-                          Move to folder
-                        </ContextMenuSubTrigger>
-                        <ContextMenuSubContent>
-                          <ContextMenuItem onClick={() => handleMoveToFolder(chat.id, null)}>
-                            Uncategorized
-                          </ContextMenuItem>
-                          <ContextMenuSeparator />
-                          {folders.map((f) => (
-                            <ContextMenuItem
-                              key={f.id}
-                              onClick={() => handleMoveToFolder(chat.id, f.id)}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className={cn(
+                                "h-6 w-6 shrink-0 rounded-lg transition-opacity",
+                                hoveredChatId === chat.id ? "opacity-100" : "opacity-0"
+                              )}
                             >
-                              {f.name}
-                            </ContextMenuItem>
-                          ))}
-                        </ContextMenuSubContent>
-                      </ContextMenuSub>
-                      <ContextMenuSeparator />
-                      <ContextMenuItem onClick={() => handleDeleteChat(chat.id)} className="text-destructive focus:text-destructive">
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Delete
-                      </ContextMenuItem>
-                    </ContextMenuContent>
-                  </ContextMenu>
+                              <MoreVertical className="h-3 w-3 text-muted-foreground" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleStarChat(chat.id)}>
+                              <Star className={cn("mr-2 h-4 w-4", chat.starred && "fill-accent text-accent")} />
+                              {chat.starred ? "Unstar" : "Star"}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleRenameChat(chat.id, chat.title)}>
+                              <Pencil className="mr-2 h-4 w-4" />
+                              Rename
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => handleDeleteChat(chat.id)} className="text-destructive focus:text-destructive">
+                              <Trash2 className="mr-2 h-4 w-4" />
+                              Delete
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    )}
+                  </div>
                 ))}
               </CollapsibleContent>
             </Collapsible>
@@ -318,25 +328,30 @@ export function Sidebar({ currentChatId, onChatSelect, onNewChat }: SidebarProps
             </div>
             <div className="space-y-1">
               {getUncategorizedChats().map((chat) => (
-                <ContextMenu key={chat.id}>
-                  <ContextMenuTrigger asChild>
-                    {editingChatId === chat.id ? (
-                      <Input
-                        value={editingTitle}
-                        onChange={(e) => setEditingTitle(e.target.value)}
-                        onBlur={saveChatRename}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") saveChatRename();
-                          if (e.key === "Escape") cancelChatRename();
-                        }}
-                        autoFocus
-                        className="h-7 text-xs bg-muted/50"
-                      />
-                    ) : (
+                <div 
+                  key={chat.id} 
+                  className="group relative"
+                  onMouseEnter={() => setHoveredChatId(chat.id)}
+                  onMouseLeave={() => setHoveredChatId(null)}
+                >
+                  {editingChatId === chat.id ? (
+                    <Input
+                      value={editingTitle}
+                      onChange={(e) => setEditingTitle(e.target.value)}
+                      onBlur={saveChatRename}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") saveChatRename();
+                        if (e.key === "Escape") cancelChatRename();
+                      }}
+                      autoFocus
+                      className="h-7 text-xs bg-muted/50"
+                    />
+                  ) : (
+                    <div className="flex items-center gap-1">
                       <button
                         onClick={() => onChatSelect(chat.id)}
                         className={cn(
-                          "w-full text-left px-2 py-1.5 rounded-lg text-xs transition-colors truncate",
+                          "flex-1 text-left px-2 py-1.5 rounded-lg text-xs transition-colors truncate",
                           currentChatId === chat.id
                             ? "bg-surface-hover text-foreground"
                             : "text-muted-foreground hover:bg-surface-hover hover:text-foreground"
@@ -344,36 +359,38 @@ export function Sidebar({ currentChatId, onChatSelect, onNewChat }: SidebarProps
                       >
                         {chat.title}
                       </button>
-                    )}
-                  </ContextMenuTrigger>
-                  <ContextMenuContent>
-                    <ContextMenuItem onClick={() => handleRenameChat(chat.id, chat.title)}>
-                      <Pencil className="mr-2 h-4 w-4" />
-                      Rename
-                    </ContextMenuItem>
-                    <ContextMenuSub>
-                      <ContextMenuSubTrigger>
-                        <FolderInput className="mr-2 h-4 w-4" />
-                        Move to folder
-                      </ContextMenuSubTrigger>
-                      <ContextMenuSubContent>
-                        {folders.map((f) => (
-                          <ContextMenuItem
-                            key={f.id}
-                            onClick={() => handleMoveToFolder(chat.id, f.id)}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className={cn(
+                              "h-6 w-6 shrink-0 rounded-lg transition-opacity",
+                              hoveredChatId === chat.id ? "opacity-100" : "opacity-0"
+                            )}
                           >
-                            {f.name}
-                          </ContextMenuItem>
-                        ))}
-                      </ContextMenuSubContent>
-                    </ContextMenuSub>
-                    <ContextMenuSeparator />
-                    <ContextMenuItem onClick={() => handleDeleteChat(chat.id)} className="text-destructive focus:text-destructive">
-                      <Trash2 className="mr-2 h-4 w-4" />
-                      Delete
-                    </ContextMenuItem>
-                  </ContextMenuContent>
-                </ContextMenu>
+                            <MoreVertical className="h-3 w-3 text-muted-foreground" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => handleStarChat(chat.id)}>
+                            <Star className={cn("mr-2 h-4 w-4", chat.starred && "fill-accent text-accent")} />
+                            {chat.starred ? "Unstar" : "Star"}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleRenameChat(chat.id, chat.title)}>
+                            <Pencil className="mr-2 h-4 w-4" />
+                            Rename
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem onClick={() => handleDeleteChat(chat.id)} className="text-destructive focus:text-destructive">
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  )}
+                </div>
               ))}
             </div>
           </div>

@@ -159,7 +159,7 @@ export function ChatInterface({ chatId, onNewChat }: ChatInterfaceProps) {
             Hello, Cam
           </h1>
           
-          <div className="w-full max-w-4xl transition-all duration-500 ease-out">
+          <div className="w-full max-w-2xl transition-all duration-500 ease-out">
             <ChatInput 
               onSendMessage={handleSendMessage} 
               disabled={isStreaming}
@@ -173,7 +173,7 @@ export function ChatInterface({ chatId, onNewChat }: ChatInterfaceProps) {
             />
           </div>
 
-          <div className="mt-8 flex flex-wrap gap-2 max-w-4xl animate-fade-in justify-center" style={{ animationDelay: '0.2s' }}>
+          <div className="mt-8 flex flex-wrap gap-2 max-w-xl animate-fade-in justify-center" style={{ animationDelay: '0.2s' }}>
             {mockProjects.map((project) => (
               <button
                 key={project.id}
