@@ -33,6 +33,8 @@ interface LearnSidebarProps {
   contentType: "recordings" | "materials";
   onContentTypeChange: (type: "recordings" | "materials") => void;
   modules: Module[];
+  isCollapsed: boolean;
+  onCollapsedChange: (collapsed: boolean) => void;
 }
 
 export const LearnSidebar = ({
@@ -41,8 +43,9 @@ export const LearnSidebar = ({
   contentType,
   onContentTypeChange,
   modules,
+  isCollapsed,
+  onCollapsedChange,
 }: LearnSidebarProps) => {
-  const [isCollapsed, setIsCollapsed] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -118,7 +121,7 @@ export const LearnSidebar = ({
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => setIsCollapsed(!isCollapsed)}
+          onClick={() => onCollapsedChange(!isCollapsed)}
           className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-transparent ml-auto"
         >
           {isCollapsed ? (

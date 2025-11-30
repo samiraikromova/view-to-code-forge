@@ -16,15 +16,18 @@ interface SidebarProps {
   onNewChat: () => void;
   chats: Chat[];
   setChats: (chats: Chat[]) => void;
+  isCollapsed: boolean;
+  onCollapsedChange: (collapsed: boolean) => void;
 }
 export function Sidebar({
   currentChatId,
   onChatSelect,
   onNewChat,
   chats,
-  setChats
+  setChats,
+  isCollapsed,
+  onCollapsedChange
 }: SidebarProps) {
-  const [isCollapsed, setIsCollapsed] = useState(false);
   const [editingChatId, setEditingChatId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -77,10 +80,10 @@ export function Sidebar({
             <Search className="h-5 w-5" />
           </Button>
           
-          <Button variant="ghost" size="icon" onClick={() => setIsCollapsed(!isCollapsed)} className="h-8 w-8 text-muted-foreground hover:bg-surface-hover ml-auto">
+          <Button variant="ghost" size="icon" onClick={() => onCollapsedChange(!isCollapsed)} className="h-8 w-8 text-muted-foreground hover:bg-surface-hover ml-auto">
             <PanelLeft className="h-5 w-5" />
             </Button>
-        </> : <Button variant="ghost" size="icon" onClick={() => setIsCollapsed(!isCollapsed)} className="h-8 w-8 text-muted-foreground hover:bg-surface-hover mx-auto">
+        </> : <Button variant="ghost" size="icon" onClick={() => onCollapsedChange(!isCollapsed)} className="h-8 w-8 text-muted-foreground hover:bg-surface-hover mx-auto">
             <PanelLeft className="h-5 w-5" />
           </Button>}
       </div>

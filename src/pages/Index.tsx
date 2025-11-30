@@ -32,6 +32,10 @@ const Index = () => {
     },
   ]);
 
+  // Sidebar collapse states
+  const [chatSidebarCollapsed, setChatSidebarCollapsed] = useState(false);
+  const [learnSidebarCollapsed, setLearnSidebarCollapsed] = useState(false);
+
   // Learn mode state
   const [lessonId, setLessonId] = useState<string | null>(null);
   const [contentType, setContentType] = useState<"recordings" | "materials">("materials");
@@ -85,7 +89,11 @@ const Index = () => {
 
   return (
     <div className="flex h-screen overflow-hidden bg-background">
-      <ModeSwitcher currentMode={mode} onModeChange={setMode} />
+      <ModeSwitcher 
+        currentMode={mode} 
+        onModeChange={setMode}
+        sidebarCollapsed={mode === "chat" ? chatSidebarCollapsed : learnSidebarCollapsed}
+      />
       
       {mode === "chat" ? (
         <>
@@ -95,6 +103,8 @@ const Index = () => {
             onNewChat={handleNewChat}
             chats={chats}
             setChats={setChats}
+            isCollapsed={chatSidebarCollapsed}
+            onCollapsedChange={setChatSidebarCollapsed}
           />
           <ChatInterface 
             chatId={chatId} 
@@ -110,6 +120,8 @@ const Index = () => {
             contentType={contentType}
             onContentTypeChange={setContentType}
             modules={modules}
+            isCollapsed={learnSidebarCollapsed}
+            onCollapsedChange={setLearnSidebarCollapsed}
           />
           <LearnInterface
             lessonId={lessonId}
