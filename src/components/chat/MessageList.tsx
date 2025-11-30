@@ -1,4 +1,3 @@
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Message } from "./Message";
 import { Bot } from "lucide-react";
 
@@ -32,19 +31,21 @@ export function MessageList({ messages, isStreaming }: MessageListProps) {
   }
 
   return (
-    <ScrollArea className="flex-1 overflow-hidden px-4 py-6">
+    <div className="px-4 py-6">
       <div className="mx-auto max-w-3xl space-y-6">
         {messages.map((message) => (
-          <Message key={message.id} message={message} />
+          <div key={message.id} className="animate-fade-in">
+            <Message message={message} />
+          </div>
         ))}
         {isStreaming && (
-          <div className="flex items-center gap-1 px-4 py-3">
+          <div className="flex items-center gap-1 px-4 py-3 animate-fade-in">
             <div className="h-2 w-2 animate-pulse rounded-full bg-accent" />
             <div className="h-2 w-2 animate-pulse rounded-full bg-accent delay-75" />
             <div className="h-2 w-2 animate-pulse rounded-full bg-accent delay-150" />
           </div>
         )}
       </div>
-    </ScrollArea>
+    </div>
   );
 }

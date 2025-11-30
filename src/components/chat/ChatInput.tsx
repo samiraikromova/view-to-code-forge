@@ -180,8 +180,8 @@ export function ChatInput({
   return <>
       <FilePreviewModal files={files} open={showFilePreview} onOpenChange={setShowFilePreview} onRemove={handleRemoveFile} onReorder={handleReorderFile} />
       
-      <div className={cn("w-full", !isEmptyState && "border-t border-border/50 bg-background p-6", isFullScreen && "fixed inset-0 z-50 flex items-center justify-center bg-background/95 backdrop-blur-sm p-6")}>
-        <div className={cn(!isEmptyState && !isFullScreen && "mx-auto max-w-2xl", isFullScreen && "w-full max-w-2xl")}>
+      <div className={cn("w-full", !isEmptyState && "bg-background p-6", isFullScreen && "fixed inset-0 z-50 flex items-center justify-center bg-background/95 backdrop-blur-sm p-6")}>
+        <div className={cn(!isEmptyState && !isFullScreen && "mx-auto max-w-3xl", isFullScreen && "w-full max-w-3xl")}>
           <div 
             ref={containerRef}
             className={cn(
