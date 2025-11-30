@@ -28,8 +28,8 @@ export function Sidebar({ currentChatId, onChatSelect, onNewChat }: SidebarProps
     <div className="flex h-full w-64 flex-col border-r border-border bg-surface">
       {/* User Profile */}
       <div className="flex items-center gap-3 border-b border-border px-4 py-4">
-        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary">
-          <User className="h-5 w-5 text-primary-foreground" />
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-purple-700">
+          <User className="h-5 w-5 text-white" />
         </div>
         <div className="flex-1 overflow-hidden">
           <p className="truncate text-sm font-medium text-foreground">Cameron</p>
