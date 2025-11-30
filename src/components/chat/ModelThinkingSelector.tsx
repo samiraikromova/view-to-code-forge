@@ -13,7 +13,7 @@ const models: Model[] = [{
 }, {
   id: "claude-sonnet-4-5",
   name: "Sonnet 4.5",
-  description: "Best balance"
+  description: "Smartest for everyday tasks"
 }, {
   id: "claude-haiku-4",
   name: "Haiku 4.5",
