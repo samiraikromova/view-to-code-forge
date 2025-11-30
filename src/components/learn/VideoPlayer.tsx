@@ -1,5 +1,7 @@
 import { Play } from "lucide-react";
 import { Lesson } from "./LearnSidebar";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 interface VideoPlayerProps {
   lesson: Lesson;
@@ -44,11 +46,13 @@ export const VideoPlayer = ({ lesson }: VideoPlayerProps) => {
           </div>
         </div>
 
-        <div className="prose prose-sm max-w-none">
-          <p className="text-muted-foreground">
-            {lesson.description || "This is a placeholder for the lesson description and additional materials. You can add transcripts, notes, resources, and other content here."}
-          </p>
-        </div>
+        {lesson.description && (
+          <div className="prose prose-sm max-w-none prose-headings:text-foreground prose-p:text-muted-foreground prose-strong:text-foreground prose-li:text-muted-foreground prose-h2:text-lg prose-h2:font-semibold prose-h2:mt-6 prose-h2:mb-3 prose-h3:text-base prose-h3:font-semibold prose-h3:mt-4 prose-h3:mb-2">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {lesson.description}
+            </ReactMarkdown>
+          </div>
+        )}
       </div>
     </div>
   );
