@@ -141,16 +141,34 @@
 }
 
 @layer utilities {
-  @keyframes shimmer-border {
+  @keyframes shimmer-border-1 {
     0%, 100% {
-      box-shadow: 0 0 20px rgba(106, 67, 120, 0.5);
+      box-shadow: 0 0 18px rgba(106, 67, 120, 0.45);
     }
     50% {
-      box-shadow: 0 0 35px rgba(106, 67, 120, 0.8);
+      box-shadow: 0 0 32px rgba(106, 67, 120, 0.75);
+    }
+  }
+
+  @keyframes shimmer-border-2 {
+    0%, 100% {
+      box-shadow: 0 0 22px rgba(106, 67, 120, 0.55);
+    }
+    50% {
+      box-shadow: 0 0 38px rgba(106, 67, 120, 0.85);
+    }
+  }
+
+  @keyframes shimmer-border-3 {
+    0%, 100% {
+      box-shadow: 0 0 16px rgba(106, 67, 120, 0.4);
+    }
+    50% {
+      box-shadow: 0 0 28px rgba(106, 67, 120, 0.7);
     }
   }
 
   .animate-shimmer-border {
-    animation: shimmer-border 3s ease-in-out infinite;
+    animation: shimmer-border-1 3s ease-in-out infinite;
   }
 }

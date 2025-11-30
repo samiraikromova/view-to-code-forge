@@ -83,6 +83,20 @@ export function ChatInput({
   const [isFocused, setIsFocused] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Randomize glow animation on mount
+  useEffect(() => {
+    if (containerRef.current) {
+      const animations = ['shimmer-border-1', 'shimmer-border-2', 'shimmer-border-3'];
+      const randomAnimation = animations[Math.floor(Math.random() * animations.length)];
+      const randomDuration = (2.5 + Math.random() * 1.5).toFixed(2); // 2.5s to 4s
+      
+      containerRef.current.style.setProperty('--shimmer-animation', randomAnimation);
+      containerRef.current.style.setProperty('--shimmer-duration', `${randomDuration}s`);
+      containerRef.current.style.animation = `${randomAnimation} ${randomDuration}s ease-in-out infinite`;
+    }
+  }, []);
   // Handle external files from global drag and drop
   useEffect(() => {
     if (externalFiles.length > 0) {
@@ -168,11 +182,11 @@ export function ChatInput({
       <div className={cn("w-full", !isEmptyState && "border-t border-border/50 bg-background p-6", isFullScreen && "fixed inset-0 z-50 flex items-center justify-center bg-background/95 backdrop-blur-sm p-6")}>
         <div className={cn(!isEmptyState && !isFullScreen && "mx-auto max-w-2xl", isFullScreen && "w-full max-w-2xl")}>
           <div 
+            ref={containerRef}
             className={cn(
               "relative rounded-2xl border border-transparent transition-all duration-500",
               "shadow-[0_0.25rem_1.25rem_rgba(0,0,0,0.035),0_0_0_0.5px_rgba(128,128,128,0.15)]",
               "hover:shadow-[0_0.25rem_1.25rem_rgba(0,0,0,0.035),0_0_0_0.5px_rgba(128,128,128,0.3)]",
-              "animate-shimmer-border",
               isDragging && "border-accent bg-accent/5"
             )}
             onDragEnter={handleDragEnter}
