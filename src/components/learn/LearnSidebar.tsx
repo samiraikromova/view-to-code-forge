@@ -1,7 +1,6 @@
 import { useState } from "react";
-import { ChevronLeft, ChevronRight, Search, PlayCircle, CheckCircle2 } from "lucide-react";
+import { PanelLeft, Search, PlayCircle, CheckCircle2, UserIcon, Sparkles, CreditCard, LogOut, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ContentToggle } from "./ContentToggle";
 import { ModeSwitcher } from "@/components/ModeSwitcher";
 import { cn } from "@/lib/utils";
@@ -13,6 +12,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 export interface Module {
   id: string;
@@ -38,6 +38,7 @@ interface LearnSidebarProps {
   onCollapsedChange: (collapsed: boolean) => void;
   mode: "chat" | "learn";
   onModeChange: (mode: "chat" | "learn") => void;
+  onToggleLessonComplete: (lessonId: string) => void;
 }
 
 export const LearnSidebar = ({
@@ -50,6 +51,7 @@ export const LearnSidebar = ({
   onCollapsedChange,
   mode,
   onModeChange,
+  onToggleLessonComplete,
 }: LearnSidebarProps) => {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -59,6 +61,16 @@ export const LearnSidebar = ({
     lesson.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const highlightMatch = (text: string, query: string) => {
+    if (!query) return text;
+    const parts = text.split(new RegExp(`(${query})`, 'gi'));
+    return parts.map((part, i) => 
+      part.toLowerCase() === query.toLowerCase() 
+        ? <mark key={i} className="bg-accent/30 text-foreground rounded">{part}</mark>
+        : part
+    );
+  };
+
   return (
     <div
       className={cn(
@@ -67,17 +79,17 @@ export const LearnSidebar = ({
       )}
     >
       {/* Header */}
-      <div className="relative flex items-center justify-center gap-2 border-b border-border p-3">
-        {!isCollapsed && (
+      <div className="relative flex items-center justify-center gap-2 border-b border-border/50 px-4 py-3">
+        {!isCollapsed ? (
           <>
             <Dialog open={searchOpen} onOpenChange={setSearchOpen}>
               <DialogTrigger asChild>
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-transparent absolute left-3"
+                  className="h-8 w-8 text-muted-foreground hover:bg-surface-hover absolute left-4"
                 >
-                  <Search className="h-4 w-4" />
+                  <Search className="h-5 w-5" />
                 </Button>
               </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[80vh]">
@@ -110,7 +122,7 @@ export const LearnSidebar = ({
                         )}
                         <div className="flex-1">
                           <div className="text-sm font-medium text-foreground">
-                            {lesson.title}
+                            {highlightMatch(lesson.title, searchQuery)}
                           </div>
                           <div className="text-xs text-muted-foreground">
                             {lesson.duration}
@@ -125,23 +137,26 @@ export const LearnSidebar = ({
           </Dialog>
           
           <ModeSwitcher currentMode={mode} onModeChange={onModeChange} />
+          
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onCollapsedChange(!isCollapsed)}
+            className="h-8 w-8 text-muted-foreground hover:bg-surface-hover absolute right-4"
+          >
+            <PanelLeft className="h-5 w-5" />
+          </Button>
         </>
+        ) : (
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => onCollapsedChange(!isCollapsed)}
+            className="h-8 w-8 text-muted-foreground hover:bg-surface-hover mx-auto"
+          >
+            <PanelLeft className="h-5 w-5" />
+          </Button>
         )}
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => onCollapsedChange(!isCollapsed)}
-          className={cn(
-            "h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-transparent",
-            !isCollapsed ? "absolute right-3" : "mx-auto"
-          )}
-        >
-          {isCollapsed ? (
-            <ChevronRight className="h-4 w-4" />
-          ) : (
-            <ChevronLeft className="h-4 w-4" />
-          )}
-        </Button>
       </div>
 
       {/* Content Toggle */}
@@ -164,7 +179,10 @@ export const LearnSidebar = ({
                   {module.lessons.map((lesson) => (
                     <button
                       key={lesson.id}
-                      onClick={() => onLessonSelect(lesson.id)}
+                      onClick={() => {
+                        onLessonSelect(lesson.id);
+                        onToggleLessonComplete(lesson.id);
+                      }}
                       className={cn(
                         "w-full group flex items-center gap-2 rounded-lg px-2 py-1.5 transition-colors text-left",
                         currentLessonId === lesson.id
@@ -193,21 +211,71 @@ export const LearnSidebar = ({
       </div>
 
       {/* Profile */}
-      <div className="border-t border-border p-3">
-        <div className={cn("flex items-center gap-3", isCollapsed && "justify-center")}>
-          <Avatar className="h-8 w-8 bg-primary">
-            <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-              U
-            </AvatarFallback>
-          </Avatar>
-          {!isCollapsed && (
-            <div className="flex-1 min-w-0">
-              <div className="text-sm font-medium text-foreground truncate">
-                User
-              </div>
-            </div>
-          )}
-        </div>
+      <div className="mt-auto border-t border-border">
+        {!isCollapsed ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="flex items-center gap-3 p-3 w-full hover:bg-surface-hover transition-colors cursor-pointer">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                  <span className="text-sm font-medium">C</span>
+                </div>
+                <div className="flex-1 overflow-hidden text-left">
+                  <p className="truncate text-xs font-medium text-foreground">Cameron</p>
+                  <p className="truncate text-xs text-muted-foreground">50,993 credits</p>
+                </div>
+                <ChevronUp className="h-4 w-4 text-muted-foreground flex-shrink-0" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem className="text-muted-foreground">
+                <UserIcon className="mr-2 h-4 w-4" />
+                Profile
+              </DropdownMenuItem>
+              <DropdownMenuItem className="text-muted-foreground">
+                <Sparkles className="mr-2 h-4 w-4" />
+                Upgrade to Pro
+              </DropdownMenuItem>
+              <DropdownMenuItem className="text-muted-foreground">
+                <CreditCard className="mr-2 h-4 w-4" />
+                Top up credits
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="text-destructive focus:text-destructive">
+                <LogOut className="mr-2 h-4 w-4" />
+                Log out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button className="flex flex-col items-center gap-2 p-3 w-full hover:bg-surface-hover transition-colors cursor-pointer">
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
+                  <span className="text-sm font-medium">C</span>
+                </div>
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuItem className="text-muted-foreground">
+                <UserIcon className="mr-2 h-4 w-4" />
+                Profile
+              </DropdownMenuItem>
+              <DropdownMenuItem className="text-muted-foreground">
+                <Sparkles className="mr-2 h-4 w-4" />
+                Upgrade to Pro
+              </DropdownMenuItem>
+              <DropdownMenuItem className="text-muted-foreground">
+                <CreditCard className="mr-2 h-4 w-4" />
+                Top up credits
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem className="text-destructive focus:text-destructive">
+                <LogOut className="mr-2 h-4 w-4" />
+                Log out
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
     </div>
   );
