@@ -84,7 +84,7 @@ export function ChatInput({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  const MAX_FILES = 5;
+  const MAX_FILES = 10;
 
   // Randomize glow animation on mount
   useEffect(() => {
@@ -209,11 +209,11 @@ export function ChatInput({
                     {files.length}/{MAX_FILES} files (max)
                   </div>
                 )}
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   {files.map((file, index) => (
                     <div
                       key={index}
-                      className="relative flex-shrink-0 w-[122px] rounded-lg border border-border bg-surface hover:bg-surface-hover transition-colors p-2 group"
+                      className="relative flex-shrink-0 w-[122px] rounded-lg border border-border bg-surface hover:bg-surface-hover transition-all duration-200 hover:scale-105 p-2 group"
                     >
                       {/* Remove button - only visible on hover */}
                       <button
