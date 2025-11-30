@@ -25,9 +25,11 @@ export function ProjectSelector({
   }, []);
   return <div ref={ref} className="relative flex items-center gap-2">
       {/* Tools button */}
-      <button onClick={() => setOpen(!open)} className="flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-sm transition-colors hover:bg-surface-hover">
-        <Zap className="h-3.5 w-3.5 text-muted-foreground" />
-        <span className="text-xs text-muted-foreground">Tools</span>
+      <button 
+        onClick={() => setOpen(!open)} 
+        className="h-8 min-w-8 px-1.5 rounded-lg border border-border/30 flex items-center justify-center text-muted-foreground hover:bg-surface-hover hover:text-foreground transition-colors"
+      >
+        <Zap className="h-4 w-4" />
       </button>
 
       {/* Selected project pill */}

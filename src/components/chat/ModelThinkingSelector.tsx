@@ -44,7 +44,7 @@ export function ModelThinkingSelector({
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 rounded-full px-3 py-2 text-sm text-muted-foreground transition-all hover:bg-surface-hover hover:text-foreground"
+        className="h-8 px-3 rounded-md flex items-center gap-2 text-sm text-muted-foreground transition-all hover:bg-surface-hover hover:text-foreground"
       >
         <span>{currentModel.name}</span>
         <ChevronDown className={cn("h-3 w-3 transition-transform", open && "rotate-180")} />

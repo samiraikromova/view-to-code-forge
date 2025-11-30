@@ -1,5 +1,5 @@
 import { useState, useRef, KeyboardEvent, useEffect } from "react";
-import { ArrowUp, Plus, Clock, Maximize2, Minimize2 } from "lucide-react";
+import { ArrowUp, Plus, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
@@ -169,59 +169,79 @@ export function ChatInput({
         <div className={cn(!isEmptyState && !isFullScreen && "mx-auto max-w-2xl", isFullScreen && "w-full max-w-2xl")}>
           <div 
             className={cn(
-              "relative rounded-3xl border transition-all duration-500",
+              "relative rounded-2xl border border-transparent transition-all duration-500",
+              "shadow-[0_0.25rem_1.25rem_rgba(0,0,0,0.035),0_0_0_0.5px_rgba(128,128,128,0.15)]",
+              "hover:shadow-[0_0.25rem_1.25rem_rgba(0,0,0,0.035),0_0_0_0.5px_rgba(128,128,128,0.3)]",
               isDragging && "border-accent bg-accent/5",
-              isFocused ? "border-accent/50 bg-surface/80 backdrop-blur-sm animate-shimmer-border" : "border-border/50 bg-surface/80 backdrop-blur-sm",
-              isEmptyState && "shadow-lg"
+              isFocused && "animate-shimmer-border shadow-[0_0.25rem_1.25rem_rgba(0,0,0,0.075),0_0_0_0.5px_rgba(128,128,128,0.3)]"
             )}
             onDragEnter={handleDragEnter}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
             onDrop={handleDrop}
           >
-          {/* Top row - Text input with fullscreen button */}
-          <div className="px-4 pt-2 relative py-[10px] border-black/0">
-            {files.length > 0 && <button onClick={() => setShowFilePreview(true)} className="mb-2 flex items-center gap-2 rounded-full bg-accent/10 px-3 py-1 text-xs text-foreground hover:bg-accent/20 transition-colors">
-                <Plus className="h-3 w-3" />
-                <span>{files.length} file{files.length > 1 ? 's' : ''} attached</span>
-              </button>}
-            <Textarea 
-              ref={textareaRef} 
-              value={message} 
-              onChange={e => setMessage(e.target.value)} 
-              onKeyDown={handleKeyDown} 
-              onFocus={() => setIsFocused(true)}
-              onBlur={() => setIsFocused(false)}
-              placeholder="Enter a prompt" 
-              rows={1} 
-              disabled={disabled} 
-              className="min-h-[24px] max-h-[168px] resize-none border-0 bg-transparent px-0 py-0 text-sm focus-visible:ring-0 focus-visible:outline-none outline-none ring-0 placeholder:text-xs placeholder:text-muted-foreground overflow-y-auto my-[4px]" 
-            />
-            {lineCount >= 3 && <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-6 w-6 text-muted-foreground hover:text-foreground" onClick={() => setIsFullScreen(!isFullScreen)}>
-                {isFullScreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-              </Button>}
-          </div>
-
-          {/* Bottom row - All buttons */}
-          <div className="flex items-center justify-between pb-3 pt-2 px-3 py-[4px]">
-            {/* Left controls */}
-            <div className="flex items-center gap-0">
-              <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 rounded-full hover:bg-surface-hover" onClick={() => fileInputRef.current?.click()} disabled={disabled}>
-                <Plus className="h-4 w-4 text-muted-foreground" />
-              </Button>
-              <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileSelect} accept="*/*" />
-              <ProjectSelector projects={mockProjects} selected={selectedProject} onChange={onSelectProject} />
-              <Button variant="ghost" size="icon" className={cn("h-8 w-8 shrink-0 rounded-full hover:bg-surface-hover transition-colors", extendedThinking ? "text-accent" : "text-muted-foreground")} onClick={onToggleExtendedThinking} disabled={disabled}>
-                <Clock className="h-4 w-4" />
-              </Button>
+          {/* Content wrapper with m-3.5 padding and gap-3.5 */}
+          <div className="m-3.5 flex flex-col gap-3.5">
+            {/* Text input area */}
+            <div className="relative">
+              {files.length > 0 && <button onClick={() => setShowFilePreview(true)} className="mb-2 flex items-center gap-2 rounded-full bg-accent/10 px-3 py-1 text-xs text-foreground hover:bg-accent/20 transition-colors">
+                  <Plus className="h-3 w-3" />
+                  <span>{files.length} file{files.length > 1 ? 's' : ''} attached</span>
+                </button>}
+              <Textarea 
+                ref={textareaRef} 
+                value={message} 
+                onChange={e => setMessage(e.target.value)} 
+                onKeyDown={handleKeyDown} 
+                onFocus={() => setIsFocused(true)}
+                onBlur={() => setIsFocused(false)}
+                placeholder="How can I help you today?" 
+                rows={1} 
+                disabled={disabled} 
+                className="min-h-[3rem] max-h-96 resize-none border-0 bg-transparent px-0 py-0 text-sm focus-visible:ring-0 focus-visible:outline-none outline-none ring-0 placeholder:text-sm placeholder:text-muted-foreground overflow-y-auto" 
+              />
             </div>
 
-            {/* Right controls */}
-            <div className="gap-3 flex items-center justify-start px-0 py-0">
-              <ModelThinkingSelector selectedModel={selectedModel} onSelectModel={onSelectModel} extendedThinking={extendedThinking} onToggleExtendedThinking={onToggleExtendedThinking} />
-              <Button size="icon" className={cn("h-8 w-8 shrink-0 rounded-full transition-all flex items-center justify-center", hasContent ? "bg-accent text-accent-foreground hover:bg-accent-hover shadow-lg" : "bg-surface-hover text-muted-foreground")} onClick={handleSend} disabled={!message.trim() || disabled}>
-                <ArrowUp className="h-4 w-4" />
-              </Button>
+            {/* Bottom row - All buttons */}
+            <div className="flex items-center justify-between h-8">
+              {/* Left controls */}
+              <div className="flex items-center gap-2">
+                <button 
+                  className="h-8 min-w-8 px-1.5 rounded-lg border border-border/30 flex items-center justify-center text-muted-foreground hover:bg-surface-hover hover:text-foreground transition-colors" 
+                  onClick={() => fileInputRef.current?.click()} 
+                  disabled={disabled}
+                >
+                  <Plus className="h-4 w-4" />
+                </button>
+                <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileSelect} accept="*/*" />
+                <ProjectSelector projects={mockProjects} selected={selectedProject} onChange={onSelectProject} />
+                <button 
+                  className={cn(
+                    "h-8 min-w-8 px-1.5 rounded-lg border border-border/30 flex items-center justify-center transition-colors hover:bg-surface-hover",
+                    extendedThinking ? "text-accent" : "text-muted-foreground"
+                  )} 
+                  onClick={onToggleExtendedThinking} 
+                  disabled={disabled}
+                >
+                  <Clock className="h-4 w-4" />
+                </button>
+              </div>
+
+              {/* Right controls */}
+              <div className="flex items-center gap-2">
+                <ModelThinkingSelector selectedModel={selectedModel} onSelectModel={onSelectModel} extendedThinking={extendedThinking} onToggleExtendedThinking={onToggleExtendedThinking} />
+                <Button 
+                  size="icon" 
+                  className={cn(
+                    "h-8 w-8 shrink-0 rounded-lg transition-all flex items-center justify-center", 
+                    hasContent ? "bg-accent text-accent-foreground hover:bg-accent-hover shadow-lg" : "bg-surface-hover text-muted-foreground"
+                  )} 
+                  onClick={handleSend} 
+                  disabled={!message.trim() || disabled}
+                >
+                  <ArrowUp className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           </div>
           </div>
