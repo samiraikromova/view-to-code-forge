@@ -213,7 +213,7 @@ export function ChatInput({
                   {files.map((file, index) => (
                     <div
                       key={index}
-                      className="relative flex-shrink-0 w-[120px] rounded-lg border border-border bg-surface hover:bg-surface-hover transition-colors p-2 group"
+                      className="relative flex-shrink-0 w-[122px] rounded-lg border border-border bg-surface hover:bg-surface-hover transition-colors p-2 group"
                     >
                       {/* Remove button - only visible on hover */}
                       <button
