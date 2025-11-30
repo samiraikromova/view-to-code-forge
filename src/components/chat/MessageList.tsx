@@ -38,15 +38,10 @@ export function MessageList({ messages, isStreaming }: MessageListProps) {
           <Message key={message.id} message={message} />
         ))}
         {isStreaming && (
-          <div className="flex gap-3">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary">
-              <Bot className="h-4 w-4 text-primary-foreground" />
-            </div>
-            <div className="flex items-center gap-1 rounded-lg bg-surface px-4 py-3">
-              <div className="h-2 w-2 animate-pulse rounded-full bg-primary" />
-              <div className="h-2 w-2 animate-pulse rounded-full bg-primary delay-75" />
-              <div className="h-2 w-2 animate-pulse rounded-full bg-primary delay-150" />
-            </div>
+          <div className="flex items-center gap-1 px-4 py-3">
+            <div className="h-2 w-2 animate-pulse rounded-full bg-accent" />
+            <div className="h-2 w-2 animate-pulse rounded-full bg-accent delay-75" />
+            <div className="h-2 w-2 animate-pulse rounded-full bg-accent delay-150" />
           </div>
         )}
       </div>
