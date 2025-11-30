@@ -71,16 +71,44 @@ export function ChatInput({
 }: ChatInputProps) {
   const [message, setMessage] = useState("");
   const [files, setFiles] = useState<File[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const handleSend = () => {
     if (message.trim() && !disabled) {
       onSendMessage(message, files.length > 0 ? files : undefined);
       setMessage("");
-      // Keep files attached - don't clear them
       if (textareaRef.current) {
         textareaRef.current.style.height = "auto";
       }
+    }
+  };
+
+  const handleDragEnter = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    
+    const droppedFiles = Array.from(e.dataTransfer.files);
+    if (droppedFiles.length > 0) {
+      setFiles([...files, ...droppedFiles]);
     }
   };
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -91,17 +119,27 @@ export function ChatInput({
   };
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      setFiles(Array.from(e.target.files));
+      setFiles([...files, ...Array.from(e.target.files)]);
     }
   };
   const hasText = message.trim().length > 0;
   const hasContent = hasText || files.length > 0;
   return <div className={cn("w-full", !isEmptyState && "border-t border-border/50 bg-background p-6")}>
       <div className={cn(!isEmptyState && "mx-auto max-w-4xl")}>
-        <div className="relative rounded-3xl border border-border/50 bg-surface shadow-lg focus-within:ring-2 focus-within:ring-accent/50 focus-within:border-accent focus-within:shadow-[0_0_20px_rgba(155,115,175,0.3)] transition-all duration-200">
+        <div 
+          className={cn(
+            "relative rounded-3xl border border-border/50 bg-surface shadow-lg transition-all duration-200",
+            isDragging && "border-accent bg-accent/5",
+            "focus-within:ring-2 focus-within:ring-accent/50 focus-within:border-accent focus-within:shadow-[0_0_20px_rgba(155,115,175,0.3)] focus-within:animate-shimmer-border"
+          )}
+          onDragEnter={handleDragEnter}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
+        >
           {/* Top row - Text input full width */}
-          <div className="px-4 pt-4">
-            {files.length > 0 && <div className="mb-2 flex gap-2 overflow-x-auto flex-nowrap">
+          <div className="px-4 pt-3">
+            {files.length > 0 && <div className="mb-2 flex gap-2 overflow-x-auto flex-nowrap scrollbar-hide">
                 {files.map((file, index) => <div key={index} className="flex items-center gap-2 rounded-full bg-accent/10 px-3 py-1 text-xs text-foreground flex-shrink-0">
                     <Plus className="h-3 w-3" />
                     <span className="max-w-[200px] truncate">{file.name}</span>
@@ -110,28 +148,28 @@ export function ChatInput({
                     </button>
                   </div>)}
               </div>}
-            <Textarea ref={textareaRef} value={message} onChange={e => setMessage(e.target.value)} onKeyDown={handleKeyDown} placeholder="Enter a prompt" className="min-h-[48px] max-h-[200px] resize-none border-0 bg-transparent px-0 py-0 text-base focus-visible:ring-0 placeholder:text-muted-foreground" disabled={disabled} />
+            <Textarea ref={textareaRef} value={message} onChange={e => setMessage(e.target.value)} onKeyDown={handleKeyDown} placeholder="Enter a prompt" className="min-h-[32px] max-h-[200px] resize-none border-0 bg-transparent px-0 py-0 text-base focus-visible:ring-0 focus-visible:outline-none placeholder:text-muted-foreground" disabled={disabled} />
           </div>
 
           {/* Bottom row - All buttons */}
-          <div className="flex items-center justify-between pb-3 pt-2 px-[4px] py-[4px]">
+          <div className="flex items-center justify-between pb-2 pt-1 px-1">
             {/* Left controls */}
             <div className="flex items-center gap-0">
-              <Button variant="ghost" size="icon" className="h-10 w-10 shrink-0 rounded-full hover:bg-surface-hover" onClick={() => fileInputRef.current?.click()} disabled={disabled}>
-                <Plus className="h-5 w-5 text-muted-foreground" />
+              <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 rounded-full hover:bg-surface-hover" onClick={() => fileInputRef.current?.click()} disabled={disabled}>
+                <Plus className="h-4 w-4 text-muted-foreground" />
               </Button>
               <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileSelect} accept="*/*" />
               <ProjectSelector projects={mockProjects} selected={selectedProject} onChange={onSelectProject} />
-              <Button variant="ghost" size="icon" className={cn("h-10 w-10 shrink-0 rounded-full hover:bg-surface-hover transition-colors", extendedThinking ? "text-accent" : "text-muted-foreground")} onClick={onToggleExtendedThinking} disabled={disabled}>
-                <Clock className="h-5 w-5" />
+              <Button variant="ghost" size="icon" className={cn("h-8 w-8 shrink-0 rounded-full hover:bg-surface-hover transition-colors", extendedThinking ? "text-accent" : "text-muted-foreground")} onClick={onToggleExtendedThinking} disabled={disabled}>
+                <Clock className="h-4 w-4" />
               </Button>
             </div>
 
             {/* Right controls */}
-            <div className="gap-1 flex items-center justify-start px-0 py-[2px]">
+            <div className="gap-1 flex items-center justify-start px-0 py-0">
               <ModelThinkingSelector selectedModel={selectedModel} onSelectModel={onSelectModel} extendedThinking={extendedThinking} onToggleExtendedThinking={onToggleExtendedThinking} />
-              <Button size="icon" className={cn("h-10 w-10 shrink-0 rounded-full transition-all flex items-center justify-center", hasContent ? "bg-accent text-accent-foreground hover:bg-accent-hover shadow-lg" : "bg-surface-hover text-muted-foreground")} onClick={handleSend} disabled={!message.trim() || disabled}>
-                <ArrowUp className="h-5 w-5" />
+              <Button size="icon" className={cn("h-8 w-8 shrink-0 rounded-full transition-all flex items-center justify-center", hasContent ? "bg-accent text-accent-foreground hover:bg-accent-hover shadow-lg" : "bg-surface-hover text-muted-foreground")} onClick={handleSend} disabled={!message.trim() || disabled}>
+                <ArrowUp className="h-4 w-4" />
               </Button>
             </div>
           </div>
