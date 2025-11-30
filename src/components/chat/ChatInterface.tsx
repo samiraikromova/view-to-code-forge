@@ -154,12 +154,12 @@ export function ChatInterface({ chatId, onNewChat }: ChatInterfaceProps) {
   return (
     <div className="flex h-full flex-1 flex-col">
       {isEmpty ? (
-        <div className="flex flex-1 flex-col items-center justify-center px-4">
-          <h1 className="mb-16 bg-gradient-to-r from-purple-400 to-purple-600 bg-clip-text text-5xl font-medium text-transparent">
+        <div className="flex flex-1 flex-col items-center justify-center px-4 transition-all duration-700 ease-out animate-fade-in">
+          <h1 className="mb-16 bg-gradient-to-r from-purple-400 to-purple-600 bg-clip-text text-5xl font-medium text-transparent animate-scale-in">
             Hello, Cam
           </h1>
           
-          <div className="w-full max-w-4xl">
+          <div className="w-full max-w-4xl transition-all duration-500 ease-out">
             <ChatInput 
               onSendMessage={handleSendMessage} 
               disabled={isStreaming}
@@ -173,12 +173,12 @@ export function ChatInterface({ chatId, onNewChat }: ChatInterfaceProps) {
             />
           </div>
 
-          <div className="mt-6 flex flex-wrap items-center justify-center gap-2">
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-2 animate-fade-in" style={{ animationDelay: '0.2s' }}>
             {mockProjects.map((project) => (
               <button
                 key={project.id}
                 onClick={() => setSelectedProject(project)}
-                className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs transition-all ${
+                className={`flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs transition-all duration-200 ${
                   selectedProject?.id === project.id
                     ? "border-accent bg-accent/10 text-foreground"
                     : "border-border bg-surface hover:bg-surface-hover text-foreground"
@@ -191,20 +191,22 @@ export function ChatInterface({ chatId, onNewChat }: ChatInterfaceProps) {
           </div>
         </div>
       ) : (
-        <>
+        <div className="flex flex-1 flex-col animate-fade-in">
           <MessageList messages={messages} isStreaming={isStreaming} />
           <div ref={messagesEndRef} />
-          <ChatInput 
-            onSendMessage={handleSendMessage} 
-            disabled={isStreaming}
-            selectedProject={selectedProject}
-            onSelectProject={handleSelectProject}
-            selectedModel={selectedModel}
-            onSelectModel={setSelectedModel}
-            extendedThinking={extendedThinking}
-            onToggleExtendedThinking={() => setExtendedThinking(!extendedThinking)}
-          />
-        </>
+          <div className="transition-all duration-500 ease-out">
+            <ChatInput 
+              onSendMessage={handleSendMessage} 
+              disabled={isStreaming}
+              selectedProject={selectedProject}
+              onSelectProject={handleSelectProject}
+              selectedModel={selectedModel}
+              onSelectModel={setSelectedModel}
+              extendedThinking={extendedThinking}
+              onToggleExtendedThinking={() => setExtendedThinking(!extendedThinking)}
+            />
+          </div>
+        </div>
       )}
     </div>
   );

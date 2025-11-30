@@ -11,62 +11,62 @@
     --background: 0 0% 7%;
     --foreground: 0 0% 100%;
 
-    /* Surface colors */
-    --surface: 0 0% 16%;
-    --surface-hover: 0 0% 25%;
+    /* Surface colors - purple-tinted */
+    --surface: 300 8% 12%;
+    --surface-hover: 300 6% 18%;
 
     /* Surface tonal colors */
     --surface-tonal: 290 11% 9%;
     --surface-tonal-hover: 290 7% 17%;
 
-    --card: 0 0% 16%;
+    --card: 300 8% 12%;
     --card-foreground: 0 0% 100%;
 
-    --popover: 0 0% 16%;
+    --popover: 300 8% 12%;
     --popover-foreground: 0 0% 100%;
 
-    /* Primary purple colors */
-    --primary: 290 47% 23%;
+    /* Primary purple colors - deeper #341539 */
+    --primary: 310 47% 15%;
     --primary-foreground: 0 0% 100%;
-    --primary-hover: 290 25% 30%;
+    --primary-hover: 310 35% 22%;
 
-    --secondary: 0 0% 25%;
+    --secondary: 300 5% 20%;
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 0 0% 25%;
-    --muted-foreground: 0 0% 63%;
+    --muted: 300 5% 20%;
+    --muted-foreground: 290 5% 55%;
 
-    /* Accent colors */
-    --accent: 290 47% 23%;
+    /* Accent colors - lighter purple for active states */
+    --accent: 290 30% 55%;
     --accent-foreground: 0 0% 100%;
-    --accent-hover: 290 25% 30%;
+    --accent-hover: 290 35% 45%;
 
-    /* Status colors */
-    --destructive: 0 63% 37%;
+    /* Status colors - matching reference */
+    --destructive: 0 64% 37%;
     --destructive-foreground: 0 0% 100%;
 
     --success: 161 62% 36%;
-    --warning: 33 60% 41%;
+    --warning: 36 60% 41%;
 
-    --border: 0 0% 25%;
-    --input: 0 0% 25%;
-    --ring: 290 47% 23%;
+    --border: 300 5% 20%;
+    --input: 300 5% 20%;
+    --ring: 310 47% 15%;
 
     --radius: 0.5rem;
 
     --text-primary: 0 0% 100%;
-    --text-secondary: 0 0% 63%;
-    --text-muted: 0 0% 42%;
+    --text-secondary: 290 5% 65%;
+    --text-muted: 290 5% 45%;
 
     /* Sidebar colors */
-    --sidebar-background: 0 0% 16%;
+    --sidebar-background: 300 8% 12%;
     --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 290 47% 23%;
+    --sidebar-primary: 310 47% 15%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 25%;
+    --sidebar-accent: 300 5% 20%;
     --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 0 0% 25%;
-    --sidebar-ring: 290 47% 23%;
+    --sidebar-border: 300 5% 20%;
+    --sidebar-ring: 310 47% 15%;
   }
 
   .dark {
@@ -74,60 +74,60 @@
     --background: 0 0% 7%;
     --foreground: 0 0% 100%;
 
-    /* Surface colors */
-    --surface: 0 0% 16%;
-    --surface-hover: 0 0% 25%;
+    /* Surface colors - purple-tinted */
+    --surface: 300 8% 12%;
+    --surface-hover: 300 6% 18%;
 
     /* Surface tonal colors */
     --surface-tonal: 290 11% 9%;
     --surface-tonal-hover: 290 7% 17%;
 
-    --card: 0 0% 16%;
+    --card: 300 8% 12%;
     --card-foreground: 0 0% 100%;
 
-    --popover: 0 0% 16%;
+    --popover: 300 8% 12%;
     --popover-foreground: 0 0% 100%;
 
-    /* Primary purple colors */
-    --primary: 290 47% 23%;
+    /* Primary purple colors - deeper #341539 */
+    --primary: 310 47% 15%;
     --primary-foreground: 0 0% 100%;
-    --primary-hover: 290 25% 30%;
+    --primary-hover: 310 35% 22%;
 
-    --secondary: 0 0% 25%;
+    --secondary: 300 5% 20%;
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 0 0% 25%;
-    --muted-foreground: 0 0% 63%;
+    --muted: 300 5% 20%;
+    --muted-foreground: 290 5% 55%;
 
-    /* Accent colors */
-    --accent: 290 47% 23%;
+    /* Accent colors - lighter purple for active states */
+    --accent: 290 30% 55%;
     --accent-foreground: 0 0% 100%;
-    --accent-hover: 290 25% 30%;
+    --accent-hover: 290 35% 45%;
 
-    /* Status colors */
-    --destructive: 0 63% 37%;
+    /* Status colors - matching reference */
+    --destructive: 0 64% 37%;
     --destructive-foreground: 0 0% 100%;
 
     --success: 161 62% 36%;
-    --warning: 33 60% 41%;
+    --warning: 36 60% 41%;
 
-    --border: 0 0% 25%;
-    --input: 0 0% 25%;
-    --ring: 290 47% 23%;
+    --border: 300 5% 20%;
+    --input: 300 5% 20%;
+    --ring: 310 47% 15%;
 
     --text-primary: 0 0% 100%;
-    --text-secondary: 0 0% 63%;
-    --text-muted: 0 0% 42%;
+    --text-secondary: 290 5% 65%;
+    --text-muted: 290 5% 45%;
 
     /* Sidebar colors */
-    --sidebar-background: 0 0% 16%;
+    --sidebar-background: 300 8% 12%;
     --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 290 47% 23%;
+    --sidebar-primary: 310 47% 15%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 25%;
+    --sidebar-accent: 300 5% 20%;
     --sidebar-accent-foreground: 0 0% 100%;
-    --sidebar-border: 0 0% 25%;
-    --sidebar-ring: 290 47% 23%;
+    --sidebar-border: 300 5% 20%;
+    --sidebar-ring: 310 47% 15%;
   }
 }
 
