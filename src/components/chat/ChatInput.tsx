@@ -203,24 +203,24 @@ export function ChatInput({
           <div className="m-3.5 flex flex-col gap-3.5">
             {/* File attachments */}
             {files.length > 0 && (
-              <div className="flex gap-2 overflow-x-auto pb-1">
+              <div className="flex gap-2">
                 {files.map((file, index) => (
                   <div
                     key={index}
-                    className="relative flex-shrink-0 w-[180px] rounded-xl border border-border bg-surface hover:bg-surface-hover transition-colors p-3 group"
+                    className="relative flex-shrink-0 w-[130px] rounded-lg border border-border bg-surface hover:bg-surface-hover transition-colors p-2 group"
                   >
                     {/* Remove button */}
                     <button
                       onClick={() => handleRemoveFile(index)}
-                      className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-background border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-surface transition-colors z-10 shadow-sm"
+                      className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-background border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-surface transition-colors z-10 shadow-sm"
                     >
-                      <X className="h-3.5 w-3.5" />
+                      <X className="h-3 w-3" />
                     </button>
 
                     {/* File preview */}
-                    <div className="flex flex-col gap-2">
+                    <div className="flex flex-col gap-1.5">
                       {isImage(file) ? (
-                        <div className="aspect-video rounded-lg bg-surface-hover flex items-center justify-center overflow-hidden">
+                        <div className="aspect-video rounded bg-surface-hover flex items-center justify-center overflow-hidden">
                           <img
                             src={URL.createObjectURL(file)}
                             alt={file.name}
@@ -228,21 +228,19 @@ export function ChatInput({
                           />
                         </div>
                       ) : (
-                        <div className="aspect-video rounded-lg bg-surface-hover flex items-center justify-center">
-                          <FileIcon className="h-10 w-10 text-muted-foreground" />
+                        <div className="aspect-video rounded bg-surface-hover flex items-center justify-center">
+                          <FileIcon className="h-8 w-8 text-muted-foreground" />
                         </div>
                       )}
                       
                       {/* File info */}
-                      <div className="space-y-1">
-                        <p className="text-xs font-medium text-foreground truncate" title={file.name}>
+                      <div className="space-y-0.5">
+                        <p className="text-[11px] font-medium text-foreground truncate leading-tight" title={file.name}>
                           {file.name}
                         </p>
-                        <div className="flex items-center justify-between">
-                          <span className="inline-block px-2 py-0.5 rounded text-[10px] font-medium bg-surface-hover text-muted-foreground border border-border/50">
-                            {getFileExtension(file.name)}
-                          </span>
-                        </div>
+                        <span className="inline-block px-1.5 py-0.5 rounded text-[9px] font-medium bg-surface-hover text-muted-foreground border border-border/50">
+                          {getFileExtension(file.name)}
+                        </span>
                       </div>
                     </div>
                   </div>
