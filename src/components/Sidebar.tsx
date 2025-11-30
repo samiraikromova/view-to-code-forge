@@ -1,8 +1,15 @@
-import { Plus, Settings, User, PanelLeft } from "lucide-react";
+import { Plus, Settings, User, PanelLeft, LogOut, CreditCard, Sparkles, UserIcon } from "lucide-react";
 import { Button } from "./ui/button";
 import { ScrollArea } from "./ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 interface Chat {
   id: string;
   title: string;
@@ -43,7 +50,7 @@ export function Sidebar({
   onNewChat
 }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
-  return <div className={cn("flex h-full flex-col border-r border-border bg-surface transition-all duration-300", isCollapsed ? "w-14" : "w-64")}>
+  return <div className={cn("flex h-full flex-col border-r border-border bg-surface transition-all duration-300 overflow-y-auto flex-shrink-0", isCollapsed ? "w-14" : "w-64")}>
       {/* Header with hamburger */}
       <div className="flex items-center justify-between border-b border-border p-3">
         <Button variant="ghost" size="icon" onClick={() => setIsCollapsed(!isCollapsed)} className="h-8 w-8 rounded-lg hover:bg-surface-hover">
@@ -72,8 +79,8 @@ export function Sidebar({
             <p className="text-xs font-medium text-muted-foreground">Recent</p>
           </div>
           <ScrollArea className="flex-1 px-2">
-            <div className="space-y-0.5 pb-3">
-              {mockChats.map(chat => <button key={chat.id} onClick={() => onChatSelect(chat.id)} className={cn("flex w-full items-center rounded-lg px-3 py-2 text-left text-sm transition-colors", currentChatId === chat.id ? "bg-surface-hover text-foreground" : "text-muted-foreground hover:bg-surface-hover hover:text-foreground")}>
+            <div className="space-y-0 pb-3">
+              {mockChats.map(chat => <button key={chat.id} onClick={() => onChatSelect(chat.id)} className={cn("flex w-full items-center rounded-lg px-2 py-1.5 text-left text-xs transition-colors", currentChatId === chat.id ? "bg-surface-hover text-foreground" : "text-muted-foreground hover:bg-surface-hover hover:text-foreground")}>
                   <p className="truncate">{chat.title}</p>
                 </button>)}
             </div>
@@ -90,9 +97,55 @@ export function Sidebar({
               <p className="truncate text-xs font-medium text-foreground">Cameron</p>
               <p className="truncate text-xs text-muted-foreground">50,993 credits</p>
             </div>
-            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-surface-hover">
-              <Settings className="h-4 w-4 text-muted-foreground" />
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg hover:bg-surface-hover">
+                  <Settings className="h-4 w-4 text-muted-foreground" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem>
+                  <UserIcon className="mr-2 h-4 w-4" />
+                  Profile
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  Upgrade to Pro
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  <CreditCard className="mr-2 h-4 w-4" />
+                  Top up credits
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="text-destructive focus:text-destructive">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Log out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem>
+                  <UserIcon className="mr-2 h-4 w-4" />
+                  Profile
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  Upgrade to Pro
+                </DropdownMenuItem>
+                <DropdownMenuItem>
+                  <CreditCard className="mr-2 h-4 w-4" />
+                  Top up credits
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="text-destructive focus:text-destructive">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Log out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div> : <div className="flex flex-col items-center gap-2 p-3">
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-purple-700">
               <User className="h-4 w-4 text-white" />

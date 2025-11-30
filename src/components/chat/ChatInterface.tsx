@@ -155,7 +155,7 @@ export function ChatInterface({ chatId, onNewChat }: ChatInterfaceProps) {
     <div className="flex h-full flex-1 flex-col">
       {isEmpty ? (
         <div className="flex flex-1 flex-col items-center justify-center px-4 transition-all duration-700 ease-out animate-fade-in">
-          <h1 className="mb-16 bg-gradient-to-r from-purple-400 to-purple-600 bg-clip-text text-5xl font-medium text-transparent animate-scale-in">
+          <h1 className="mb-16 bg-gradient-to-r from-[hsl(290,30%,55%)] to-[hsl(310,47%,25%)] bg-clip-text text-5xl font-medium text-transparent animate-scale-in">
             Hello, Cam
           </h1>
           

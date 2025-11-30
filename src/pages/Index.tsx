@@ -10,7 +10,7 @@ const Index = () => {
   };
 
   return (
-    <div className="flex h-screen bg-background">
+    <div className="flex h-screen overflow-hidden bg-background">
       <Sidebar currentChatId={chatId} onChatSelect={setChatId} onNewChat={handleNewChat} />
       <ChatInterface chatId={chatId} onNewChat={handleNewChat} />
     </div>
