@@ -238,9 +238,17 @@ export function ChatInterface({
               </button>)}
           </div>
         </div> : <div className="flex flex-1 flex-col min-h-0 overflow-hidden animate-fade-in relative">
-          <div ref={messagesContainerRef} className="flex-1 overflow-y-auto">
+          <div ref={messagesContainerRef} className="flex-1 overflow-y-auto relative">
             <MessageList messages={messages} isStreaming={isStreaming} />
             <div ref={messagesEndRef} />
+            
+            {/* Gradient fade overlay */}
+            <div 
+              className="sticky bottom-0 left-0 right-0 h-24 pointer-events-none"
+              style={{
+                background: 'linear-gradient(to bottom, transparent, hsl(var(--background)))'
+              }}
+            />
           </div>
           
           {/* Scroll to bottom button */}

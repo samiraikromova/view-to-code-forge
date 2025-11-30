@@ -32,7 +32,7 @@ export function MessageList({ messages, isStreaming }: MessageListProps) {
 
   return (
     <div className="px-4 py-6">
-      <div className="mx-auto max-w-3xl space-y-6">
+      <div className="mx-auto max-w-[720px] space-y-6">
         {messages.map((message) => (
           <div key={message.id} className="animate-fade-in">
             <Message message={message} />
