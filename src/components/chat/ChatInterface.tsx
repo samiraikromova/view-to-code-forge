@@ -93,6 +93,7 @@ export function ChatInterface({
   const [dragCounter, setDragCounter] = useState(0);
   const [externalFiles, setExternalFiles] = useState<File[]>([]);
   const [showScrollButton, setShowScrollButton] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -185,8 +186,10 @@ export function ChatInterface({
     setSelectedProject(project);
   };
   const handleSendMessage = async (content: string, files?: File[]) => {
+    const isFirstMessage = messages.length === 0;
+    
     // If this is a new chat (no chatId), create it
-    if (!chatId && messages.length === 0) {
+    if (!chatId && isFirstMessage) {
       onCreateChat(content);
     }
 
@@ -199,25 +202,55 @@ export function ChatInterface({
         minute: "2-digit"
       })
     };
-    setMessages(prev => [...prev, newMessage]);
-    setIsStreaming(true);
 
-    // Simulate AI response
-    setTimeout(() => {
-      const aiResponse: Message = {
-        id: (Date.now() + 1).toString(),
-        role: "assistant",
-        content: "This is a demo response. In the full version, this would be connected to Claude AI for intelligent responses based on the selected project and model.",
-        timestamp: new Date().toLocaleTimeString("en-US", {
-          hour: "numeric",
-          minute: "2-digit"
-        })
-      };
-      setMessages(prev => [...prev, aiResponse]);
-      setIsStreaming(false);
-    }, 1000);
+    // If it's the first message, trigger transition animation
+    if (isFirstMessage) {
+      setIsTransitioning(true);
+      // Wait for animation to complete before showing messages
+      setTimeout(() => {
+        setMessages([newMessage]);
+        setIsStreaming(true);
+        setIsTransitioning(false);
+        
+        // Simulate AI response
+        setTimeout(() => {
+          const aiResponse: Message = {
+            id: (Date.now() + 1).toString(),
+            role: "assistant",
+            content: "This is a demo response. In the full version, this would be connected to Claude AI for intelligent responses based on the selected project and model.",
+            timestamp: new Date().toLocaleTimeString("en-US", {
+              hour: "numeric",
+              minute: "2-digit"
+            })
+          };
+          setMessages(prev => [...prev, aiResponse]);
+          setIsStreaming(false);
+        }, 1000);
+      }, 600);
+    } else {
+      // Not first message, add immediately
+      setMessages(prev => [...prev, newMessage]);
+      setIsStreaming(true);
+
+      // Simulate AI response
+      setTimeout(() => {
+        const aiResponse: Message = {
+          id: (Date.now() + 1).toString(),
+          role: "assistant",
+          content: "This is a demo response. In the full version, this would be connected to Claude AI for intelligent responses based on the selected project and model.",
+          timestamp: new Date().toLocaleTimeString("en-US", {
+            hour: "numeric",
+            minute: "2-digit"
+          })
+        };
+        setMessages(prev => [...prev, aiResponse]);
+        setIsStreaming(false);
+      }, 1000);
+    }
   };
-  const isEmpty = messages.length === 0;
+  const isEmpty = messages.length === 0 && !isTransitioning;
+  const showTransition = isTransitioning;
+  
   return <div className="flex h-full flex-1 flex-col min-h-0 overflow-hidden relative">
       {/* Global drag and drop overlay */}
       {isDraggingGlobal && (
@@ -246,7 +279,28 @@ export function ChatInterface({
                 <span className="text-xs">{project.name}</span>
               </button>)}
           </div>
-        </div> : <div className="flex flex-1 flex-col min-h-0 overflow-hidden animate-fade-in relative">
+        </div> : showTransition ? (
+        <div className="flex h-full flex-1 flex-col min-h-0 overflow-hidden relative">
+          {/* Transitioning state - input animates from center to bottom */}
+          <div className="absolute inset-0 flex items-center justify-center animate-[slide-down_0.6s_ease-out_forwards]">
+            <div className="w-full max-w-2xl px-4">
+              <ChatInput 
+                onSendMessage={handleSendMessage} 
+                disabled={true}
+                selectedProject={selectedProject} 
+                onSelectProject={handleSelectProject} 
+                selectedModel={selectedModel} 
+                onSelectModel={setSelectedModel} 
+                extendedThinking={extendedThinking} 
+                onToggleExtendedThinking={() => setExtendedThinking(!extendedThinking)} 
+                isEmptyState={true} 
+                externalFiles={externalFiles} 
+                onExternalFilesProcessed={() => setExternalFiles([])} 
+              />
+            </div>
+          </div>
+        </div>
+      ) : <div className="flex flex-1 flex-col min-h-0 overflow-hidden animate-fade-in relative">
           <div ref={messagesContainerRef} className="flex-1 overflow-y-auto relative">
             <MessageList messages={messages} isStreaming={isStreaming} />
             <div ref={messagesEndRef} />
