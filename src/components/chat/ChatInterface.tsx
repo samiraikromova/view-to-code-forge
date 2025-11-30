@@ -173,18 +173,18 @@ export function ChatInterface({ chatId, onNewChat }: ChatInterfaceProps) {
             />
           </div>
 
-          <div className="mt-6 grid grid-cols-4 gap-2 max-w-4xl animate-fade-in" style={{ animationDelay: '0.2s' }}>
+          <div className="mt-8 flex flex-wrap gap-2 max-w-4xl animate-fade-in justify-center" style={{ animationDelay: '0.2s' }}>
             {mockProjects.map((project) => (
               <button
                 key={project.id}
                 onClick={() => setSelectedProject(project)}
-                className={`flex items-center justify-center text-center rounded-lg border px-3 py-2 transition-all duration-200 whitespace-nowrap overflow-hidden text-ellipsis ${
+                className={`flex items-center justify-center text-center rounded-lg border px-3 py-2 transition-all duration-200 whitespace-nowrap ${
                   selectedProject?.id === project.id
                     ? "border-accent bg-accent/10 text-muted-foreground"
                     : "border-border/30 bg-surface/50 hover:bg-surface-hover text-muted-foreground"
                 }`}
               >
-                <span className="text-xs truncate">{project.name}</span>
+                <span className="text-xs">{project.name}</span>
               </button>
             ))}
           </div>

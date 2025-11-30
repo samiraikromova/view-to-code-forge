@@ -222,7 +222,7 @@ export function ChatInput({
           </div>
 
           {/* Bottom row - All buttons */}
-          <div className="flex items-center justify-between pb-1.5 pt-1 px-1">
+          <div className="flex items-center justify-between pb-2 pt-2 px-2">
             {/* Left controls */}
             <div className="flex items-center gap-0">
               <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0 rounded-full hover:bg-surface-hover" onClick={() => fileInputRef.current?.click()} disabled={disabled}>
@@ -236,7 +236,7 @@ export function ChatInput({
             </div>
 
             {/* Right controls */}
-            <div className="gap-1 flex items-center justify-start px-0 py-0">
+            <div className="gap-2 flex items-center justify-start px-0 py-0">
               <ModelThinkingSelector selectedModel={selectedModel} onSelectModel={onSelectModel} extendedThinking={extendedThinking} onToggleExtendedThinking={onToggleExtendedThinking} />
               <Button size="icon" className={cn("h-8 w-8 shrink-0 rounded-full transition-all flex items-center justify-center", hasContent ? "bg-accent text-accent-foreground hover:bg-accent-hover shadow-lg" : "bg-surface-hover text-muted-foreground")} onClick={handleSend} disabled={!message.trim() || disabled}>
                 <ArrowUp className="h-4 w-4" />

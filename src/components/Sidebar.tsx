@@ -162,7 +162,7 @@ export function Sidebar({ currentChatId, onChatSelect, onNewChat }: SidebarProps
         >
           <PanelLeft className="h-4 w-4 text-muted-foreground" />
         </Button>
-        {!isCollapsed && <span className="text-sm font-medium text-foreground">Leveraged Creator</span>}
+        {!isCollapsed && <span className="text-sm font-medium text-muted-foreground">Leveraged Creator</span>}
       </div>
 
       {/* New Chat Button */}
@@ -195,7 +195,7 @@ export function Sidebar({ currentChatId, onChatSelect, onNewChat }: SidebarProps
             <Collapsible key={folder.id} open={folder.isOpen} onOpenChange={() => toggleFolder(folder.id)}>
               <div className="flex items-center gap-1 py-2">
                 <CollapsibleTrigger asChild>
-                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground">
+                  <Button variant="ghost" size="sm" className="h-6 w-6 p-0 text-muted-foreground hover:bg-surface-hover">
                     {folder.isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
                   </Button>
                 </CollapsibleTrigger>
@@ -310,7 +310,7 @@ export function Sidebar({ currentChatId, onChatSelect, onNewChat }: SidebarProps
                 variant="ghost"
                 size="icon"
                 onClick={handleCreateFolder}
-                className="h-6 w-6 text-muted-foreground hover:text-foreground"
+                className="h-6 w-6 text-muted-foreground hover:bg-surface-hover"
                 title="New Folder"
               >
                 <FolderPlus className="h-4 w-4" />
@@ -398,15 +398,15 @@ export function Sidebar({ currentChatId, onChatSelect, onNewChat }: SidebarProps
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem>
+                <DropdownMenuItem className="text-muted-foreground">
                   <UserIcon className="mr-2 h-4 w-4" />
                   Profile
                 </DropdownMenuItem>
-                <DropdownMenuItem>
+                <DropdownMenuItem className="text-muted-foreground">
                   <Sparkles className="mr-2 h-4 w-4" />
                   Upgrade to Pro
                 </DropdownMenuItem>
-                <DropdownMenuItem>
+                <DropdownMenuItem className="text-muted-foreground">
                   <CreditCard className="mr-2 h-4 w-4" />
                   Top up credits
                 </DropdownMenuItem>
@@ -430,15 +430,15 @@ export function Sidebar({ currentChatId, onChatSelect, onNewChat }: SidebarProps
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem>
+                <DropdownMenuItem className="text-muted-foreground">
                   <UserIcon className="mr-2 h-4 w-4" />
                   Profile
                 </DropdownMenuItem>
-                <DropdownMenuItem>
+                <DropdownMenuItem className="text-muted-foreground">
                   <Sparkles className="mr-2 h-4 w-4" />
                   Upgrade to Pro
                 </DropdownMenuItem>
-                <DropdownMenuItem>
+                <DropdownMenuItem className="text-muted-foreground">
                   <CreditCard className="mr-2 h-4 w-4" />
                   Top up credits
                 </DropdownMenuItem>
