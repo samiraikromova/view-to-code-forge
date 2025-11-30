@@ -151,11 +151,20 @@ export function Sidebar({
   };
   return <div className={cn("flex h-full flex-col border-r border-border bg-surface transition-all duration-300 flex-shrink-0", isCollapsed ? "w-14" : "w-64")}>
       {/* Header */}
-      <div className="flex items-center gap-2 border-b border-border/50 p-4">
+      <div className="flex items-center border-b border-border/50 p-4">
         {!isCollapsed ? <>
-            
-            <h2 className="text-sm font-semibold whitespace-nowrap">Leveraged Creator</h2>
-            <Button variant="ghost" size="icon" onClick={() => setIsCollapsed(!isCollapsed)} className="h-8 w-8 text-muted-foreground hover:text-foreground text-right px-0 my-0 mx-0">
+            <div className="relative flex-1">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <input
+                type="text"
+                placeholder="Search chats..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-8 pr-2 py-1 text-xs rounded-lg bg-surface-hover border border-border/50 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-accent"
+              />
+            </div>
+            <h2 className="text-sm font-semibold whitespace-nowrap absolute left-1/2 -translate-x-1/2">Leveraged Creator</h2>
+            <Button variant="ghost" size="icon" onClick={() => setIsCollapsed(!isCollapsed)} className="h-8 w-8 text-muted-foreground hover:text-foreground ml-auto">
               <PanelLeft className="h-5 w-5" />
             </Button>
           </> : <Button variant="ghost" size="icon" onClick={() => setIsCollapsed(!isCollapsed)} className="h-8 w-8 text-muted-foreground hover:text-foreground mx-auto">
