@@ -16,7 +16,7 @@ const models: Model[] = [{
   description: "Best balance"
 }, {
   id: "claude-haiku-4",
-  name: "Haiku 4",
+  name: "Haiku 4.5",
   description: "Fastest"
 }];
 interface ModelThinkingSelectorProps {
