@@ -10,14 +10,24 @@ export const VideoPlayer = ({ lesson }: VideoPlayerProps) => {
     <div className="space-y-6">
       {/* Video Container */}
       <div className="relative w-full aspect-video bg-surface rounded-2xl overflow-hidden border border-border">
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className="text-center space-y-4">
-            <div className="w-20 h-20 rounded-full bg-accent/20 flex items-center justify-center mx-auto">
-              <Play className="h-10 w-10 text-accent fill-accent" />
+        {lesson.embedUrl ? (
+          <iframe
+            src={lesson.embedUrl}
+            className="w-full h-full"
+            frameBorder="0"
+            allow="autoplay; fullscreen; picture-in-picture"
+            allowFullScreen
+          />
+        ) : (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="text-center space-y-4">
+              <div className="w-20 h-20 rounded-full bg-accent/20 flex items-center justify-center mx-auto">
+                <Play className="h-10 w-10 text-accent fill-accent" />
+              </div>
+              <p className="text-sm text-muted-foreground">Video player placeholder</p>
             </div>
-            <p className="text-sm text-muted-foreground">Video player placeholder</p>
           </div>
-        </div>
+        )}
       </div>
 
       {/* Lesson Info */}

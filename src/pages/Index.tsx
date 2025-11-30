@@ -44,40 +44,44 @@ const Index = () => {
   const [recordingsData, setRecordingsData] = useState<Module[]>([
     {
       id: "module-1",
-      title: "December 2025",
-      lessons: [
-        { id: "rec-1", moduleId: "module-1", title: "Dec 15 - Q4 Strategy Review", duration: "45:20", completed: false, description: "Discussed Q4 performance metrics and 2026 planning" },
-        { id: "rec-2", moduleId: "module-1", title: "Dec 8 - Product Roadmap Update", duration: "38:15", completed: false, description: "Review of upcoming features and customer feedback integration" },
-        { id: "rec-3", moduleId: "module-1", title: "Dec 1 - Team Alignment Call", duration: "52:30", completed: false, description: "Cross-functional sync on project priorities and timelines" },
-      ],
-    },
-    {
-      id: "module-2",
       title: "November 2025",
       lessons: [
-        { id: "rec-4", moduleId: "module-2", title: "Nov 24 - Customer Success Review", duration: "41:10", completed: false, description: "Analysis of customer satisfaction scores and support tickets" },
-        { id: "rec-5", moduleId: "module-2", title: "Nov 17 - Marketing Campaign Results", duration: "35:45", completed: false, description: "Performance review of recent campaigns and ROI analysis" },
-        { id: "rec-6", moduleId: "module-2", title: "Nov 10 - Technical Architecture Discussion", duration: "48:30", completed: false, description: "Infrastructure improvements and scalability planning" },
-        { id: "rec-7", moduleId: "module-2", title: "Nov 3 - Sales Pipeline Review", duration: "43:20", completed: false, description: "Current deals status and forecast for end of quarter" },
-      ],
-    },
-    {
-      id: "module-3",
-      title: "October 2025",
-      lessons: [
-        { id: "rec-8", moduleId: "module-3", title: "Oct 27 - Quarterly Business Review", duration: "58:15", completed: false, description: "Comprehensive Q3 analysis and key learnings" },
-        { id: "rec-9", moduleId: "module-3", title: "Oct 20 - Product Launch Debrief", duration: "44:50", completed: false, description: "Post-launch metrics and customer adoption patterns" },
-        { id: "rec-10", moduleId: "module-3", title: "Oct 13 - Team Retrospective", duration: "39:30", completed: false, description: "Process improvements and team collaboration feedback" },
-      ],
-    },
-    {
-      id: "module-4",
-      title: "September 2025",
-      lessons: [
-        { id: "rec-11", moduleId: "module-4", title: "Sep 29 - Budget Planning Session", duration: "51:40", completed: false, description: "2026 budget allocation and department requests" },
-        { id: "rec-12", moduleId: "module-4", title: "Sep 22 - Competitive Analysis", duration: "46:25", completed: false, description: "Market positioning and competitor feature comparison" },
-        { id: "rec-13", moduleId: "module-4", title: "Sep 15 - Onboarding Process Review", duration: "37:55", completed: false, description: "Improvements to new customer onboarding experience" },
-        { id: "rec-14", moduleId: "module-4", title: "Sep 8 - Security Audit Findings", duration: "42:10", completed: false, description: "Review of security assessment and action items" },
+        { 
+          id: "rec-1", 
+          moduleId: "module-1", 
+          title: "LC Group Call 11/28", 
+          duration: "~45 min", 
+          completed: false, 
+          description: "Weekly group call discussion",
+          embedUrl: "https://share.fireflies.ai/embed/meetings/01KB6J9WXW8YAXJDWBH07AY4A8"
+        },
+        { 
+          id: "rec-2", 
+          moduleId: "module-1", 
+          title: "LC Group Call 11/20", 
+          duration: "~45 min", 
+          completed: false, 
+          description: "Weekly group call discussion",
+          embedUrl: "https://share.fireflies.ai/embed/meetings/01KAHZD1SWVAN3J5X6WX6BDHMA"
+        },
+        { 
+          id: "rec-3", 
+          moduleId: "module-1", 
+          title: "LC Group Call 11/13", 
+          duration: "~45 min", 
+          completed: false, 
+          description: "Weekly group call discussion",
+          embedUrl: "https://share.fireflies.ai/embed/meetings/01K9ZZ0RCWY3Y36E6PBAMSTNWB"
+        },
+        { 
+          id: "rec-4", 
+          moduleId: "module-1", 
+          title: "LC Group Call 11/6", 
+          duration: "~45 min", 
+          completed: false, 
+          description: "Weekly group call discussion",
+          embedUrl: "https://share.fireflies.ai/embed/meetings/01K9DXB7TGMMGXECZ6C265MFES"
+        },
       ],
     },
   ]);
