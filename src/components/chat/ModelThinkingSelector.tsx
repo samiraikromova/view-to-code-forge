@@ -48,10 +48,10 @@ export function ModelThinkingSelector({
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 rounded-full border border-border/50 bg-background px-4 py-2 text-sm transition-colors hover:bg-surface-hover"
+        className="flex items-center gap-2 rounded-full px-3 py-2 text-sm text-muted-foreground transition-all hover:bg-surface-hover hover:text-foreground"
       >
-        <span className="text-foreground">{displayText}</span>
-        <ChevronDown className={cn("h-3 w-3 text-muted-foreground transition-transform", open && "rotate-180")} />
+        <span>{displayText}</span>
+        <ChevronDown className={cn("h-3 w-3 transition-transform", open && "rotate-180")} />
       </button>
 
       {open && (

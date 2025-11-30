@@ -87,12 +87,46 @@ export function ChatInput({
   };
 
   const hasText = message.trim().length > 0;
+  const hasContent = hasText || files.length > 0;
 
   return (
     <div className={cn("w-full", !isEmptyState && "border-t border-border/50 bg-background p-6")}>
       <div className={cn(!isEmptyState && "mx-auto max-w-4xl")}>
         <div className="relative rounded-3xl border border-border/50 bg-surface shadow-lg">
-          <div className="flex items-end gap-2 p-3">
+          {/* Top row - Text input full width */}
+          <div className="px-4 pt-4">
+            {files.length > 0 && (
+              <div className="mb-2 flex flex-wrap gap-2">
+                {files.map((file, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center gap-2 rounded-full bg-accent/10 px-3 py-1 text-xs text-foreground"
+                  >
+                    <Plus className="h-3 w-3" />
+                    <span className="max-w-[200px] truncate">{file.name}</span>
+                    <button
+                      onClick={() => setFiles(files.filter((_, i) => i !== index))}
+                      className="text-muted-foreground hover:text-foreground"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <Textarea
+              ref={textareaRef}
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Enter a prompt"
+              className="min-h-[48px] max-h-[200px] resize-none border-0 bg-transparent px-0 py-0 text-base focus-visible:ring-0 placeholder:text-muted-foreground"
+              disabled={disabled}
+            />
+          </div>
+
+          {/* Bottom row - All buttons */}
+          <div className="flex items-center justify-between px-3 pb-3 pt-2">
             {/* Left controls */}
             <div className="flex items-center gap-1">
               <Button
@@ -119,38 +153,6 @@ export function ChatInput({
               />
             </div>
 
-            {/* Center input */}
-            <div className="flex-1">
-              {files.length > 0 && (
-                <div className="mb-2 flex flex-wrap gap-2 px-2">
-                  {files.map((file, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center gap-2 rounded-full bg-accent/10 px-3 py-1 text-xs text-foreground"
-                    >
-                      <Plus className="h-3 w-3" />
-                      <span className="max-w-[200px] truncate">{file.name}</span>
-                      <button
-                        onClick={() => setFiles(files.filter((_, i) => i !== index))}
-                        className="text-muted-foreground hover:text-foreground"
-                      >
-                        ×
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <Textarea
-                ref={textareaRef}
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Enter a prompt"
-                className="min-h-[48px] max-h-[200px] resize-none border-0 bg-transparent px-4 py-3 text-base focus-visible:ring-0 placeholder:text-muted-foreground"
-                disabled={disabled}
-              />
-            </div>
-
             {/* Right controls */}
             <div className="flex items-center gap-1">
               <ModelThinkingSelector
@@ -159,21 +161,13 @@ export function ChatInput({
                 extendedThinking={extendedThinking}
                 onToggleExtendedThinking={onToggleExtendedThinking}
               />
-              {!hasText && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-10 w-10 shrink-0 rounded-full hover:bg-surface-hover"
-                  disabled={disabled}
-                >
-                  <Mic className="h-5 w-5 text-muted-foreground" />
-                </Button>
-              )}
               <Button
                 size="icon"
                 className={cn(
-                  "h-10 w-10 shrink-0 rounded-full",
-                  message.trim() ? "bg-accent text-accent-foreground hover:bg-accent-hover" : "opacity-50"
+                  "h-10 w-10 shrink-0 rounded-full transition-all",
+                  hasContent 
+                    ? "bg-accent text-accent-foreground hover:bg-accent-hover shadow-lg" 
+                    : "bg-surface-hover text-muted-foreground"
                 )}
                 onClick={handleSend}
                 disabled={!message.trim() || disabled}
