@@ -29,10 +29,7 @@ export function ProjectSelector({
         {/* Tools button */}
         <Tooltip>
           <TooltipTrigger asChild>
-            <button 
-              onClick={() => setOpen(!open)} 
-              className="h-8 min-w-8 px-1.5 rounded-lg border border-border/30 flex items-center justify-center text-muted-foreground hover:text-accent transition-colors"
-            >
+            <button onClick={() => setOpen(!open)} className="h-8 min-w-8 px-1.5 rounded-lg border border-border/30 flex items-center justify-center text-muted-foreground hover:text-accent transition-colors">
               <Zap className="h-4 w-4" />
             </button>
           </TooltipTrigger>
@@ -55,12 +52,12 @@ export function ProjectSelector({
         {/* Dropdown menu */}
         {open && <div className="absolute bottom-full left-0 mb-2 w-64 rounded-xl border border-border bg-popover shadow-xl z-50">
             <div className="p-1.5">
-              <div className="mb-0.5 px-2 py-1 text-xs font-medium text-muted-foreground">Tools</div>
+              <div className="mb-0.5 px-2 py-1 text-xs font-medium text-accent">Tools</div>
               <div className="max-h-80 overflow-y-auto">
                 {projects.map(project => <button key={project.id} onClick={() => {
-            onChange(project);
-            setOpen(false);
-          }} className={cn("flex w-full items-center rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-surface-hover", selected?.id === project.id && "bg-surface-hover")}>
+              onChange(project);
+              setOpen(false);
+            }} className={cn("flex w-full items-center rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-surface-hover", selected?.id === project.id && "bg-surface-hover")}>
                     <span className="text-xs text-muted-foreground">{project.name}</span>
                   </button>)}
               </div>
