@@ -172,8 +172,8 @@ export function ChatInput({
               "relative rounded-2xl border border-transparent transition-all duration-500",
               "shadow-[0_0.25rem_1.25rem_rgba(0,0,0,0.035),0_0_0_0.5px_rgba(128,128,128,0.15)]",
               "hover:shadow-[0_0.25rem_1.25rem_rgba(0,0,0,0.035),0_0_0_0.5px_rgba(128,128,128,0.3)]",
-              isDragging && "border-accent bg-accent/5",
-              isFocused && "animate-shimmer-border shadow-[0_0.25rem_1.25rem_rgba(0,0,0,0.075),0_0_0_0.5px_rgba(128,128,128,0.3)]"
+              "animate-shimmer-border",
+              isDragging && "border-accent bg-accent/5"
             )}
             onDragEnter={handleDragEnter}
             onDragOver={handleDragOver}
