@@ -1,5 +1,5 @@
 import { useState, useRef, KeyboardEvent, useEffect } from "react";
-import { ArrowUp, Plus, Clock, X, FileIcon, Image as ImageIcon } from "lucide-react";
+import { ArrowUp, Plus, Clock, X, FileIcon, Image as ImageIcon, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -80,6 +80,7 @@ export function ChatInput({
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [lineCount, setLineCount] = useState(1);
   const [isFocused, setIsFocused] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -109,14 +110,20 @@ export function ChatInput({
     }
   }, [externalFiles, onExternalFilesProcessed]);
 
-  const handleSend = () => {
-    if (message.trim() && !disabled) {
-      onSendMessage(message, files.length > 0 ? files : undefined);
-      setMessage("");
-      setFiles([]);
-      setIsFullScreen(false);
-      if (textareaRef.current) {
-        textareaRef.current.style.height = "auto";
+  const handleSend = async () => {
+    const hasContent = message.trim() || files.length > 0;
+    if (hasContent && !disabled && !isUploading) {
+      setIsUploading(true);
+      try {
+        await onSendMessage(message, files.length > 0 ? files : undefined);
+        setMessage("");
+        setFiles([]);
+        setIsFullScreen(false);
+        if (textareaRef.current) {
+          textareaRef.current.style.height = "auto";
+        }
+      } finally {
+        setIsUploading(false);
       }
     }
   };
@@ -266,7 +273,7 @@ export function ChatInput({
                 onBlur={() => setIsFocused(false)}
                 placeholder="How can I help you today?" 
                 rows={1} 
-                disabled={disabled} 
+                disabled={disabled || isUploading} 
                 className="min-h-[3rem] max-h-96 resize-none border-0 bg-transparent px-0 py-0 text-sm focus-visible:ring-0 focus-visible:outline-none outline-none ring-0 placeholder:text-sm placeholder:text-muted-foreground overflow-y-auto" 
               />
             </div>
@@ -322,9 +329,13 @@ export function ChatInput({
                       : "bg-primary text-primary-foreground hover:bg-primary/90"
                   )} 
                   onClick={handleSend} 
-                  disabled={!message.trim() || disabled}
+                  disabled={!hasContent || disabled || isUploading}
                 >
-                  <ArrowUp className="h-4 w-4" />
+                  {isUploading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <ArrowUp className="h-4 w-4" />
+                  )}
                 </Button>
               </div>
             </div>
