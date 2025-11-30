@@ -255,7 +255,7 @@ export function ChatInterface({
           {showScrollButton && (
             <button
               onClick={scrollToBottom}
-              className="absolute bottom-32 left-1/2 -translate-x-1/2 h-10 w-10 rounded-full bg-surface border border-border shadow-lg flex items-center justify-center hover:bg-surface-hover transition-all animate-fade-in z-10"
+              className="absolute bottom-44 left-1/2 -translate-x-1/2 h-10 w-10 rounded-full bg-surface border border-border shadow-lg flex items-center justify-center hover:bg-surface-hover transition-all animate-fade-in z-10"
             >
               <ArrowDown className="h-5 w-5 text-muted-foreground" />
             </button>
