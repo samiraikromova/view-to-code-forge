@@ -39,7 +39,7 @@ const Index = () => {
   // Learn mode state
   const [lessonId, setLessonId] = useState<string | null>(null);
   const [contentType, setContentType] = useState<"recordings" | "materials">("materials");
-  const [modules] = useState<Module[]>([
+  const [modules, setModules] = useState<Module[]>([
     {
       id: "module-1",
       title: "Getting Started",
@@ -87,6 +87,17 @@ const Index = () => {
     setChatId(newChatId);
   };
 
+  const handleToggleLessonComplete = (lessonId: string) => {
+    setModules(modules.map(module => ({
+      ...module,
+      lessons: module.lessons.map(lesson =>
+        lesson.id === lessonId
+          ? { ...lesson, completed: !lesson.completed }
+          : lesson
+      ),
+    })));
+  };
+
   return (
     <div className="flex h-screen overflow-hidden bg-background">
       {mode === "chat" ? (
@@ -120,6 +131,7 @@ const Index = () => {
             onCollapsedChange={setLearnSidebarCollapsed}
             mode={mode}
             onModeChange={setMode}
+            onToggleLessonComplete={handleToggleLessonComplete}
           />
           <LearnInterface
             lessonId={lessonId}
