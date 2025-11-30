@@ -1,5 +1,5 @@
 import { useState, useRef, KeyboardEvent, useEffect } from "react";
-import { ArrowUp, Plus, Clock } from "lucide-react";
+import { ArrowUp, Plus, Clock, X, FileIcon, Image as ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -7,7 +7,6 @@ import { cn } from "@/lib/utils";
 import { Project } from "./ChatHeader";
 import { ProjectSelector } from "./ProjectSelector";
 import { ModelThinkingSelector } from "./ModelThinkingSelector";
-import { FilePreviewModal } from "./FilePreviewModal";
 const mockProjects: Project[] = [{
   id: "cb4",
   name: "CB4",
@@ -80,11 +79,12 @@ export function ChatInput({
   const [isDragging, setIsDragging] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [lineCount, setLineCount] = useState(1);
-  const [showFilePreview, setShowFilePreview] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const MAX_FILES = 5;
 
   // Randomize glow animation on mount
   useEffect(() => {
@@ -101,7 +101,10 @@ export function ChatInput({
   // Handle external files from global drag and drop
   useEffect(() => {
     if (externalFiles.length > 0) {
-      setFiles(prev => [...prev, ...externalFiles]);
+      setFiles(prev => {
+        const newFiles = [...prev, ...externalFiles];
+        return newFiles.slice(0, MAX_FILES);
+      });
       onExternalFilesProcessed?.();
     }
   }, [externalFiles, onExternalFilesProcessed]);
@@ -152,7 +155,8 @@ export function ChatInput({
     setIsDragging(false);
     const droppedFiles = Array.from(e.dataTransfer.files);
     if (droppedFiles.length > 0) {
-      setFiles([...files, ...droppedFiles]);
+      const newFiles = [...files, ...droppedFiles];
+      setFiles(newFiles.slice(0, MAX_FILES));
     }
   };
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -163,23 +167,23 @@ export function ChatInput({
   };
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
-      setFiles([...files, ...Array.from(e.target.files)]);
+      const newFiles = [...files, ...Array.from(e.target.files)];
+      setFiles(newFiles.slice(0, MAX_FILES));
     }
   };
   const handleRemoveFile = (index: number) => {
     setFiles(files.filter((_, i) => i !== index));
   };
-  const handleReorderFile = (fromIndex: number, toIndex: number) => {
-    const newFiles = [...files];
-    const [removed] = newFiles.splice(fromIndex, 1);
-    newFiles.splice(toIndex, 0, removed);
-    setFiles(newFiles);
+
+  const getFileExtension = (filename: string) => {
+    const ext = filename.split('.').pop()?.toUpperCase();
+    return ext || 'FILE';
   };
+
+  const isImage = (file: File) => file.type.startsWith('image/');
   const hasText = message.trim().length > 0;
   const hasContent = hasText || files.length > 0;
   return <>
-      <FilePreviewModal files={files} open={showFilePreview} onOpenChange={setShowFilePreview} onRemove={handleRemoveFile} onReorder={handleReorderFile} />
-      
       <div className={cn("w-full", !isEmptyState && "bg-background p-6", isFullScreen && "fixed inset-0 z-50 flex items-center justify-center bg-background/95 backdrop-blur-sm p-6")}>
         <div className={cn(!isEmptyState && !isFullScreen && "mx-auto max-w-[720px]", isFullScreen && "w-full max-w-[720px]")}>
           <div 
@@ -197,13 +201,58 @@ export function ChatInput({
           >
           {/* Content wrapper with m-3.5 padding and gap-3.5 */}
           <div className="m-3.5 flex flex-col gap-3.5">
+            {/* File attachments */}
+            {files.length > 0 && (
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {files.map((file, index) => (
+                  <div
+                    key={index}
+                    className="relative flex-shrink-0 w-[180px] rounded-xl border border-border bg-surface hover:bg-surface-hover transition-colors p-3 group"
+                  >
+                    {/* Remove button */}
+                    <button
+                      onClick={() => handleRemoveFile(index)}
+                      className="absolute -top-2 -right-2 h-6 w-6 rounded-full bg-background border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-surface transition-colors z-10 shadow-sm"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+
+                    {/* File preview */}
+                    <div className="flex flex-col gap-2">
+                      {isImage(file) ? (
+                        <div className="aspect-video rounded-lg bg-surface-hover flex items-center justify-center overflow-hidden">
+                          <img
+                            src={URL.createObjectURL(file)}
+                            alt={file.name}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                      ) : (
+                        <div className="aspect-video rounded-lg bg-surface-hover flex items-center justify-center">
+                          <FileIcon className="h-10 w-10 text-muted-foreground" />
+                        </div>
+                      )}
+                      
+                      {/* File info */}
+                      <div className="space-y-1">
+                        <p className="text-xs font-medium text-foreground truncate" title={file.name}>
+                          {file.name}
+                        </p>
+                        <div className="flex items-center justify-between">
+                          <span className="inline-block px-2 py-0.5 rounded text-[10px] font-medium bg-surface-hover text-muted-foreground border border-border/50">
+                            {getFileExtension(file.name)}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
             {/* Text input area */}
             <div className="relative">
-              {files.length > 0 && <button onClick={() => setShowFilePreview(true)} className="mb-2 flex items-center gap-2 rounded-full bg-accent/10 px-3 py-1 text-xs text-foreground hover:bg-accent/20 transition-colors">
-                  <Plus className="h-3 w-3" />
-                  <span>{files.length} file{files.length > 1 ? 's' : ''} attached</span>
-                </button>}
-              <Textarea 
+              <Textarea
                 ref={textareaRef} 
                 value={message} 
                 onChange={e => setMessage(e.target.value)} 
@@ -223,9 +272,12 @@ export function ChatInput({
               <TooltipProvider delayDuration={300}>
                 <div className="flex items-center gap-2">
                   <button 
-                    className="h-8 min-w-8 px-1.5 rounded-lg border border-border/30 flex items-center justify-center text-muted-foreground hover:bg-surface-hover hover:text-foreground transition-colors" 
+                    className={cn(
+                      "h-8 min-w-8 px-1.5 rounded-lg border border-border/30 flex items-center justify-center text-muted-foreground hover:bg-surface-hover hover:text-foreground transition-colors",
+                      files.length >= MAX_FILES && "opacity-50 cursor-not-allowed"
+                    )}
                     onClick={() => fileInputRef.current?.click()} 
-                    disabled={disabled}
+                    disabled={disabled || files.length >= MAX_FILES}
                   >
                     <Plus className="h-4 w-4" />
                   </button>
