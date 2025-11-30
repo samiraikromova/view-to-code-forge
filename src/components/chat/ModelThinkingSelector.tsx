@@ -51,9 +51,9 @@ export function ModelThinkingSelector({
       </button>
 
       {open && (
-        <div className="absolute bottom-full right-0 mb-2 w-64 rounded-2xl border border-border bg-popover shadow-xl z-50">
-          <div className="p-2">
-            <div className="mb-1 px-2 text-xs font-medium text-muted-foreground">Models</div>
+        <div className="absolute bottom-full right-0 mb-2 w-56 rounded-xl border border-border bg-popover shadow-xl z-50">
+          <div className="p-1.5">
+            <div className="mb-0.5 px-2 py-1 text-xs font-medium text-muted-foreground">Models</div>
             {models.map((model) => (
               <button
                 key={model.id}
@@ -62,7 +62,7 @@ export function ModelThinkingSelector({
                   setOpen(false);
                 }}
                 className={cn(
-                  "flex w-full flex-col rounded-xl px-3 py-2 text-left transition-colors hover:bg-surface-hover",
+                  "flex w-full flex-col rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-surface-hover",
                   selectedModel === model.id && "bg-surface-hover"
                 )}
               >

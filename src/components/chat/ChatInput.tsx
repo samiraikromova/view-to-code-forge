@@ -2,6 +2,7 @@ import { useState, useRef, KeyboardEvent, useEffect } from "react";
 import { ArrowUp, Plus, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { Project } from "./ChatHeader";
 import { ProjectSelector } from "./ProjectSelector";
@@ -219,27 +220,38 @@ export function ChatInput({
             {/* Bottom row - All buttons */}
             <div className="flex items-center justify-between h-8">
               {/* Left controls */}
-              <div className="flex items-center gap-2">
-                <button 
-                  className="h-8 min-w-8 px-1.5 rounded-lg border border-border/30 flex items-center justify-center text-muted-foreground hover:bg-surface-hover hover:text-foreground transition-colors" 
-                  onClick={() => fileInputRef.current?.click()} 
-                  disabled={disabled}
-                >
-                  <Plus className="h-4 w-4" />
-                </button>
-                <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileSelect} accept="*/*" />
-                <ProjectSelector projects={mockProjects} selected={selectedProject} onChange={onSelectProject} />
-                <button 
-                  className={cn(
-                    "h-8 min-w-8 px-1.5 rounded-lg border border-border/30 flex items-center justify-center transition-colors hover:bg-surface-hover",
-                    extendedThinking ? "text-accent" : "text-muted-foreground"
-                  )} 
-                  onClick={onToggleExtendedThinking} 
-                  disabled={disabled}
-                >
-                  <Clock className="h-4 w-4" />
-                </button>
-              </div>
+              <TooltipProvider delayDuration={300}>
+                <div className="flex items-center gap-2">
+                  <button 
+                    className="h-8 min-w-8 px-1.5 rounded-lg border border-border/30 flex items-center justify-center text-muted-foreground hover:bg-surface-hover hover:text-foreground transition-colors" 
+                    onClick={() => fileInputRef.current?.click()} 
+                    disabled={disabled}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
+                  <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileSelect} accept="*/*" />
+                  
+                  <ProjectSelector projects={mockProjects} selected={selectedProject} onChange={onSelectProject} />
+                  
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button 
+                        className={cn(
+                          "h-8 min-w-8 px-1.5 rounded-lg border border-border/30 flex items-center justify-center transition-colors",
+                          extendedThinking ? "text-accent hover:text-accent" : "text-muted-foreground hover:text-accent"
+                        )} 
+                        onClick={onToggleExtendedThinking} 
+                        disabled={disabled}
+                      >
+                        <Clock className="h-4 w-4" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Extended thinking</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+              </TooltipProvider>
 
               {/* Right controls */}
               <div className="flex items-center gap-2">

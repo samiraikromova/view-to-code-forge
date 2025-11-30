@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { MessageList } from "./MessageList";
 import { ChatInput } from "./ChatInput";
 import { Project } from "./ChatHeader";
-import { FileText, X } from "lucide-react";
+import { FileText, X, ArrowDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 const mockProjects: Project[] = [{
   id: "cb4",
@@ -90,7 +90,9 @@ export function ChatInterface({
   const [isDraggingGlobal, setIsDraggingGlobal] = useState(false);
   const [dragCounter, setDragCounter] = useState(0);
   const [externalFiles, setExternalFiles] = useState<File[]>([]);
+  const [showScrollButton, setShowScrollButton] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (chatId && mockMessages[chatId]) {
       setMessages(mockMessages[chatId]);
@@ -103,6 +105,25 @@ export function ChatInterface({
       behavior: "smooth"
     });
   }, [messages]);
+
+  // Handle scroll to show/hide scroll-to-bottom button
+  useEffect(() => {
+    const container = messagesContainerRef.current;
+    if (!container) return;
+
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = container;
+      const isScrolledUp = scrollHeight - scrollTop - clientHeight > 100;
+      setShowScrollButton(isScrolledUp);
+    };
+
+    container.addEventListener("scroll", handleScroll);
+    return () => container.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
 
   // Global drag and drop handlers
   useEffect(() => {
@@ -216,9 +237,22 @@ export function ChatInterface({
                 <span className="text-xs">{project.name}</span>
               </button>)}
           </div>
-        </div> : <div className="flex flex-1 flex-col min-h-0 overflow-hidden animate-fade-in">
-          <MessageList messages={messages} isStreaming={isStreaming} />
-          <div ref={messagesEndRef} />
+        </div> : <div className="flex flex-1 flex-col min-h-0 overflow-hidden animate-fade-in relative">
+          <div ref={messagesContainerRef} className="flex-1 overflow-y-auto">
+            <MessageList messages={messages} isStreaming={isStreaming} />
+            <div ref={messagesEndRef} />
+          </div>
+          
+          {/* Scroll to bottom button */}
+          {showScrollButton && (
+            <button
+              onClick={scrollToBottom}
+              className="absolute bottom-24 right-6 h-10 w-10 rounded-full bg-surface border border-border shadow-lg flex items-center justify-center hover:bg-surface-hover transition-all animate-fade-in"
+            >
+              <ArrowDown className="h-5 w-5 text-muted-foreground" />
+            </button>
+          )}
+
           <div className="shrink-0 transition-all duration-500 ease-out">
             <ChatInput onSendMessage={handleSendMessage} disabled={isStreaming} selectedProject={selectedProject} onSelectProject={handleSelectProject} selectedModel={selectedModel} onSelectModel={setSelectedModel} extendedThinking={extendedThinking} onToggleExtendedThinking={() => setExtendedThinking(!extendedThinking)} externalFiles={externalFiles} onExternalFilesProcessed={() => setExternalFiles([])} />
           </div>
