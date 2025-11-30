@@ -67,7 +67,7 @@ export const LearnSidebar = ({
       )}
     >
       {/* Header */}
-      <div className="flex items-center justify-center gap-2 border-b border-border p-3 relative">
+      <div className="relative flex items-center justify-center gap-2 border-b border-border p-3">
         {!isCollapsed && (
           <>
             <Dialog open={searchOpen} onOpenChange={setSearchOpen}>
