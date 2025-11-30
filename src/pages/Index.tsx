@@ -42,29 +42,40 @@ const Index = () => {
   const [modules, setModules] = useState<Module[]>([
     {
       id: "module-1",
-      title: "Getting Started",
+      title: "December 2025",
       lessons: [
-        { id: "lesson-1", moduleId: "module-1", title: "Introduction to the Platform", duration: "5:30", completed: true },
-        { id: "lesson-2", moduleId: "module-1", title: "Setting Up Your Workspace", duration: "8:45", completed: false },
-        { id: "lesson-3", moduleId: "module-1", title: "Understanding the Interface", duration: "12:20", completed: false },
+        { id: "lesson-1", moduleId: "module-1", title: "Dec 15 - Q4 Strategy Review", duration: "45:20", completed: false, description: "Discussed Q4 performance metrics and 2026 planning" },
+        { id: "lesson-2", moduleId: "module-1", title: "Dec 8 - Product Roadmap Update", duration: "38:15", completed: false, description: "Review of upcoming features and customer feedback integration" },
+        { id: "lesson-3", moduleId: "module-1", title: "Dec 1 - Team Alignment Call", duration: "52:30", completed: false, description: "Cross-functional sync on project priorities and timelines" },
       ],
     },
     {
       id: "module-2",
-      title: "Core Concepts",
+      title: "November 2025",
       lessons: [
-        { id: "lesson-4", moduleId: "module-2", title: "Working with Projects", duration: "15:10", completed: false },
-        { id: "lesson-5", moduleId: "module-2", title: "Advanced Features", duration: "18:30", completed: false },
-        { id: "lesson-6", moduleId: "module-2", title: "Collaboration Tools", duration: "10:45", completed: false },
+        { id: "lesson-4", moduleId: "module-2", title: "Nov 24 - Customer Success Review", duration: "41:10", completed: false, description: "Analysis of customer satisfaction scores and support tickets" },
+        { id: "lesson-5", moduleId: "module-2", title: "Nov 17 - Marketing Campaign Results", duration: "35:45", completed: false, description: "Performance review of recent campaigns and ROI analysis" },
+        { id: "lesson-6", moduleId: "module-2", title: "Nov 10 - Technical Architecture Discussion", duration: "48:30", completed: false, description: "Infrastructure improvements and scalability planning" },
+        { id: "lesson-7", moduleId: "module-2", title: "Nov 3 - Sales Pipeline Review", duration: "43:20", completed: false, description: "Current deals status and forecast for end of quarter" },
       ],
     },
     {
       id: "module-3",
-      title: "Advanced Topics",
+      title: "October 2025",
       lessons: [
-        { id: "lesson-7", moduleId: "module-3", title: "Automation & Workflows", duration: "22:15", completed: false },
-        { id: "lesson-8", moduleId: "module-3", title: "Integration Strategies", duration: "14:50", completed: false },
-        { id: "lesson-9", moduleId: "module-3", title: "Best Practices", duration: "16:30", completed: false },
+        { id: "lesson-8", moduleId: "module-3", title: "Oct 27 - Quarterly Business Review", duration: "58:15", completed: false, description: "Comprehensive Q3 analysis and key learnings" },
+        { id: "lesson-9", moduleId: "module-3", title: "Oct 20 - Product Launch Debrief", duration: "44:50", completed: false, description: "Post-launch metrics and customer adoption patterns" },
+        { id: "lesson-10", moduleId: "module-3", title: "Oct 13 - Team Retrospective", duration: "39:30", completed: false, description: "Process improvements and team collaboration feedback" },
+      ],
+    },
+    {
+      id: "module-4",
+      title: "September 2025",
+      lessons: [
+        { id: "lesson-11", moduleId: "module-4", title: "Sep 29 - Budget Planning Session", duration: "51:40", completed: false, description: "2026 budget allocation and department requests" },
+        { id: "lesson-12", moduleId: "module-4", title: "Sep 22 - Competitive Analysis", duration: "46:25", completed: false, description: "Market positioning and competitor feature comparison" },
+        { id: "lesson-13", moduleId: "module-4", title: "Sep 15 - Onboarding Process Review", duration: "37:55", completed: false, description: "Improvements to new customer onboarding experience" },
+        { id: "lesson-14", moduleId: "module-4", title: "Sep 8 - Security Audit Findings", duration: "42:10", completed: false, description: "Review of security assessment and action items" },
       ],
     },
   ]);

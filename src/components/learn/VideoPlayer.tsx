@@ -36,8 +36,7 @@ export const VideoPlayer = ({ lesson }: VideoPlayerProps) => {
 
         <div className="prose prose-sm max-w-none">
           <p className="text-muted-foreground">
-            This is a placeholder for the lesson description and additional materials.
-            You can add transcripts, notes, resources, and other content here.
+            {lesson.description || "This is a placeholder for the lesson description and additional materials. You can add transcripts, notes, resources, and other content here."}
           </p>
         </div>
       </div>

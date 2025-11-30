@@ -26,6 +26,7 @@ export interface Lesson {
   title: string;
   duration: string;
   completed?: boolean;
+  description?: string;
 }
 
 interface LearnSidebarProps {
