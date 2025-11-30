@@ -79,7 +79,7 @@ export function Sidebar({
   };
   return <div className={cn("flex h-full flex-col border-r border-border bg-surface transition-all duration-300 flex-shrink-0", isCollapsed ? "w-14" : "w-64")}>
       {/* Header */}
-      <div className="flex items-center justify-center gap-2 border-b border-border/50 px-4 py-3">
+      <div className="relative flex items-center justify-center gap-2 border-b border-border/50 px-4 py-3">
         {!isCollapsed ? <>
           <Button variant="ghost" size="icon" onClick={() => setIsSearchModalOpen(true)} className="h-8 w-8 text-muted-foreground hover:bg-surface-hover absolute left-4">
             <Search className="h-5 w-5" />
