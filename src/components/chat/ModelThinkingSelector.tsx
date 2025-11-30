@@ -17,7 +17,7 @@ const models: Model[] = [{
 }, {
   id: "claude-haiku-4",
   name: "Haiku 4.5",
-  description: "Fastest"
+  description: "Fastest for quick answers"
 }];
 interface ModelThinkingSelectorProps {
   selectedModel: string;
