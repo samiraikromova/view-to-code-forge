@@ -40,7 +40,7 @@ export function ProjectSelector({
               {selected && <button onClick={e => {
                 e.stopPropagation();
                 onChange(null);
-              }} className="ml-0.5 rounded-full p-0.5 transition-colors hover:bg-surface-hover">
+              }} className="ml-0.5 rounded-full p-0.5 transition-all hover:bg-surface-hover hover:scale-110">
                 <X className="h-3 w-3" />
               </button>}
             </button>
@@ -51,7 +51,7 @@ export function ProjectSelector({
         </Tooltip>
 
         {/* Dropdown menu */}
-        {open && <div className="absolute bottom-full left-0 mb-2 w-64 rounded-xl border border-border bg-popover shadow-xl z-50">
+        {open && <div className="absolute bottom-full left-0 mb-2 w-64 rounded-xl border border-border bg-popover shadow-xl z-50 animate-in slide-in-from-bottom-2 fade-in duration-200">
             <div className="p-1.5">
               
               <div className="max-h-80 overflow-y-auto">
