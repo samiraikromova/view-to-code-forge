@@ -113,13 +113,15 @@ export function ChatInterface({
 
     const handleScroll = () => {
       const { scrollTop, scrollHeight, clientHeight } = container;
-      const isScrolledUp = scrollHeight - scrollTop - clientHeight > 100;
+      const isScrolledUp = scrollHeight - scrollTop - clientHeight > 50;
       setShowScrollButton(isScrolledUp);
     };
 
     container.addEventListener("scroll", handleScroll);
+    // Check initial state
+    handleScroll();
     return () => container.removeEventListener("scroll", handleScroll);
-  }, []);
+  }, [messages]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -252,14 +254,15 @@ export function ChatInterface({
           </div>
           
           {/* Scroll to bottom button */}
-          {showScrollButton && (
-            <button
-              onClick={scrollToBottom}
-              className="absolute bottom-44 left-1/2 -translate-x-1/2 h-10 w-10 rounded-full bg-surface border border-border shadow-lg flex items-center justify-center hover:bg-surface-hover transition-all animate-fade-in z-10"
-            >
-              <ArrowDown className="h-5 w-5 text-muted-foreground" />
-            </button>
-          )}
+          <button
+            onClick={scrollToBottom}
+            className={cn(
+              "absolute bottom-44 left-1/2 -translate-x-1/2 h-10 w-10 rounded-full bg-surface border border-border shadow-lg flex items-center justify-center hover:bg-surface-hover transition-all duration-300 z-10",
+              showScrollButton ? "opacity-100 pointer-events-auto" : "opacity-0 pointer-events-none"
+            )}
+          >
+            <ArrowDown className="h-5 w-5 text-muted-foreground" />
+          </button>
 
           <div className="shrink-0 transition-all duration-500 ease-out">
             <ChatInput onSendMessage={handleSendMessage} disabled={isStreaming} selectedProject={selectedProject} onSelectProject={handleSelectProject} selectedModel={selectedModel} onSelectModel={setSelectedModel} extendedThinking={extendedThinking} onToggleExtendedThinking={() => setExtendedThinking(!extendedThinking)} externalFiles={externalFiles} onExternalFilesProcessed={() => setExternalFiles([])} />
