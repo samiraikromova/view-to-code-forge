@@ -52,7 +52,7 @@ export function ProjectSelector({
         {/* Dropdown menu */}
         {open && <div className="absolute bottom-full left-0 mb-2 w-64 rounded-xl border border-border bg-popover shadow-xl z-50">
             <div className="p-1.5">
-              <div className="mb-0.5 px-2 py-1 text-xs font-medium text-accent">Tools</div>
+              
               <div className="max-h-80 overflow-y-auto">
                 {projects.map(project => <button key={project.id} onClick={() => {
               onChange(project);
