@@ -14,26 +14,17 @@ interface SidebarProps {
   currentChatId: string | null;
   onChatSelect: (chatId: string) => void;
   onNewChat: () => void;
+  chats: Chat[];
+  setChats: (chats: Chat[]) => void;
 }
 export function Sidebar({
   currentChatId,
   onChatSelect,
-  onNewChat
+  onNewChat,
+  chats,
+  setChats
 }: SidebarProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [chats, setChats] = useState<Chat[]>([{
-    id: "1",
-    title: "Marketing campaign ideas",
-    starred: false
-  }, {
-    id: "2",
-    title: "Video script review",
-    starred: false
-  }, {
-    id: "3",
-    title: "Product description help",
-    starred: false
-  }]);
   const [editingChatId, setEditingChatId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const [searchQuery, setSearchQuery] = useState("");

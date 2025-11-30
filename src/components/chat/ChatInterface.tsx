@@ -54,6 +54,7 @@ interface Message {
 interface ChatInterfaceProps {
   chatId: string | null;
   onNewChat: () => void;
+  onCreateChat: (firstMessage: string) => void;
 }
 const mockMessages: Record<string, Message[]> = {
   "1": [{
@@ -80,7 +81,8 @@ const mockMessages: Record<string, Message[]> = {
 };
 export function ChatInterface({
   chatId,
-  onNewChat
+  onNewChat,
+  onCreateChat
 }: ChatInterfaceProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
@@ -183,6 +185,11 @@ export function ChatInterface({
     setSelectedProject(project);
   };
   const handleSendMessage = async (content: string, files?: File[]) => {
+    // If this is a new chat (no chatId), create it
+    if (!chatId && messages.length === 0) {
+      onCreateChat(content);
+    }
+
     const newMessage: Message = {
       id: Date.now().toString(),
       role: "user",
