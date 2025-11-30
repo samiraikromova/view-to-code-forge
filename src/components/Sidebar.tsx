@@ -226,7 +226,7 @@ export function Sidebar({
                     if (e.key === "Enter") saveChatRename(chat.id);
                     if (e.key === "Escape") cancelChatRename();
                   }} onBlur={() => saveChatRename(chat.id)} className="flex-1 rounded bg-surface px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-accent" autoFocus /> : <>
-                            <Button variant="ghost" size="sm" onClick={() => onChatSelect(chat.id)} className={cn("flex-1 justify-start truncate text-xs", currentChatId === chat.id ? "bg-accent/10 text-accent hover:bg-accent/20" : "text-muted-foreground hover:text-foreground hover:bg-surface-hover")}>
+                            <Button variant="ghost" size="sm" onClick={() => onChatSelect(chat.id)} className={cn("flex-1 justify-start truncate text-xs", currentChatId === chat.id ? "bg-accent/10 text-accent hover:bg-accent/20" : "text-muted-foreground")}>
                               {chat.starred && <Star className="mr-1 h-3 w-3 fill-accent text-accent" />}
                               {chat.title}
                             </Button>
@@ -279,7 +279,7 @@ export function Sidebar({
               if (e.key === "Enter") saveChatRename(chat.id);
               if (e.key === "Escape") cancelChatRename();
             }} onBlur={() => saveChatRename(chat.id)} className="flex-1 rounded bg-surface px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-accent" autoFocus /> : <>
-                    <Button variant="ghost" size="sm" onClick={() => onChatSelect(chat.id)} className={cn("flex-1 justify-start truncate text-xs", currentChatId === chat.id ? "bg-accent/10 text-accent hover:bg-accent/20" : "text-muted-foreground hover:text-foreground hover:bg-surface-hover")}>
+                    <Button variant="ghost" size="sm" onClick={() => onChatSelect(chat.id)} className={cn("flex-1 justify-start truncate text-xs", currentChatId === chat.id ? "bg-accent/10 text-accent hover:bg-accent/20" : "text-muted-foreground")}>
                       <Star className="mr-1 h-3 w-3 fill-accent text-accent" />
                       {chat.title}
                     </Button>
@@ -332,7 +332,7 @@ export function Sidebar({
               if (e.key === "Enter") saveChatRename(chat.id);
               if (e.key === "Escape") cancelChatRename();
             }} onBlur={() => saveChatRename(chat.id)} className="flex-1 rounded bg-surface px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-accent" autoFocus /> : <>
-                    <Button variant="ghost" size="sm" onClick={() => onChatSelect(chat.id)} className={cn("flex-1 justify-start truncate text-xs", currentChatId === chat.id ? "bg-accent/10 text-accent hover:bg-accent/20" : "text-muted-foreground hover:text-foreground")}>
+                    <Button variant="ghost" size="sm" onClick={() => onChatSelect(chat.id)} className={cn("flex-1 justify-start truncate text-xs", currentChatId === chat.id ? "bg-accent/10 text-accent hover:bg-accent/20" : "text-muted-foreground")}>
                       {chat.title}
                     </Button>
                   <DropdownMenu>
