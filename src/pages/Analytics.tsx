@@ -170,17 +170,20 @@ export default function Analytics() {
                       cx="50%"
                       cy="50%"
                       labelLine={false}
-                      label={({ name, percentage }) => `${percentage}%`}
+                      label={({ percentage }) => `${percentage}%`}
                       outerRadius={100}
                       fill="hsl(var(--primary))"
                       dataKey="cost"
+                      nameKey="project"
                     >
                       {projectCostData.map((entry, index) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
                     <ChartTooltip content={<ChartTooltipContent />} />
-                    <Legend />
+                    <Legend 
+                      formatter={(value: string) => <span className="text-sm text-foreground">{value}</span>}
+                    />
                   </PieChart>
                 </ResponsiveContainer>
               </ChartContainer>

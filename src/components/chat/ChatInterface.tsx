@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { MessageList } from "./MessageList";
 import { ChatInput } from "./ChatInput";
 import { Project } from "./ChatHeader";
@@ -110,6 +111,7 @@ export function ChatInterface({
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
   
   // Get current chat's files
   const currentFiles = chatId ? (chatFiles[chatId] || []) : externalFiles;
@@ -224,7 +226,7 @@ export function ChatInterface({
   const handleSelectProject = (project: Project | null) => {
     // Check if user is trying to select a premium project without Pro tier
     if (project?.isPremium && userTier !== "pro") {
-      setShowUpgradeDialog(true);
+      navigate("/settings");
       return;
     }
     setSelectedProject(project);
@@ -404,15 +406,15 @@ export function ChatInterface({
           <div style={{
         animationDelay: '0.2s'
       }} className="mt-8 flex flex-wrap max-w-xl animate-fade-in justify-center mx-0 gap-[6px] px-[8px]">
-            {mockProjects.map(project => <button key={project.id} onClick={() => setSelectedProject(project)} className={cn(
+            {mockProjects.map(project => <button key={project.id} onClick={() => handleSelectProject(project)} className={cn(
                 "flex items-center justify-center text-center rounded-lg border px-3 py-2 transition-all duration-200 whitespace-nowrap",
                 selectedProject?.id === project.id 
                   ? "border-accent bg-accent/10 text-muted-foreground"
-                  : project.isPremium
+                  : (project.isPremium && userTier !== "pro")
                     ? "border-primary/50 bg-primary/20 text-primary-foreground/80"
                     : "border-border/30 bg-surface/50 hover:bg-surface-hover text-muted-foreground"
               )}>
-                {project.isPremium && <Lock className="h-3 w-3 mr-1.5" />}
+                {project.isPremium && userTier !== "pro" && <Lock className="h-3 w-3 mr-1.5" />}
                 <span className="text-xs">{project.name}</span>
               </button>)}
           </div>

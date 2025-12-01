@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Check, Sparkles } from "lucide-react";
 import { PLANS, SubscriptionTier } from "@/types/subscription";
 import { Badge } from "@/components/ui/badge";
+import { useNavigate } from "react-router-dom";
 
 interface UpgradeDialogProps {
   open: boolean;
@@ -11,13 +12,13 @@ interface UpgradeDialogProps {
 }
 
 export function UpgradeDialog({ open, onOpenChange, currentTier }: UpgradeDialogProps) {
+  const navigate = useNavigate();
   const starterPlan = PLANS.starter;
   const proPlan = PLANS.pro;
 
   const handleUpgrade = () => {
-    // In a real app, this would navigate to billing/payment
-    console.log("Upgrade to Pro clicked");
     onOpenChange(false);
+    navigate("/settings");
   };
 
   return (

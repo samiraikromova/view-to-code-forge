@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { X, Zap, Lock } from "lucide-react";
 import { Project } from "./ChatHeader";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -21,6 +22,7 @@ export function ProjectSelector({
 }: ProjectSelectorProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (ref.current && !ref.current.contains(e.target as Node)) {
@@ -64,7 +66,7 @@ export function ProjectSelector({
                 {projects.map(project => <button key={project.id} onClick={() => {
               // Check if premium project and user doesn't have Pro tier
               if (project.isPremium && userTier !== "pro") {
-                onUpgradeClick?.();
+                navigate("/settings");
                 setOpen(false);
                 return;
               }
@@ -73,11 +75,11 @@ export function ProjectSelector({
             }} className={cn(
                 "flex w-full items-center gap-1.5 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-surface-hover", 
                 selected?.id === project.id && "bg-surface-hover",
-                project.isPremium && "text-primary-foreground/80"
+                project.isPremium && userTier !== "pro" && "text-primary-foreground/80"
               )}>
-                    {project.isPremium && <Lock className="h-3 w-3" />}
+                    {project.isPremium && userTier !== "pro" && <Lock className="h-3 w-3" />}
                     <span className="text-xs text-muted-foreground">{project.name}</span>
-                    {project.isPremium && <span className="ml-auto text-[10px] text-primary-foreground/60">Pro</span>}
+                    {project.isPremium && userTier !== "pro" && <span className="ml-auto text-[10px] text-primary-foreground/60">Pro</span>}
                   </button>)}
               </div>
             </div>
