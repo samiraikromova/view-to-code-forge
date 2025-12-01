@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { PanelLeft, Plus, CreditCard, User, LogOut, MoreVertical, Star, Search, UserIcon, Sparkles, Trash2, Pencil, X, ChevronUp } from "lucide-react";
+import { PanelLeft, Plus, CreditCard, User, LogOut, MoreVertical, Star, Search, UserIcon, Sparkles, Trash2, Pencil, X, ChevronUp, TrendingUp, Settings } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { ModeSwitcher } from "@/components/ModeSwitcher";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -33,6 +34,7 @@ export function Sidebar({
   mode,
   onModeChange
 }: SidebarProps) {
+  const navigate = useNavigate();
   const [editingChatId, setEditingChatId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -207,6 +209,15 @@ export function Sidebar({
                 <UserIcon className="mr-2 h-4 w-4" />
                 Profile
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate("/analytics")} className="text-muted-foreground">
+                <TrendingUp className="mr-2 h-4 w-4" />
+                Analytics
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate("/settings")} className="text-muted-foreground">
+                <Settings className="mr-2 h-4 w-4" />
+                Settings
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem className="text-muted-foreground">
                 <Sparkles className="mr-2 h-4 w-4" />
                 Upgrade to Pro
@@ -234,6 +245,15 @@ export function Sidebar({
                 <UserIcon className="mr-2 h-4 w-4" />
                 Profile
               </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate("/analytics")} className="text-muted-foreground">
+                <TrendingUp className="mr-2 h-4 w-4" />
+                Analytics
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate("/settings")} className="text-muted-foreground">
+                <Settings className="mr-2 h-4 w-4" />
+                Settings
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuItem className="text-muted-foreground">
                 <Sparkles className="mr-2 h-4 w-4" />
                 Upgrade to Pro
