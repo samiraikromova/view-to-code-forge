@@ -7,6 +7,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 interface Chat {
   id: string;
   title: string;
@@ -35,10 +37,16 @@ export function Sidebar({
   onModeChange
 }: SidebarProps) {
   const navigate = useNavigate();
+  const { user, userProfile, signOut } = useAuth();
   const [editingChatId, setEditingChatId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  
+  const handleSignOut = async () => {
+    await signOut();
+    toast.success("Signed out successfully");
+  };
   const handleRenameChat = (chatId: string) => {
     const chat = chats.find(c => c.id === chatId);
     if (chat) {
@@ -198,8 +206,12 @@ export function Sidebar({
                   <span className="text-sm font-medium">C</span>
                 </div>
                 <div className="flex-1 overflow-hidden text-left">
-                  <p className="truncate text-xs font-medium text-foreground">Cameron</p>
-                  <p className="truncate text-xs text-muted-foreground">50,993 credits</p>
+                  <p className="truncate text-xs font-medium text-foreground">
+                    {user?.email || "Guest"}
+                  </p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {userProfile ? `${userProfile.credits.toLocaleString()} credits` : "Not signed in"}
+                  </p>
                 </div>
                 <ChevronUp className="h-4 w-4 text-muted-foreground flex-shrink-0" />
               </button>
@@ -227,7 +239,7 @@ export function Sidebar({
                 Top up credits
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-destructive focus:text-destructive">
+              <DropdownMenuItem onClick={handleSignOut} className="text-destructive focus:text-destructive">
                 <LogOut className="mr-2 h-4 w-4" />
                 Log out
               </DropdownMenuItem>

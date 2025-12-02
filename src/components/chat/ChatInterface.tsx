@@ -6,6 +6,8 @@ import { Project } from "./ChatHeader";
 import { FileText, X, ArrowDown, Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { UpgradeDialog } from "./UpgradeDialog";
+import { AuthDialog } from "@/components/auth/AuthDialog";
+import { useAuth } from "@/hooks/useAuth";
 import { SubscriptionTier } from "@/types/subscription";
 const mockProjects: Project[] = [{
   id: "cb4",
@@ -109,9 +111,18 @@ export function ChatInterface({
   const [chatMessages, setChatMessages] = useState<Record<string, Message[]>>(mockMessages);
   const [userTier, setUserTier] = useState<SubscriptionTier>("starter");
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
+  const [showAuthDialog, setShowAuthDialog] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
+  const { isAuthenticated, userProfile } = useAuth();
+  
+  // Update user tier from auth profile
+  useEffect(() => {
+    if (userProfile) {
+      setUserTier(userProfile.subscription_tier as SubscriptionTier);
+    }
+  }, [userProfile]);
   
   // Get current chat's files
   const currentFiles = chatId ? (chatFiles[chatId] || []) : externalFiles;
@@ -232,6 +243,12 @@ export function ChatInterface({
     setSelectedProject(project);
   };
   const handleSendMessage = async (content: string, files?: File[]) => {
+    // Check authentication before sending
+    if (!isAuthenticated) {
+      setShowAuthDialog(true);
+      return;
+    }
+    
     const isFirstMessage = messages.length === 0;
     let activeChatId = chatId;
     
@@ -367,6 +384,15 @@ export function ChatInterface({
         open={showUpgradeDialog} 
         onOpenChange={setShowUpgradeDialog}
         currentTier={userTier}
+      />
+
+      {/* Auth Dialog */}
+      <AuthDialog 
+        open={showAuthDialog} 
+        onOpenChange={setShowAuthDialog}
+        onAuthSuccess={() => {
+          setShowAuthDialog(false);
+        }}
       />
 
       {/* Global drag and drop overlay */}
