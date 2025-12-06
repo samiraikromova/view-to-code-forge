@@ -1,8 +1,7 @@
 // n8n webhook service for direct calls from frontend
 // Your n8n webhooks should be configured to accept CORS requests
 
-const N8N_CHAT_WEBHOOK_URL = import.meta.env.VITE_N8N_CHAT_WEBHOOK_URL || 'https://n8n.leveragedcreator.ai/webhook/cb4-chat'
-const N8N_IMAGE_WEBHOOK_URL = import.meta.env.VITE_N8N_IMAGE_WEBHOOK_URL || 'https://n8n.leveragedcreator.ai/webhook/cb4-chat'
+const N8N_WEBHOOK_URL = 'https://n8n.leveragedcreator.ai/webhook/cb4-chat'
 
 export interface ChatPayload {
   message: string
@@ -43,7 +42,7 @@ export interface ImageResponse {
 }
 
 export async function sendChatMessage(payload: ChatPayload): Promise<ChatResponse> {
-  const response = await fetch(N8N_CHAT_WEBHOOK_URL, {
+  const response = await fetch(N8N_WEBHOOK_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
@@ -59,7 +58,7 @@ export async function sendChatMessage(payload: ChatPayload): Promise<ChatRespons
 }
 
 export async function generateImage(payload: ImagePayload): Promise<ImageResponse> {
-  const response = await fetch(N8N_IMAGE_WEBHOOK_URL, {
+  const response = await fetch(N8N_WEBHOOK_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload),
