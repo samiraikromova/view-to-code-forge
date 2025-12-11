@@ -272,11 +272,8 @@ export function ChatInterface({
 
   const handleSendMessage = async (content: string, files?: File[]) => {
     if (!user) {
-      toast({
-        title: "Authentication required",
-        description: "Please log in to send messages",
-        variant: "destructive"
-      });
+      // User should already be logged in from main page
+      console.warn('No user found - should be authenticated');
       return;
     }
 
@@ -509,7 +506,7 @@ export function ChatInterface({
       )}
       {isEmpty ? <div className="flex flex-1 flex-col items-center justify-center px-4 transition-all duration-700 ease-out animate-fade-in">
           <h1 className="mb-16 bg-gradient-to-r from-[hsl(290,30%,55%)] to-[hsl(310,47%,25%)] bg-clip-text text-5xl font-medium text-transparent animate-scale-in">
-            Hello, Cam
+            Hello, {profile?.full_name?.split(' ')[0] || 'there'}
           </h1>
           
           <div className="w-full max-w-2xl transition-all duration-500 ease-out">

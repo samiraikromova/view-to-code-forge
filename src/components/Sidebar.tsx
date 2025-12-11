@@ -7,6 +7,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
+
 interface Chat {
   id: string;
   title: string;
@@ -35,10 +37,15 @@ export function Sidebar({
   onModeChange
 }: SidebarProps) {
   const navigate = useNavigate();
+  const { profile, signOut } = useAuth();
   const [editingChatId, setEditingChatId] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  
+  const userName = profile?.full_name || profile?.email?.split('@')[0] || 'User';
+  const userInitial = userName.charAt(0).toUpperCase();
+  const userCredits = profile?.credits ?? 0;
   const handleRenameChat = (chatId: string) => {
     const chat = chats.find(c => c.id === chatId);
     if (chat) {
@@ -195,11 +202,11 @@ export function Sidebar({
             <DropdownMenuTrigger asChild>
               <button className="flex items-center gap-3 p-3 w-full hover:bg-surface-hover transition-colors cursor-pointer">
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                  <span className="text-sm font-medium">C</span>
+                  <span className="text-sm font-medium">{userInitial}</span>
                 </div>
                 <div className="flex-1 overflow-hidden text-left">
-                  <p className="truncate text-xs font-medium text-foreground">Cameron</p>
-                  <p className="truncate text-xs text-muted-foreground">50,993 credits</p>
+                  <p className="truncate text-xs font-medium text-foreground">{userName}</p>
+                  <p className="truncate text-xs text-muted-foreground">{userCredits.toLocaleString()} credits</p>
                 </div>
                 <ChevronUp className="h-4 w-4 text-muted-foreground flex-shrink-0" />
               </button>
@@ -227,7 +234,7 @@ export function Sidebar({
                 Top up credits
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-destructive focus:text-destructive">
+              <DropdownMenuItem onClick={() => signOut()} className="text-destructive focus:text-destructive">
                 <LogOut className="mr-2 h-4 w-4" />
                 Log out
               </DropdownMenuItem>
@@ -236,7 +243,7 @@ export function Sidebar({
             <DropdownMenuTrigger asChild>
               <button className="flex flex-col items-center gap-2 p-3 w-full hover:bg-surface-hover transition-colors cursor-pointer">
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                  <span className="text-sm font-medium">C</span>
+                  <span className="text-sm font-medium">{userInitial}</span>
                 </div>
               </button>
             </DropdownMenuTrigger>
@@ -263,7 +270,7 @@ export function Sidebar({
                 Top up credits
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-destructive focus:text-destructive">
+              <DropdownMenuItem onClick={() => signOut()} className="text-destructive focus:text-destructive">
                 <LogOut className="mr-2 h-4 w-4" />
                 Log out
               </DropdownMenuItem>
