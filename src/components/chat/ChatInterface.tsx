@@ -71,13 +71,15 @@ export function ChatInterface({
   // Load projects from Supabase
   useEffect(() => {
     const loadProjects = async () => {
+      console.log('Loading projects from Supabase...');
       const { data, error } = await supabase
         .from('projects')
         .select('id, name, slug, description, system_prompt, icon, requires_tier2')
-        .eq('is_active', true)
         .order('name');
 
-      if (data && !error) {
+      console.log('Projects response:', { data, error });
+
+      if (data && !error && data.length > 0) {
         const mappedProjects: Project[] = data.map((p: SupabaseProject) => ({
           id: p.id,
           name: p.name,
@@ -88,6 +90,13 @@ export function ChatInterface({
           systemPrompt: p.system_prompt
         }));
         setProjects(mappedProjects);
+      } else if (error) {
+        console.error('Error loading projects:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load projects from database',
+          variant: 'destructive'
+        });
       }
     };
     loadProjects();
@@ -527,20 +536,28 @@ export function ChatInterface({
             />
           </div>
 
-          <div style={{
-        animationDelay: '0.2s'
-      }} className="mt-8 flex flex-wrap max-w-xl animate-fade-in justify-center mx-0 gap-[6px] px-[8px]">
-            {projects.map(project => <button key={project.id} onClick={() => handleSelectProject(project)} className={cn(
-                "flex items-center justify-center text-center rounded-lg border px-3 py-2 transition-all duration-200 whitespace-nowrap",
-                selectedProject?.id === project.id 
-                  ? "border-accent bg-accent/10 text-muted-foreground"
-                  : (project.isPremium && userTier !== "pro")
-                    ? "border-primary/50 bg-primary/20 text-primary-foreground/80"
-                    : "border-border/30 bg-surface/50 hover:bg-surface-hover text-muted-foreground"
-              )}>
-                {project.isPremium && userTier !== "pro" && <Lock className="h-3 w-3 mr-1.5" />}
-                <span className="text-xs">{project.name}</span>
-              </button>)}
+          {/* Project buttons - OUTSIDE chat input, styled like reference image */}
+          <div 
+            style={{ animationDelay: '0.2s' }} 
+            className="mt-8 flex flex-wrap max-w-2xl animate-fade-in justify-center mx-0 gap-2 px-2"
+          >
+            {projects.map(project => (
+              <button 
+                key={project.id} 
+                onClick={() => handleSelectProject(project)} 
+                className={cn(
+                  "flex items-center justify-center text-center rounded-full border px-4 py-2 transition-all duration-200 whitespace-nowrap",
+                  selectedProject?.id === project.id 
+                    ? "border-accent bg-accent/10 text-foreground"
+                    : (project.isPremium && userTier !== "pro")
+                      ? "border-border/50 bg-surface/30 text-muted-foreground"
+                      : "border-border/30 bg-transparent hover:bg-surface-hover hover:border-border/50 text-muted-foreground"
+                )}
+              >
+                {project.isPremium && userTier !== "pro" && <Lock className="h-3 w-3 mr-1.5 text-muted-foreground" />}
+                <span className="text-sm">{project.name}</span>
+              </button>
+            ))}
           </div>
         </div> : showTransition ? (
         <div className="flex h-full flex-1 flex-col min-h-0 overflow-hidden relative">
