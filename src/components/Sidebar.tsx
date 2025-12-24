@@ -235,7 +235,7 @@ export function Sidebar({
                 </div>
                 <div className="flex-1 overflow-hidden text-left">
                   <p className="truncate text-xs font-medium text-foreground">{userName}</p>
-                  <p className="truncate text-xs text-muted-foreground">{userCredits.toLocaleString()} credits</p>
+                  <p className="truncate text-xs text-muted-foreground">{typeof userCredits === 'number' ? userCredits.toFixed(2) : '0.00'} credits</p>
                 </div>
                 <ChevronUp className="h-4 w-4 text-muted-foreground flex-shrink-0" />
               </button>

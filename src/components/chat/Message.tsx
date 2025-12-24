@@ -10,6 +10,7 @@ interface MessageData {
   role: "user" | "assistant";
   content: string;
   timestamp: string;
+  imageUrls?: string[];
 }
 
 interface MessageProps {
@@ -128,6 +129,21 @@ function CodeBlock({ language, value }: { language: string; value: string }) {
   );
 }
 
+// Helper function to extract image URLs from text content
+function extractImageUrls(content: string): string[] {
+  const urlRegex = /(https?:\/\/[^\s<>"{}|\\^`\[\]]+\.(?:png|jpg|jpeg|gif|webp|svg)(?:\?[^\s<>"{}|\\^`\[\]]*)?)/gi;
+  return content.match(urlRegex) || [];
+}
+
+// Helper to check if content is primarily image URLs
+function isImageResponse(content: string): boolean {
+  const imageUrls = extractImageUrls(content);
+  if (imageUrls.length === 0) return false;
+  // If the content is mostly URLs (remove URLs and check remaining text length)
+  const textWithoutUrls = imageUrls.reduce((text, url) => text.replace(url, ''), content).trim();
+  return textWithoutUrls.length < 100; // If minimal text remains, it's an image response
+}
+
 export function Message({ message }: MessageProps) {
   const isUser = message.role === "user";
   const [copied, setCopied] = useState(false);
@@ -166,6 +182,62 @@ export function Message({ message }: MessageProps) {
     );
   }
 
+  // Check for image URLs in assistant messages
+  const imageUrls = message.imageUrls || extractImageUrls(message.content);
+  const hasImages = imageUrls.length > 0;
+  const isMainlyImages = isImageResponse(message.content);
+
+  // If this is primarily an image response, render images prominently
+  if (hasImages && isMainlyImages) {
+    return (
+      <div className="group flex flex-col">
+        <div className="space-y-4">
+          {/* Render any text that's not a URL */}
+          {message.content.split(/https?:\/\/[^\s]+/g).filter(text => text.trim()).map((text, idx) => (
+            <p key={idx} className="text-sm text-foreground">{text.trim()}</p>
+          ))}
+          {/* Render images in a grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {imageUrls.map((url, idx) => (
+              <div key={idx} className="relative group/image rounded-lg overflow-hidden border border-border bg-surface">
+                <img 
+                  src={url} 
+                  alt={`Generated image ${idx + 1}`} 
+                  className="w-full h-auto object-cover"
+                  loading="lazy"
+                />
+                <div className="absolute inset-0 bg-background/80 opacity-0 group-hover/image:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                  <a 
+                    href={url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+                  >
+                    Open Full Size
+                  </a>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="mt-2 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <span className="text-xs text-muted-foreground">{message.timestamp}</span>
+          <button
+            onClick={handleCopy}
+            className="text-muted-foreground hover:text-foreground transition-colors"
+            aria-label="Copy message"
+          >
+            {copied ? (
+              <Check className="h-3.5 w-3.5" />
+            ) : (
+              <Copy className="h-3.5 w-3.5" />
+            )}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="group flex flex-col">
       <div className="markdown-content w-full">
@@ -185,6 +257,13 @@ export function Message({ message }: MessageProps) {
                 </code>
               );
             },
+            img({ src, alt }) {
+              return (
+                <div className="my-4 rounded-lg overflow-hidden border border-border">
+                  <img src={src} alt={alt || 'Image'} className="w-full h-auto" loading="lazy" />
+                </div>
+              );
+            }
           }}
         >
           {message.content}
