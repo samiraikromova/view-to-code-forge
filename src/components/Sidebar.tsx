@@ -8,6 +8,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
+import { deleteThread, updateThreadTitle, starThread } from "@/api/chat/chatApi";
+import { toast } from "sonner";
 
 interface Chat {
   id: string;
@@ -24,6 +26,7 @@ interface SidebarProps {
   onCollapsedChange: (collapsed: boolean) => void;
   mode: "chat" | "learn";
   onModeChange: (mode: "chat" | "learn") => void;
+  onRefreshChats?: () => void;
 }
 export function Sidebar({
   currentChatId,
@@ -34,7 +37,8 @@ export function Sidebar({
   isCollapsed,
   onCollapsedChange,
   mode,
-  onModeChange
+  onModeChange,
+  onRefreshChats
 }: SidebarProps) {
   const navigate = useNavigate();
   const { profile, signOut } = useAuth();
@@ -46,6 +50,7 @@ export function Sidebar({
   const userName = profile?.full_name || profile?.email?.split('@')[0] || 'User';
   const userInitial = userName.charAt(0).toUpperCase();
   const userCredits = profile?.credits ?? 0;
+  
   const handleRenameChat = (chatId: string) => {
     const chat = chats.find(c => c.id === chatId);
     if (chat) {
@@ -53,28 +58,52 @@ export function Sidebar({
       setEditValue(chat.title);
     }
   };
-  const saveChatRename = (chatId: string) => {
+  
+  const saveChatRename = async (chatId: string) => {
     if (editValue.trim()) {
-      setChats(chats.map(chat => chat.id === chatId ? {
-        ...chat,
-        title: editValue.trim()
-      } : chat));
+      const success = await updateThreadTitle(chatId, editValue.trim());
+      if (success) {
+        setChats(chats.map(chat => chat.id === chatId ? {
+          ...chat,
+          title: editValue.trim()
+        } : chat));
+      } else {
+        toast.error('Failed to rename chat');
+      }
     }
     setEditingChatId(null);
     setEditValue("");
   };
+  
   const cancelChatRename = () => {
     setEditingChatId(null);
     setEditValue("");
   };
-  const handleDeleteChat = (chatId: string) => {
-    setChats(chats.filter(chat => chat.id !== chatId));
+  
+  const handleDeleteChat = async (chatId: string) => {
+    const success = await deleteThread(chatId);
+    if (success) {
+      setChats(chats.filter(chat => chat.id !== chatId));
+      if (onRefreshChats) onRefreshChats();
+    } else {
+      toast.error('Failed to delete chat');
+    }
   };
-  const handleStarChat = (chatId: string) => {
-    setChats(chats.map(chat => chat.id === chatId ? {
-      ...chat,
-      starred: !chat.starred
-    } : chat));
+  
+  const handleStarChat = async (chatId: string) => {
+    const chat = chats.find(c => c.id === chatId);
+    if (chat) {
+      const newStarred = !chat.starred;
+      const success = await starThread(chatId, newStarred);
+      if (success) {
+        setChats(chats.map(c => c.id === chatId ? {
+          ...c,
+          starred: newStarred
+        } : c));
+      } else {
+        toast.error('Failed to update star');
+      }
+    }
   };
   const getRecentChats = () => {
     return chats.filter(chat => !chat.starred);

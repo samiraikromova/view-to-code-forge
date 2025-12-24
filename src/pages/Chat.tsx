@@ -1,8 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Sidebar } from "@/components/Sidebar";
 import { ChatInterface } from "@/components/chat/ChatInterface";
 import { LearnSidebar, Module } from "@/components/learn/LearnSidebar";
 import { LearnInterface } from "@/components/learn/LearnInterface";
+import { useAuth } from "@/hooks/useAuth";
+import { fetchUserThreads, deleteThread, updateThreadTitle, starThread } from "@/api/chat/chatApi";
+import { toast } from "sonner";
 
 interface Chat {
   id: string;
@@ -11,25 +14,40 @@ interface Chat {
 }
 
 const Chat = () => {
+  const { user } = useAuth();
   const [mode, setMode] = useState<"chat" | "learn">("chat");
   const [chatId, setChatId] = useState<string | null>(null);
-  const [chats, setChats] = useState<Chat[]>([
-    {
-      id: "1",
-      title: "Marketing campaign ideas",
-      starred: false,
-    },
-    {
-      id: "2",
-      title: "Video script review",
-      starred: false,
-    },
-    {
-      id: "3",
-      title: "Product description help",
-      starred: false,
-    },
-  ]);
+  const [chats, setChats] = useState<Chat[]>([]);
+  const [threadsLoading, setThreadsLoading] = useState(true);
+
+  // Fetch threads from Supabase on mount and when user changes
+  const loadThreads = useCallback(async () => {
+    if (!user?.id) {
+      setChats([]);
+      setThreadsLoading(false);
+      return;
+    }
+
+    setThreadsLoading(true);
+    try {
+      const threads = await fetchUserThreads(user.id);
+      const mappedChats: Chat[] = threads.map((thread: any) => ({
+        id: thread.id,
+        title: thread.title || 'Untitled Chat',
+        starred: thread.starred || false,
+      }));
+      setChats(mappedChats);
+    } catch (error) {
+      console.error('Failed to load threads:', error);
+      toast.error('Failed to load chat history');
+    } finally {
+      setThreadsLoading(false);
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    loadThreads();
+  }, [loadThreads]);
 
   // Sidebar collapse states
   const [chatSidebarCollapsed, setChatSidebarCollapsed] = useState(false);

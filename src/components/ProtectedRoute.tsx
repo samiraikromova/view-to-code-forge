@@ -47,12 +47,12 @@ export function ProtectedRoute({ children, requireAllowList = true }: ProtectedR
 
   // Not logged in - redirect to login
   if (!user) {
-    return <Navigate to="/login" state={{ from: location }} replace />
+    return <Navigate to="/auth/login" state={{ from: location }} replace />
   }
 
   // User not on allow list - redirect to access denied
   if (requireAllowList && isAllowed === false) {
-    return <Navigate to="/access-denied" replace />
+    return <Navigate to="/auth/access-denied" replace />
   }
 
   return <>{children}</>
