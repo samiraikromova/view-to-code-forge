@@ -68,22 +68,14 @@ export function ChatInterface({
   // Get current chat's files
   const currentFiles = chatId ? (chatFiles[chatId] || []) : externalFiles;
 
-  // Default fallback projects when Supabase table is empty
-  const defaultProjects: Project[] = [
-    { id: 'cb4', name: 'CB4', slug: 'cb4', icon: '🧠', description: "Cam's Brain", isPremium: false, systemPrompt: '' },
-    { id: 'copywriting', name: 'Copywriting Assistant', slug: 'copywriting', icon: '✍️', description: 'Write compelling copy', isPremium: false, systemPrompt: '' },
-    { id: 'contract', name: 'Contract Writer', slug: 'contract', icon: '📄', description: 'Draft contracts', isPremium: false, systemPrompt: '' },
-    { id: 'sales-call', name: 'Sales Call Review', slug: 'sales-call', icon: '📞', description: 'Analyze sales calls', isPremium: false, systemPrompt: '' },
-    { id: 'ad-writing', name: 'Ad Writing', slug: 'ad-writing', icon: '📝', description: 'Create ad copy', isPremium: false, systemPrompt: '' },
-    { id: 'image-ad', name: 'Image Ad Generator', slug: 'image-ad', icon: '🖼️', description: 'Generate image ads', isPremium: true, systemPrompt: '' },
-    { id: 'hooks', name: 'AI Hooks Generator', slug: 'hooks', icon: '🎣', description: 'Generate hooks', isPremium: true, systemPrompt: '' },
-    { id: 'docs', name: 'Documentation', slug: 'docs', icon: '📚', description: 'Write documentation', isPremium: true, systemPrompt: '' },
-  ];
+  const [projectsLoading, setProjectsLoading] = useState(true);
 
   // Load projects from Supabase
   useEffect(() => {
     const loadProjects = async () => {
+      setProjectsLoading(true);
       console.log('Loading projects from Supabase...');
+      
       const { data, error } = await supabase
         .from('projects')
         .select('id, name, slug, description, system_prompt, icon, requires_tier2')
@@ -91,7 +83,18 @@ export function ChatInterface({
 
       console.log('Projects response:', { data, error });
 
-      if (data && !error && data.length > 0) {
+      if (error) {
+        console.error('Error loading projects:', error);
+        toast({
+          title: 'Error',
+          description: 'Failed to load projects from database',
+          variant: 'destructive'
+        });
+        setProjectsLoading(false);
+        return;
+      }
+
+      if (data && data.length > 0) {
         const mappedProjects: Project[] = data.map((p: SupabaseProject) => ({
           id: p.id,
           name: p.name,
@@ -103,10 +106,10 @@ export function ChatInterface({
         }));
         setProjects(mappedProjects);
       } else {
-        // Use fallback projects when DB is empty or error
-        console.log('Using fallback projects');
-        setProjects(defaultProjects);
+        console.log('No projects found in database');
+        setProjects([]);
       }
+      setProjectsLoading(false);
     };
     loadProjects();
   }, []);
