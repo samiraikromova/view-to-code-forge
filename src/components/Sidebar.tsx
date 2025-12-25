@@ -241,7 +241,7 @@ export function Sidebar({
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem className="text-muted-foreground">
+              <DropdownMenuItem onClick={() => navigate("/profile")} className="text-muted-foreground">
                 <UserIcon className="mr-2 h-4 w-4" />
                 Profile
               </DropdownMenuItem>
@@ -254,11 +254,11 @@ export function Sidebar({
                 Settings
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-muted-foreground">
+              <DropdownMenuItem onClick={() => navigate("/settings")} className="text-muted-foreground">
                 <Sparkles className="mr-2 h-4 w-4" />
                 Upgrade to Pro
               </DropdownMenuItem>
-              <DropdownMenuItem className="text-muted-foreground">
+              <DropdownMenuItem onClick={() => navigate("/pricing/top-up")} className="text-muted-foreground">
                 <CreditCard className="mr-2 h-4 w-4" />
                 Top up credits
               </DropdownMenuItem>
@@ -277,7 +277,7 @@ export function Sidebar({
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem className="text-muted-foreground">
+              <DropdownMenuItem onClick={() => navigate("/profile")} className="text-muted-foreground">
                 <UserIcon className="mr-2 h-4 w-4" />
                 Profile
               </DropdownMenuItem>
@@ -290,11 +290,11 @@ export function Sidebar({
                 Settings
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-muted-foreground">
+              <DropdownMenuItem onClick={() => navigate("/settings")} className="text-muted-foreground">
                 <Sparkles className="mr-2 h-4 w-4" />
                 Upgrade to Pro
               </DropdownMenuItem>
-              <DropdownMenuItem className="text-muted-foreground">
+              <DropdownMenuItem onClick={() => navigate("/pricing/top-up")} className="text-muted-foreground">
                 <CreditCard className="mr-2 h-4 w-4" />
                 Top up credits
               </DropdownMenuItem>

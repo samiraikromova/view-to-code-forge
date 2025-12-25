@@ -1,40 +1,131 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, CreditCard, Download, ExternalLink, Check } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-import { PLANS, SubscriptionTier } from "@/types/subscription";
-import { useState } from "react";
+import { useEffect, useState } from "react"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
+import { Separator } from "@/components/ui/separator"
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { ArrowLeft, CreditCard, Download, Check, Zap } from "lucide-react"
+import { useNavigate } from "react-router-dom"
+import { PLANS, SubscriptionTier } from "@/types/subscription"
+import { useAuth } from "@/hooks/useAuth"
+import { supabase } from "@/lib/supabase"
+import ThrivecartEmbed, { getThriveCartCheckoutUrl, THRIVECART_PRODUCTS } from "@/components/ThrivecartEmbed"
 
-const billingHistory = [
-  { id: "INV-001", date: "Dec 1, 2025", amount: 99.00, status: "Paid", plan: "Pro" },
-  { id: "INV-002", date: "Nov 1, 2025", amount: 99.00, status: "Paid", plan: "Pro" },
-  { id: "INV-003", date: "Oct 1, 2025", amount: 29.00, status: "Paid", plan: "Starter" },
-  { id: "INV-004", date: "Sep 1, 2025", amount: 29.00, status: "Paid", plan: "Starter" },
-];
-
-const paymentMethods = [
-  { id: "pm-1", type: "Visa", last4: "4242", expiry: "12/2026", isDefault: true },
-  { id: "pm-2", type: "Mastercard", last4: "5555", expiry: "08/2025", isDefault: false },
-];
+interface BillingRecord {
+  id: string
+  date: string
+  amount: number
+  status: string
+  type: string
+}
 
 export default function Settings() {
-  const navigate = useNavigate();
-  const [currentTier, setCurrentTier] = useState<SubscriptionTier>("starter");
+  const navigate = useNavigate()
+  const { user, profile } = useAuth()
+  const [currentTier, setCurrentTier] = useState<SubscriptionTier>("free")
+  const [billingHistory, setBillingHistory] = useState<BillingRecord[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (profile) {
+      // Map tier values
+      const tierMap: Record<string, SubscriptionTier> = {
+        'free': 'free',
+        'tier1': 'starter',
+        'starter': 'starter',
+        'tier2': 'pro',
+        'pro': 'pro'
+      }
+      setCurrentTier(tierMap[profile.subscription_tier] || 'free')
+    }
+    if (user) {
+      fetchBillingHistory()
+    }
+  }, [profile, user])
+
+  async function fetchBillingHistory() {
+    if (!user) return
+    setLoading(true)
+    try {
+      const { data } = await supabase
+        .from('credit_transactions')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(10)
+
+      if (data) {
+        setBillingHistory(data.map(tx => ({
+          id: tx.id,
+          date: new Date(tx.created_at).toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+          }),
+          amount: Math.abs(tx.amount || 0),
+          status: 'Completed',
+          type: tx.type || 'Credit'
+        })))
+      }
+    } catch (error) {
+      console.error('Error fetching billing history:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleUpgrade = (tier: SubscriptionTier) => {
+    const product = tier === 'starter' ? THRIVECART_PRODUCTS.starter : THRIVECART_PRODUCTS.pro
+    const checkoutUrl = getThriveCartCheckoutUrl(product.slug, user?.email || undefined)
+    window.open(checkoutUrl, "_blank")
+  }
 
   return (
     <div className="min-h-screen bg-background">
+      <ThrivecartEmbed />
       <div className="max-w-5xl mx-auto p-6">
         <div className="flex items-center gap-4 mb-6">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/")}>
+          <Button variant="ghost" size="icon" onClick={() => navigate("/chat")}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div>
             <h1 className="text-3xl font-semibold text-foreground">Settings</h1>
             <p className="text-sm text-muted-foreground mt-1">Manage your subscription and billing</p>
           </div>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <Card className="bg-gradient-to-br from-primary/20 to-primary/5 border-primary/30">
+            <CardContent className="py-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Current Balance</p>
+                  <p className="text-3xl font-bold text-foreground">{(profile?.credits || 0).toFixed(2)} credits</p>
+                </div>
+                <Button onClick={() => navigate("/pricing/top-up")} className="gap-2">
+                  <Zap className="h-4 w-4" />
+                  Top Up
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="py-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Current Plan</p>
+                  <p className="text-3xl font-bold text-foreground">{PLANS[currentTier].name}</p>
+                </div>
+                {currentTier !== 'pro' && (
+                  <Button onClick={() => handleUpgrade('pro')} variant="outline" className="gap-2">
+                    Upgrade
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Subscription Plan Management */}
@@ -50,7 +141,7 @@ export default function Settings() {
                 <div>
                   <div className="flex items-center gap-3">
                     <h3 className="text-lg font-semibold text-foreground">{PLANS[currentTier].name} Plan</h3>
-                    <Badge variant="outline" className="bg-primary/20 text-primary-foreground border-primary/30">
+                    <Badge variant="outline" className="bg-primary/20 text-primary border-primary/30">
                       Current Plan
                     </Badge>
                   </div>
@@ -66,9 +157,13 @@ export default function Settings() {
                 </div>
                 <div className="flex flex-col gap-2">
                   {currentTier !== "pro" && (
-                    <Button className="bg-accent hover:bg-accent/90">Upgrade to Pro</Button>
+                    <Button onClick={() => handleUpgrade('pro')} className="bg-accent hover:bg-accent/90">
+                      Upgrade to Pro
+                    </Button>
                   )}
-                  <Button variant="outline">Cancel Subscription</Button>
+                  {currentTier !== "free" && (
+                    <Button variant="outline">Cancel Subscription</Button>
+                  )}
                 </div>
               </div>
 
@@ -79,8 +174,8 @@ export default function Settings() {
                 <h4 className="text-sm font-medium text-foreground mb-4">Available Plans</h4>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {(Object.keys(PLANS) as SubscriptionTier[]).map((tier) => {
-                    const plan = PLANS[tier];
-                    const isCurrent = tier === currentTier;
+                    const plan = PLANS[tier]
+                    const isCurrent = tier === currentTier
                     return (
                       <div
                         key={tier}
@@ -101,15 +196,16 @@ export default function Settings() {
                         </ul>
                         {!isCurrent && (
                           <Button
+                            onClick={() => handleUpgrade(tier)}
                             variant={tier === "pro" ? "default" : "outline"}
                             className="w-full mt-4"
                             size="sm"
                           >
-                            {tier === "pro" ? "Upgrade" : "Downgrade"}
+                            {tier === "pro" ? "Upgrade" : tier === "free" ? "Downgrade" : "Switch"}
                           </Button>
                         )}
                       </div>
-                    );
+                    )
                   })}
                 </div>
               </div>
@@ -117,45 +213,53 @@ export default function Settings() {
           </CardContent>
         </Card>
 
-        {/* Billing History */}
+        {/* Transaction History */}
         <Card className="mb-6">
           <CardHeader>
-            <CardTitle>Billing History</CardTitle>
-            <CardDescription>View and download your past invoices</CardDescription>
+            <CardTitle>Transaction History</CardTitle>
+            <CardDescription>View your recent transactions</CardDescription>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Invoice</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Plan</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {billingHistory.map((invoice) => (
-                  <TableRow key={invoice.id}>
-                    <TableCell className="font-medium">{invoice.id}</TableCell>
-                    <TableCell>{invoice.date}</TableCell>
-                    <TableCell>{invoice.plan}</TableCell>
-                    <TableCell>${invoice.amount.toFixed(2)}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="bg-primary/20 text-primary-foreground border-primary/30">
-                        {invoice.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="sm">
-                        <Download className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
+            {billingHistory.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>ID</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {billingHistory.map((record) => (
+                    <TableRow key={record.id}>
+                      <TableCell className="font-medium font-mono text-xs">
+                        {record.id.slice(0, 8)}...
+                      </TableCell>
+                      <TableCell>{record.date}</TableCell>
+                      <TableCell className="capitalize">{record.type}</TableCell>
+                      <TableCell>{record.amount.toFixed(2)} credits</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="bg-primary/20 text-primary border-primary/30">
+                          {record.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="ghost" size="sm">
+                          <Download className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                {loading ? "Loading..." : "No transactions yet"}
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -165,58 +269,23 @@ export default function Settings() {
             <div className="flex items-center justify-between">
               <div>
                 <CardTitle>Payment Methods</CardTitle>
-                <CardDescription>Manage your credit cards and payment options</CardDescription>
+                <CardDescription>Manage your payment options via ThriveCart</CardDescription>
               </div>
-              <Button variant="outline" size="sm">
-                <CreditCard className="h-4 w-4 mr-2" />
-                Add Payment Method
-              </Button>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {paymentMethods.map((method) => (
-                <div
-                  key={method.id}
-                  className="flex items-center justify-between p-4 border border-border rounded-lg bg-surface/30"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-8 bg-surface border border-border rounded flex items-center justify-center">
-                      <CreditCard className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium text-foreground">
-                          {method.type} •••• {method.last4}
-                        </p>
-                        {method.isDefault && (
-                          <Badge variant="outline" className="bg-primary/20 text-primary-foreground border-primary/30">
-                            Default
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-sm text-muted-foreground">Expires {method.expiry}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {!method.isDefault && (
-                      <Button variant="ghost" size="sm">
-                        Set as Default
-                      </Button>
-                    )}
-                    <Button variant="ghost" size="sm">
-                      Edit
-                    </Button>
-                    <Button variant="ghost" size="sm">
-                      Remove
-                    </Button>
-                  </div>
-                </div>
-              ))}
+            <div className="text-center py-6">
+              <CreditCard className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground mb-4">
+                Payment methods are managed through ThriveCart's secure payment system.
+              </p>
+              <Button variant="outline" onClick={() => window.open('https://thrivecart.com/account', '_blank')}>
+                Manage on ThriveCart
+              </Button>
             </div>
           </CardContent>
         </Card>
       </div>
     </div>
-  );
+  )
 }

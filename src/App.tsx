@@ -9,6 +9,8 @@ import Landing from "./pages/Landing";
 import Chat from "./pages/Chat";
 import Analytics from "./pages/Analytics";
 import Settings from "./pages/Settings";
+import Profile from "./pages/Profile";
+import TopUp from "./pages/TopUp";
 import NotFound from "./pages/NotFound";
 
 // Auth pages
@@ -19,6 +21,9 @@ import ErrorPage from "./auth/ErrorPage";
 import PaymentRequiredPage from "./auth/PaymentRequiredPage";
 import ConfirmCallback from "./auth/ConfirmCallback";
 import SignoutCallback from "./auth/SignoutCallback";
+
+// Admin pages
+import { AdminDashboard, AdminUsers, AdminCredits, AdminUsage, AdminSettings } from "./admin";
 
 const queryClient = new QueryClient();
 
@@ -54,6 +59,15 @@ const App = () => {
             <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />
             <Route path="/analytics" element={<ProtectedRoute><Analytics /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+            <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+            <Route path="/pricing/top-up" element={<ProtectedRoute><TopUp /></ProtectedRoute>} />
+            
+            {/* Admin routes */}
+            <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
+            <Route path="/admin/users" element={<ProtectedRoute><AdminUsers /></ProtectedRoute>} />
+            <Route path="/admin/credits" element={<ProtectedRoute><AdminCredits /></ProtectedRoute>} />
+            <Route path="/admin/usage" element={<ProtectedRoute><AdminUsage /></ProtectedRoute>} />
+            <Route path="/admin/settings" element={<ProtectedRoute><AdminSettings /></ProtectedRoute>} />
             
             {/* Catch-all */}
             <Route path="*" element={<NotFound />} />
