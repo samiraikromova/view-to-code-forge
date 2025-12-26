@@ -21,14 +21,12 @@ export default function Profile() {
 
   useEffect(() => {
     if (profile) {
-      setFullName(profile.full_name || "")
+      setFullName(profile.name || "")
       setCredits(profile.credits || 0)
       setTier(profile.subscription_tier || "free")
+      setCreatedAt(profile.created_at || null)
     }
-    if (user) {
-      setCreatedAt(user.created_at || null)
-    }
-  }, [profile, user])
+  }, [profile])
 
   const handleSaveProfile = async () => {
     if (!user) return
@@ -37,7 +35,7 @@ export default function Profile() {
     try {
       const { error } = await supabase
         .from('users')
-        .update({ full_name: fullName })
+        .update({ name: fullName })
         .eq('id', user.id)
 
       if (error) throw error

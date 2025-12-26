@@ -47,7 +47,7 @@ export function Sidebar({
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   
-  const userName = profile?.full_name || profile?.email?.split('@')[0] || 'User';
+  const userName = profile?.name || profile?.email?.split('@')[0] || 'User';
   const userInitial = userName.charAt(0).toUpperCase();
   const userCredits = profile?.credits ?? 0;
   
@@ -115,7 +115,7 @@ export function Sidebar({
     if (!searchQuery) return chatList;
     return chatList.filter(chat => chat.title.toLowerCase().includes(searchQuery.toLowerCase()));
   };
-  return <div className={cn("flex h-full flex-col border-r border-border bg-surface transition-all duration-300 flex-shrink-0", isCollapsed ? "w-14" : "w-64")}>
+  return <div className={cn("flex h-full flex-col border-r border-border bg-surface transition-all duration-300 flex-shrink-0", isCollapsed ? "w-14" : "w-72")}>
       {/* Header */}
       <div className="relative flex items-center justify-center gap-2 border-b border-border/50 px-4 py-3">
         {!isCollapsed ? <>

@@ -112,12 +112,12 @@ export function AdminLayout({ children, currentPage }: AdminLayoutProps) {
           <div className="flex items-center gap-3 mb-3 px-2">
             <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
               <span className="text-sm font-medium text-primary-foreground">
-                {profile?.full_name?.charAt(0) || user?.email?.charAt(0)?.toUpperCase()}
+                {profile?.name?.charAt(0) || user?.email?.charAt(0)?.toUpperCase()}
               </span>
             </div>
             <div className="flex-1 overflow-hidden">
               <p className="text-sm font-medium text-foreground truncate">
-                {profile?.full_name || 'Admin'}
+                {profile?.name || 'Admin'}
               </p>
               <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
             </div>

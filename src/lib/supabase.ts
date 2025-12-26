@@ -27,6 +27,7 @@ export type ChatThread = {
   user_id: string
   project_id: string
   model?: string
+  starred?: boolean
 }
 
 export type Project = {
@@ -41,8 +42,12 @@ export type Project = {
 
 export type UserProfile = {
   id: string
+  name: string | null
+  email: string | null
   credits: number
-  subscription_tier: 'free' | 'starter' | 'pro'
-  email?: string
-  full_name?: string
+  subscription_tier: string
+  created_at?: string
+  total_tokens?: number
+  total_cost?: number
+  last_credit_update?: string
 }
