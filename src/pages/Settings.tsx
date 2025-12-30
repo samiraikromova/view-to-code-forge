@@ -119,7 +119,7 @@ export default function Settings() {
                   <p className="text-3xl font-bold text-foreground">{PLANS[currentTier].name}</p>
                 </div>
                 {currentTier !== 'pro' && (
-                  <ThrivecartButton productId={THRIVECART_PRODUCTS.pro.productId} variant="outline" className="gap-2">
+                  <ThrivecartButton productId={THRIVECART_PRODUCTS.pro.productId} userEmail={user?.email} variant="outline" className="gap-2">
                     Upgrade
                   </ThrivecartButton>
                 )}
@@ -157,7 +157,7 @@ export default function Settings() {
                 </div>
                 <div className="flex flex-col gap-2">
                   {currentTier !== "pro" && (
-                    <ThrivecartButton productId={THRIVECART_PRODUCTS.pro.productId} className="bg-accent hover:bg-accent/90">
+                    <ThrivecartButton productId={THRIVECART_PRODUCTS.pro.productId} userEmail={user?.email} className="bg-accent hover:bg-accent/90">
                       Upgrade to Pro
                     </ThrivecartButton>
                   )}
@@ -197,6 +197,7 @@ export default function Settings() {
                         {!isCurrent && tier !== "free" && (
                           <ThrivecartButton
                             productId={getProductId(tier)}
+                            userEmail={user?.email}
                             variant={tier === "pro" ? "default" : "outline"}
                             className="w-full mt-4"
                             size="sm"
