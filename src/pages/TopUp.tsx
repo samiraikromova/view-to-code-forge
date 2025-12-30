@@ -7,34 +7,34 @@ import ThrivecartEmbed, { getThriveCartCheckoutUrl, THRIVECART_PRODUCTS } from "
 
 const topUpOptions = [
   {
-    id: "topUp10",
-    credits: 10,
+    id: "topUp1000",
+    credits: 1000,
     price: 10,
-    perCredit: 1.00,
+    perCredit: 0.01,
     popular: false,
   },
   {
-    id: "topUp25",
-    credits: 25,
-    price: 22,
-    perCredit: 0.88,
-    savings: "12%",
+    id: "topUp2500",
+    credits: 2500,
+    price: 25,
+    perCredit: 0.01,
+    savings: "0%",
     popular: false,
   },
   {
-    id: "topUp50",
-    credits: 50,
-    price: 40,
-    perCredit: 0.80,
-    savings: "20%",
+    id: "topUp5000",
+    credits: 5000,
+    price: 50,
+    perCredit: 0.01,
+    savings: "0%",
     popular: true,
   },
   {
-    id: "topUp100",
-    credits: 100,
-    price: 75,
-    perCredit: 0.75,
-    savings: "25%",
+    id: "topUp10000",
+    credits: 10000,
+    price: 100,
+    perCredit: 0.01,
+    savings: "0%",
     popular: false,
   },
 ]
@@ -100,7 +100,7 @@ export default function TopUp() {
               <CardHeader>
                 <div className="flex items-center gap-2">
                   <Zap className="h-5 w-5 text-primary" />
-                  <CardTitle>{option.credits} Credits</CardTitle>
+                  <CardTitle>{option.credits.toLocaleString()} Credits</CardTitle>
                 </div>
                 <CardDescription>
                   ${option.perCredit.toFixed(2)} per credit
