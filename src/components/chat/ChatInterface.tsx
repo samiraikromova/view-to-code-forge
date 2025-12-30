@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { MessageList } from "./MessageList";
-import { ChatInput } from "./ChatInput";
+import { ChatInput, ImageGenerationSettings } from "./ChatInput";
 import { Project } from "./ChatHeader";
 import { FileText, Lock, ArrowDown } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -9,7 +9,8 @@ import { UpgradeDialog } from "./UpgradeDialog";
 import { SubscriptionTier } from "@/types/subscription";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
-import { sendChatMessage, estimateTokens, calculateChatCost } from "@/lib/n8n";
+import { sendChatMessage, estimateTokens, calculateChatCost, calculateImageCost } from "@/lib/n8n";
+import { generateImageViaAPI } from "@/api/generate-image/imageApi";
 import { toast } from "@/hooks/use-toast";
 
 interface Message {
@@ -292,12 +293,17 @@ export function ChatInterface({
     return uploaded;
   };
 
-  const handleSendMessage = async (content: string, files?: File[]) => {
+  const handleSendMessage = async (content: string, files?: File[], imageSettings?: ImageGenerationSettings) => {
     if (!user) {
       // User should already be logged in from main page
       console.warn('No user found - should be authenticated');
       return;
     }
+    
+    // Check if this is an image generation request
+    const isImageGeneration = selectedProject?.name?.toLowerCase().includes('image') && 
+                              selectedProject?.name?.toLowerCase().includes('generator') &&
+                              imageSettings !== undefined;
 
     const isFirstMessage = messages.length === 0;
     let activeThreadId = currentThreadId;
@@ -403,29 +409,63 @@ export function ChatInterface({
         content: m.content
       }));
 
-      // Call n8n webhook
-      const n8nResult = await sendChatMessage({
-        message: content,
-        userId: user.id,
-        projectId: selectedProject?.id || 'default',
-        projectSlug: selectedProject?.slug || 'default',
-        model: selectedModel,
-        threadId: activeThreadId,
-        fileUrls: fileObjs,
-        systemPrompt: systemPrompt,
-        conversationHistory
-      });
+      let aiReply = '';
+      let cost = 0;
 
-      const aiReply = n8nResult.reply || n8nResult.output || 'No response received';
+      if (isImageGeneration && imageSettings) {
+        // Handle image generation
+        const imageResult = await generateImageViaAPI({
+          message: content,
+          userId: user.id,
+          projectId: selectedProject?.id || 'default',
+          projectSlug: selectedProject?.slug || 'default',
+          quality: imageSettings.quality,
+          numImages: imageSettings.numImages,
+          aspectRatio: imageSettings.aspectRatio,
+          threadId: activeThreadId,
+          isImageGeneration: true
+        });
 
-      // Calculate and deduct credits
-      const inputTokens = estimateTokens(
-        systemPrompt +
-        conversationHistory.map(m => m.content).join('\n') +
-        content
-      );
-      const outputTokens = estimateTokens(aiReply);
-      const cost = calculateChatCost(selectedModel, inputTokens, outputTokens);
+        if (imageResult.error) {
+          throw new Error(imageResult.error);
+        }
+
+        // Build response with image URLs
+        if (imageResult.imageUrls && imageResult.imageUrls.length > 0) {
+          aiReply = imageResult.imageUrls.join('\n');
+        } else if (imageResult.isTextResponse && imageResult.reply) {
+          aiReply = imageResult.reply;
+        } else {
+          aiReply = 'Image generation completed but no images were returned.';
+        }
+
+        // Calculate image cost
+        cost = calculateImageCost(imageSettings.quality, imageSettings.numImages);
+      } else {
+        // Handle regular chat
+        const n8nResult = await sendChatMessage({
+          message: content,
+          userId: user.id,
+          projectId: selectedProject?.id || 'default',
+          projectSlug: selectedProject?.slug || 'default',
+          model: selectedModel,
+          threadId: activeThreadId,
+          fileUrls: fileObjs,
+          systemPrompt: systemPrompt,
+          conversationHistory
+        });
+
+        aiReply = n8nResult.reply || n8nResult.output || 'No response received';
+
+        // Calculate chat cost
+        const inputTokens = estimateTokens(
+          systemPrompt +
+          conversationHistory.map(m => m.content).join('\n') +
+          content
+        );
+        const outputTokens = estimateTokens(aiReply);
+        cost = calculateChatCost(selectedModel, inputTokens, outputTokens);
+      }
 
       // Deduct credits
       const { data: userData } = await supabase
@@ -447,9 +487,9 @@ export function ChatInterface({
         // Log usage
         await supabase.from('usage_logs').insert({
           user_id: user.id,
-          model: selectedModel,
-          tokens_input: inputTokens,
-          tokens_output: outputTokens,
+          model: isImageGeneration ? 'Ideogram' : selectedModel,
+          tokens_input: 0,
+          tokens_output: 0,
           estimated_cost: cost,
         });
 
@@ -463,8 +503,8 @@ export function ChatInterface({
           thread_id: activeThreadId,
           role: 'assistant',
           content: aiReply,
-          model: selectedModel,
-          tokens_used: inputTokens + outputTokens,
+          model: isImageGeneration ? 'Ideogram' : selectedModel,
+          tokens_used: 0,
         })
         .select()
         .single();

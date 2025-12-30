@@ -3,7 +3,61 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { useState } from "react";
-import { Check, Copy } from "lucide-react";
+import { Check, Copy, Loader2 } from "lucide-react";
+
+// Image component with loading state and smooth fade-in
+function ImageWithLoading({ url, idx }: { url: string; idx: number }) {
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
+
+  const handleImageClick = () => {
+    window.open(url, '_blank', 'noopener,noreferrer');
+  };
+
+  return (
+    <div 
+      className="relative group/image rounded-lg overflow-hidden border border-border bg-surface cursor-pointer"
+      onClick={handleImageClick}
+    >
+      {/* Loading state */}
+      {isLoading && !hasError && (
+        <div className="absolute inset-0 flex items-center justify-center bg-surface z-10">
+          <Loader2 className="h-8 w-8 text-accent animate-spin" />
+        </div>
+      )}
+      
+      {/* Error state */}
+      {hasError && (
+        <div className="absolute inset-0 flex items-center justify-center bg-surface z-10">
+          <p className="text-sm text-muted-foreground">Failed to load image</p>
+        </div>
+      )}
+      
+      <img 
+        src={url} 
+        alt={`Generated image ${idx + 1}`} 
+        className={cn(
+          "w-full h-auto object-cover transition-opacity duration-500",
+          isLoading ? "opacity-0" : "opacity-100"
+        )}
+        onLoad={() => setIsLoading(false)}
+        onError={() => {
+          setIsLoading(false);
+          setHasError(true);
+        }}
+      />
+      
+      {/* Hover overlay */}
+      {!isLoading && !hasError && (
+        <div className="absolute inset-0 bg-background/80 opacity-0 group-hover/image:opacity-100 transition-opacity flex items-center justify-center gap-2">
+          <span className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium">
+            Open Full Size
+          </span>
+        </div>
+      )}
+    </div>
+  );
+}
 
 interface MessageData {
   id: string;
@@ -199,24 +253,7 @@ export function Message({ message }: MessageProps) {
           {/* Render images in a grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {imageUrls.map((url, idx) => (
-              <div key={idx} className="relative group/image rounded-lg overflow-hidden border border-border bg-surface">
-                <img 
-                  src={url} 
-                  alt={`Generated image ${idx + 1}`} 
-                  className="w-full h-auto object-cover"
-                  loading="lazy"
-                />
-                <div className="absolute inset-0 bg-background/80 opacity-0 group-hover/image:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                  <a 
-                    href={url} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
-                  >
-                    Open Full Size
-                  </a>
-                </div>
-              </div>
+              <ImageWithLoading key={idx} url={url} idx={idx} />
             ))}
           </div>
         </div>
