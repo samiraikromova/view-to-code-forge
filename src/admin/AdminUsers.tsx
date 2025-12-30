@@ -25,7 +25,7 @@ import { toast } from "sonner"
 interface User {
   id: string
   email: string
-  full_name: string | null
+  name: string | null
   credits: number
   subscription_tier: string
   created_at: string
@@ -67,7 +67,7 @@ export default function AdminUsers() {
 
   const filteredUsers = users.filter(user => 
     user.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    user.full_name?.toLowerCase().includes(searchQuery.toLowerCase())
+    user.name?.toLowerCase().includes(searchQuery.toLowerCase())
   )
 
   const handleAddToAllowList = async (email: string) => {
@@ -209,7 +209,7 @@ export default function AdminUsers() {
                           {user.email}
                         </div>
                       </TableCell>
-                      <TableCell className="text-foreground">{user.full_name || '-'}</TableCell>
+                      <TableCell className="text-foreground">{user.name || '-'}</TableCell>
                       <TableCell className="text-foreground">{Number(user.credits || 0).toFixed(2)}</TableCell>
                       <TableCell>{getTierBadge(user.subscription_tier || 'free')}</TableCell>
                       <TableCell>
