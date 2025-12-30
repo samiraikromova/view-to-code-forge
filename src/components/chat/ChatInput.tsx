@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { Project } from "./ChatHeader";
 import { ProjectSelector } from "./ProjectSelector";
 import { ModelThinkingSelector } from "./ModelThinkingSelector";
+import { ImageGenerationSelectors } from "./ImageGenerationSelectors";
 import { SubscriptionTier } from "@/types/subscription";
 const mockProjects: Project[] = [{
   id: "cb4",
@@ -49,8 +50,15 @@ const mockProjects: Project[] = [{
   icon: "📚",
   description: "Generate and manage technical documentation"
 }];
+
+export interface ImageGenerationSettings {
+  quality: string;
+  numImages: number;
+  aspectRatio: string;
+}
+
 interface ChatInputProps {
-  onSendMessage: (content: string, files?: File[]) => void;
+  onSendMessage: (content: string, files?: File[], imageSettings?: ImageGenerationSettings) => void;
   disabled?: boolean;
   selectedProject: Project | null;
   onSelectProject: (project: Project | null) => void;
@@ -86,11 +94,22 @@ export function ChatInput({
   const [lineCount, setLineCount] = useState(1);
   const [isFocused, setIsFocused] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  
+  // Image generation settings
+  const [imageQuality, setImageQuality] = useState("BALANCED");
+  const [imageNumImages, setImageNumImages] = useState(1);
+  const [imageAspectRatio, setImageAspectRatio] = useState("square_hd");
+  
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const MAX_FILES = 10;
+  
+  // Check if current project is Image Ad Generator
+  const isImageGenerator = selectedProject?.name?.toLowerCase().includes('image') && 
+                           selectedProject?.name?.toLowerCase().includes('generator');
+
 
   // Randomize glow animation on mount
   useEffect(() => {
@@ -117,7 +136,14 @@ export function ChatInput({
     if (hasContent && !disabled && !isUploading) {
       setIsUploading(true);
       try {
-        await onSendMessage(message, files.length > 0 ? files : undefined);
+        // Pass image generation settings if it's the image generator project
+        const imageSettings = isImageGenerator ? {
+          quality: imageQuality,
+          numImages: imageNumImages,
+          aspectRatio: imageAspectRatio
+        } : undefined;
+        
+        await onSendMessage(message, files.length > 0 ? files : undefined, imageSettings);
         setMessage("");
         // Don't clear files - they persist as context
         setIsFullScreen(false);
@@ -214,6 +240,18 @@ export function ChatInput({
           >
           {/* Content wrapper with m-3.5 padding and gap-3.5 */}
           <div className="m-3.5 flex flex-col gap-3.5">
+            {/* Image generation selectors - only show for Image Ad Generator */}
+            {isImageGenerator && (
+              <ImageGenerationSelectors
+                quality={imageQuality}
+                onQualityChange={setImageQuality}
+                numImages={imageNumImages}
+                onNumImagesChange={setImageNumImages}
+                aspectRatio={imageAspectRatio}
+                onAspectRatioChange={setImageAspectRatio}
+              />
+            )}
+            
             {/* File attachments */}
             {files.length > 0 && (
               <div className="space-y-1.5">
