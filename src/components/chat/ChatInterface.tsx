@@ -79,6 +79,7 @@ export function ChatInterface({
       const { data, error } = await supabase
         .from('projects')
         .select('id, name, slug, description, system_prompt, icon, requires_tier2')
+        .eq('coming_soon', false)
         .order('name');
 
       console.log('Projects response:', { data, error });
