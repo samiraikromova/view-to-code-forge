@@ -9,19 +9,13 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const PRODUCT_CONFIG: Record<number, { tier: string; monthlyCredits: number; price: number; type: string }> = {
-  // Subscriptions
-  8: { tier: 'tier2', monthlyCredits: 40000, price: 99, type: 'subscription' },
-  7: { tier: 'tier1', monthlyCredits: 10000, price: 29, type: 'subscription' },
-
-  // Top-ups (one-time purchases)
-  9: { tier: 'free', monthlyCredits: 1000, price: 10, type: 'topup' },
-  10: { tier: 'free', monthlyCredits: 2500, price: 25, type: 'topup' },
-  12: { tier: 'free', monthlyCredits: 5000, price: 50, type: 'topup' },
-  13: { tier: 'free', monthlyCredits: 10000, price: 100, type: 'topup' },
+// Product configuration with MONTHLY credits
+const PRODUCT_CONFIG: Record<number, { tier: string; monthlyCredits: number; price: number }> = {
+  7: { tier: 'tier1', monthlyCredits: 10000, price: 29 },
+  8: { tier: 'tier2', monthlyCredits: 40000, price: 99 }
 };
 
-// Parse form-encoded data
+// Helper to parse form data (ThriveCart sends form-encoded)
 async function parseFormData(req: Request): Promise<Record<string, any>> {
   try {
     const text = await req.text();
@@ -29,17 +23,30 @@ async function parseFormData(req: Request): Promise<Record<string, any>> {
     const data: Record<string, any> = {};
 
     for (const [key, value] of params.entries()) {
+      // Handle nested keys like customer[email]
       if (key.includes('[')) {
-        const match = key.match(/^([^\[]+)\[([^\]]+)\]$/);
-        if (match) {
-          const parent = match[1];
-          const child = match[2];
-          if (!data[parent]) data[parent] = {};
-          data[parent][child] = value;
+        const parts = key.split(/\[|\]/).filter(Boolean);
+        let current = data;
+
+        for (let i = 0; i < parts.length - 1; i++) {
+          if (!current[parts[i]]) {
+            current[parts[i]] = {};
+          }
+          current = current[parts[i]];
         }
+        current[parts[parts.length - 1]] = value;
       } else {
         data[key] = value;
       }
+    }
+
+    // Try to parse JSON strings
+    try {
+      if (typeof data.customer === "string") data.customer = JSON.parse(data.customer);
+      if (typeof data.order === "string") data.order = JSON.parse(data.order);
+      if (typeof data.subscriptions === "string") data.subscriptions = JSON.parse(data.subscriptions);
+    } catch (err) {
+      // Ignore parse errors for non-JSON fields
     }
 
     return data;
@@ -50,22 +57,28 @@ async function parseFormData(req: Request): Promise<Record<string, any>> {
 }
 
 serve(async (req) => {
+  // Handle CORS
   if (req.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
 
+  // ThriveCart pings with HEAD to verify endpoint is alive
   if (req.method === 'HEAD') {
-    console.log('🔍 HEAD request - ThriveCart verification');
+    console.log('🔍 HEAD request received - ThriveCart verification');
     return new Response(null, { status: 200, headers: corsHeaders });
   }
 
+  // Health check endpoint
   if (req.method === 'GET') {
+    console.log('🔍 GET request to webhook endpoint');
+    
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+    const THRIVECART_SECRET = Deno.env.get('THRIVECART_SECRET');
 
     if (!supabaseUrl || !supabaseServiceKey) {
       return new Response(JSON.stringify({
-        status: 'error',
+        status: 'Error',
         message: 'Missing Supabase credentials'
       }), {
         status: 500,
@@ -77,9 +90,23 @@ serve(async (req) => {
     const { error } = await supabase.from('users').select('count').limit(1);
 
     return new Response(JSON.stringify({
-      status: 'active',
+      status: 'ThriveCart subscription webhook endpoint is active',
       timestamp: new Date().toISOString(),
-      supabaseConnected: !error
+      supabaseConnected: !error,
+      supportedEvents: [
+        'order.success',
+        'order.subscription_payment',
+        'order.subscription_cancelled',
+        'order.subscription_paused',
+        'order.subscription_resumed',
+        'order.refund'
+      ],
+      productConfig: {
+        7: 'Tier 1 - $29/month - 10,000 credits',
+        8: 'Tier 2 - $99/month - 40,000 credits'
+      },
+      format: 'application/x-www-form-urlencoded',
+      security: THRIVECART_SECRET ? 'Secret configured ✅' : 'Secret NOT configured ❌'
     }), {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -88,33 +115,44 @@ serve(async (req) => {
 
   if (req.method === 'POST') {
     try {
+      // 1. Parse form-encoded data
       const body = await parseFormData(req);
 
+      // 2. Enhanced logging
       console.log('='.repeat(60));
-      console.log('🔔 ThriveCart Webhook Received');
+      console.log('🔔 ThriveCart Subscription Webhook Received');
+      console.log('='.repeat(60));
+      console.log('Timestamp:', new Date().toISOString());
+      console.log('Mode:', body.mode, `(${body.mode_int === '1' ? 'TEST' : 'LIVE'})`);
       console.log('Event:', body.event);
+      console.log('Base Product:', body.base_product);
       console.log('Customer Email:', body.customer?.email);
-      console.log('Product ID:', body.base_product);
-      console.log('Coupon Code:', body.coupon_code || 'None');
+      console.log('Order ID:', body.order_id);
       console.log('='.repeat(60));
 
-      // Verify secret
+      // 3. Verify ThriveCart secret
       const THRIVECART_SECRET = Deno.env.get('THRIVECART_SECRET');
       if (THRIVECART_SECRET && body.thrivecart_secret !== THRIVECART_SECRET) {
-        console.error('❌ Invalid secret');
+        console.error('❌ Invalid ThriveCart secret');
         return new Response(JSON.stringify({ error: 'Invalid secret' }), {
           status: 403,
-          headers: { 'Content-Type': 'application/json' }
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
 
-      const event = (body.event || '').toString().trim();
-      const email = body.customer?.email;
-      const productId = parseInt(body.base_product);
-      const couponCode = body.coupon_code;
+      // 4. Extract data
+      const email = body.customer?.email || body.customer_email || body.email;
+      const productId = parseInt(body.base_product || body.product?.id);
+      const event = body.event;
+      const mode = body.mode;
 
+      console.log('📧 Extracted Email:', email);
+      console.log('🆔 Extracted Product ID:', productId);
+      console.log('🎯 Event:', event);
+
+      // 5. Validate required fields
       if (!email) {
-        console.error('❌ No email');
+        console.error('❌ No email found in webhook');
         return new Response(JSON.stringify({ error: 'Email required' }), {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -122,44 +160,45 @@ serve(async (req) => {
       }
 
       if (!productId || isNaN(productId)) {
-        console.error('❌ Invalid product ID');
+        console.error('❌ No valid base_product found in webhook');
         return new Response(JSON.stringify({ error: 'Product ID required' }), {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
 
+      // 6. Get product configuration
       const config = PRODUCT_CONFIG[productId];
       if (!config) {
-        console.error(`❌ Unknown product: ${productId}`);
-        return new Response(JSON.stringify({ error: `Unknown product: ${productId}` }), {
+        console.error(`❌ Unknown product ID: ${productId}`);
+        return new Response(JSON.stringify({
+          error: `Unknown product ID: ${productId}. Valid IDs: ${Object.keys(PRODUCT_CONFIG).join(', ')}`
+        }), {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
 
-      // Initialize Supabase
+      console.log(`✅ Product Config Found: Tier=${config.tier}, Credits=${config.monthlyCredits}`);
+
+      // 7. Initialize Supabase
       const supabaseUrl = Deno.env.get('SUPABASE_URL');
       const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
 
       if (!supabaseUrl || !supabaseServiceKey) {
         console.error('Missing Supabase environment variables');
-        return new Response(JSON.stringify({
-          error: 'Server configuration error'
-        }), {
+        return new Response(JSON.stringify({ error: 'Server configuration error' }), {
           status: 500,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         });
       }
 
       const supabase = createClient(supabaseUrl, supabaseServiceKey, {
-        auth: {
-          autoRefreshToken: false,
-          persistSession: false
-        }
+        auth: { autoRefreshToken: false, persistSession: false }
       });
 
-      // Find or create user
+      // 8. Find or create user
+      console.log(`🔍 Looking for user with email: ${email}`);
       let { data: user } = await supabase
         .from('users')
         .select('id, credits, email, subscription_tier')
@@ -167,12 +206,14 @@ serve(async (req) => {
         .maybeSingle();
 
       if (!user) {
-        console.log('Creating new user...');
+        console.log('⚠️ User not found, creating new user...');
+        const customerName = body.customer?.name || body.customer?.first_name || email.split('@')[0];
+
         const { data: newUser, error: createError } = await supabase
           .from('users')
           .insert({
             email: email,
-            name: body.customer?.name || body.customer?.first_name || email.split('@')[0],
+            name: customerName,
             credits: 0,
             subscription_tier: 'free'
           })
@@ -180,132 +221,39 @@ serve(async (req) => {
           .single();
 
         if (createError || !newUser) {
-          console.error('Failed to create user:', createError);
-          return new Response(JSON.stringify({ error: 'User creation failed' }), {
-            status: 500,
-            headers: { 'Content-Type': 'application/json' }
-          });
-        }
-        user = newUser;
-      }
-
-      console.log(`✅ User: ${user.email} (${user.id})`);
-
-      // ========================================
-      // HANDLE COUPON CODE
-      // ========================================
-      if (couponCode && event === 'order.success') {
-        const { data: coupon } = await supabase
-          .from('coupons')
-          .select('*')
-          .eq('code', couponCode)
-          .single();
-
-        if (coupon) {
-          // Check if coupon is still valid
-          const now = new Date();
-          const isExpired = coupon.expires_at && new Date(coupon.expires_at) < now;
-          const maxUsesReached = coupon.max_uses && coupon.uses >= coupon.max_uses;
-
-          if (isExpired) {
-            console.log(`⚠️ Coupon ${couponCode} has expired`);
-          } else if (maxUsesReached) {
-            console.log(`⚠️ Coupon ${couponCode} max uses reached`);
-          } else {
-            // Apply coupon
-            if (coupon.type === 'trial') {
-              console.log(`🎁 Applying trial coupon: ${coupon.months} months`);
-
-              const trialCredits = config.monthlyCredits * coupon.months;
-              const newCredits = (user.credits || 0) + trialCredits;
-
-              await supabase
-                .from('users')
-                .update({
-                  credits: newCredits,
-                  subscription_tier: config.tier
-                })
-                .eq('id', user.id);
-
-              // Log transaction
-              await supabase.from('credit_transactions').insert({
-                user_id: user.id,
-                amount: trialCredits,
-                type: 'trial',
-                payment_method: 'coupon',
-                metadata: {
-                  coupon_code: couponCode,
-                  months: coupon.months,
-                  order_id: body.order?.id
-                }
-              });
-
-              // Increment coupon usage
-              await supabase
-                .from('coupons')
-                .update({ uses: coupon.uses + 1 })
-                .eq('code', couponCode);
-
-              console.log(`✅ Trial applied: +${trialCredits} credits`);
-            } else if (coupon.type === 'discount') {
-              console.log(`💰 Discount coupon applied: ${coupon.discount_percent}%`);
-              // Note: ThriveCart handles price discount, we just log it
-              await supabase
-                .from('coupons')
-                .update({ uses: coupon.uses + 1 })
-                .eq('code', couponCode);
-            }
-          }
-        }
-      }
-
-      // ========================================
-      // HANDLE EVENTS
-      // ========================================
-      if (event === 'order.success' || event === 'order.subscription_payment') {
-        console.log('💳 Processing purchase/renewal');
-
-        // Check if this is a top-up or subscription
-        if (config.type === 'topup') {
-          // One-time credit purchase
-          const newCredits = (user.credits || 0) + config.monthlyCredits;
-
-          await supabase
-            .from('users')
-            .update({ credits: newCredits })
-            .eq('id', user.id);
-
-          // Log transaction
-          await supabase.from('credit_transactions').insert({
-            user_id: user.id,
-            amount: config.monthlyCredits,
-            type: 'purchase',
-            payment_method: 'thrivecart',
-            metadata: {
-              product_id: productId,
-              price: config.price,
-              order_id: body.order?.id
-            }
-          });
-
-          console.log(`✅ Top-up: +${config.monthlyCredits} credits (Total: ${newCredits})`);
-
+          console.error('❌ Failed to create user:', createError);
           return new Response(JSON.stringify({
-            success: true,
-            message: 'Credits added',
-            credits: newCredits
+            error: 'User creation failed',
+            details: createError?.message
           }), {
-            status: 200,
-            headers: { 'Content-Type': 'application/json' }
+            status: 500,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
           });
+        }
 
-        } else {
-          // Subscription
+        user = newUser;
+        console.log('✅ New user created:', newUser.id);
+      } else {
+        console.log('✅ Existing user found:', user.id);
+      }
+
+      console.log(`✅ User ready: ${user.email} (ID: ${user.id}, Current Credits: ${user.credits})`);
+
+      // 9. Handle different webhook events
+      switch (event) {
+        case 'order.success':
+        case 'order.subscription_payment':
+          // SUBSCRIPTION ACTIVATION OR RENEWAL
+          const isInitial = event === 'order.success';
+          console.log(`💳 Processing ${isInitial ? 'initial purchase' : 'subscription renewal'}`);
+          console.log(`Current credits: ${user.credits}, Adding: ${config.monthlyCredits}`);
+
           const newCredits = (user.credits || 0) + config.monthlyCredits;
           const renewalDate = new Date();
           renewalDate.setMonth(renewalDate.getMonth() + 1);
 
-          await supabase
+          // Update users table
+          const { error: updateError } = await supabase
             .from('users')
             .update({
               subscription_tier: config.tier,
@@ -313,6 +261,19 @@ serve(async (req) => {
             })
             .eq('id', user.id);
 
+          if (updateError) {
+            console.error('❌ Failed to update users table:', updateError);
+            return new Response(JSON.stringify({
+              error: 'Update failed',
+              details: updateError.message
+            }), {
+              status: 500,
+              headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            });
+          }
+          console.log('✅ Users table updated');
+
+          // Update user_credits table
           const { data: existingCredit } = await supabase
             .from('user_credits')
             .select('id')
@@ -351,100 +312,150 @@ serve(async (req) => {
             metadata: {
               product_id: productId,
               tier: config.tier,
-              order_id: body.order?.id
+              order_id: body.order_id
             }
           });
 
-          console.log(`✅ Subscription: +${config.monthlyCredits} credits (Total: ${newCredits})`);
+          console.log(`✅ Credits added: ${config.monthlyCredits} (New total: ${newCredits})`);
+          console.log('='.repeat(60));
 
           return new Response(JSON.stringify({
             success: true,
-            message: event === 'order.success' ? 'Subscription activated' : 'Subscription renewed',
+            message: isInitial ? 'Subscription activated' : 'Subscription renewed',
             credits: newCredits,
-            tier: config.tier
+            tier: config.tier,
+            user_id: user.id,
+            mode: mode
           }), {
             status: 200,
-            headers: { 'Content-Type': 'application/json' }
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
           });
-        }
 
-      } else if (event === 'order.subscription_cancelled' || event === 'order.subscription_paused') {
-        console.log('🚫 Processing cancellation/pause');
+        case 'order.subscription_cancelled':
+        case 'order.subscription_paused':
+          console.log(`🚫 Processing subscription ${event.includes('cancelled') ? 'cancellation' : 'pause'}`);
 
-        await supabase
-          .from('users')
-          .update({ subscription_tier: 'free' })
-          .eq('id', user.id);
+          await supabase
+            .from('users')
+            .update({ subscription_tier: 'free' })
+            .eq('id', user.id);
 
-        await supabase
-          .from('user_credits')
-          .update({
-            tier: 'free',
-            monthly_allowance: 0,
-            updated_at: new Date().toISOString()
-          })
-          .eq('user_id', user.id);
+          await supabase
+            .from('user_credits')
+            .update({
+              tier: 'free',
+              monthly_allowance: 0,
+              updated_at: new Date().toISOString()
+            })
+            .eq('user_id', user.id);
 
-        return new Response(JSON.stringify({
-          success: true,
-          message: event.includes('cancelled') ? 'Subscription cancelled' : 'Subscription paused'
-        }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
-        });
+          console.log(`✅ Subscription ${event.includes('cancelled') ? 'cancelled' : 'paused'}`);
+          console.log('='.repeat(60));
 
-      } else if (event === 'order.refund') {
-        console.log('💸 Processing refund');
+          return new Response(JSON.stringify({
+            success: true,
+            message: `Subscription ${event.includes('cancelled') ? 'cancelled' : 'paused'}`,
+            mode: mode
+          }), {
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
 
-        const creditsToRemove = config.monthlyCredits;
-        const newCreditBalance = Math.max(0, (user.credits || 0) - creditsToRemove);
+        case 'order.subscription_resumed':
+          console.log('▶️ Processing subscription resume');
 
-        await supabase
-          .from('users')
-          .update({ credits: newCreditBalance })
-          .eq('id', user.id);
+          await supabase
+            .from('users')
+            .update({ subscription_tier: config.tier })
+            .eq('id', user.id);
 
-        // Log refund
-        await supabase.from('credit_transactions').insert({
-          user_id: user.id,
-          amount: -creditsToRemove,
-          type: 'refund',
-          payment_method: 'thrivecart',
-          metadata: {
-            product_id: productId,
-            order_id: body.order?.id
-          }
-        });
+          await supabase
+            .from('user_credits')
+            .update({
+              tier: config.tier,
+              monthly_allowance: config.monthlyCredits,
+              updated_at: new Date().toISOString()
+            })
+            .eq('user_id', user.id);
 
-        return new Response(JSON.stringify({
-          success: true,
-          message: 'Refund processed',
-          credits: newCreditBalance
-        }), {
-          status: 200,
-          headers: { 'Content-Type': 'application/json' }
-        });
+          console.log('✅ Subscription resumed');
+          console.log('='.repeat(60));
 
-      } else {
-        console.log('⚠️ Unhandled event:', event);
-        return new Response(JSON.stringify({
-          success: true,
-          message: `Event ${event} received but not handled`
-        }), {
-          status: 200,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        });
+          return new Response(JSON.stringify({
+            success: true,
+            message: 'Subscription resumed',
+            mode: mode
+          }), {
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+
+        case 'order.refund':
+          console.log('💸 Processing refund');
+
+          const creditsToRemove = config.monthlyCredits;
+          const newCreditBalance = Math.max(0, (user.credits || 0) - creditsToRemove);
+
+          await supabase
+            .from('users')
+            .update({
+              subscription_tier: 'free',
+              credits: newCreditBalance
+            })
+            .eq('id', user.id);
+
+          // Log refund transaction
+          await supabase.from('credit_transactions').insert({
+            user_id: user.id,
+            amount: -creditsToRemove,
+            type: 'refund',
+            payment_method: 'thrivecart',
+            metadata: { product_id: productId, order_id: body.order_id }
+          });
+
+          console.log(`✅ Refund processed. Credits removed: ${creditsToRemove}`);
+          console.log('='.repeat(60));
+
+          return new Response(JSON.stringify({
+            success: true,
+            message: 'Refund processed',
+            credits: newCreditBalance,
+            mode: mode
+          }), {
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
+
+        default:
+          console.log(`⚠️ Unhandled event type: ${event}`);
+          console.log('='.repeat(60));
+          return new Response(JSON.stringify({
+            success: true,
+            message: `Event ${event} received but not processed`,
+            mode: mode
+          }), {
+            status: 200,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          });
       }
 
     } catch (err) {
       const error = err as Error;
-      console.error('❌ Webhook error:', error.message);
-      return new Response(JSON.stringify({ error: error.message }), {
+      console.error('='.repeat(60));
+      console.error('❌ WEBHOOK ERROR');
+      console.error('Error:', error.message);
+      console.error('Stack:', error.stack);
+      console.error('='.repeat(60));
+
+      // Return 200 to avoid ThriveCart retrying
+      return new Response(JSON.stringify({
+        error: error.message || 'Internal server error'
+      }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       });
     }
   }
 
-  return new Response('Method not allowed', { status: 405 });
+  return new Response('Method not allowed', { status: 405, headers: corsHeaders });
 });

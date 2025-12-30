@@ -19,3 +19,6 @@ api_url = "http://localhost"
 
 [functions.thrivecart-webhook]
 verify_jwt = false
+
+[functions.thrivecart-topup]
+verify_jwt = false

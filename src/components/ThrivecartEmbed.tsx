@@ -1,119 +1,18 @@
-import { useEffect, useRef } from "react"
-import { Button, ButtonProps } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
+import { useEffect } from "react";
 
-interface ThrivecartEmbedProps {
-  productId?: string
-}
-
-// Global script loader - ensures script is loaded once
-let scriptLoaded = false
-let scriptLoadPromise: Promise<void> | null = null
-
-function loadThrivecartScript(): Promise<void> {
-  if (scriptLoaded) return Promise.resolve()
-  if (scriptLoadPromise) return scriptLoadPromise
-
-  scriptLoadPromise = new Promise((resolve) => {
-    const existingScript = document.querySelector('script[src*="thrivecart.js"]')
-    if (existingScript) {
-      scriptLoaded = true
-      resolve()
-      return
-    }
-
-    const script = document.createElement("script")
-    script.src = "https://tinder.thrivecart.com/embed/v1/thrivecart.js"
-    script.async = true
-    script.onload = () => {
-      scriptLoaded = true
-      resolve()
-    }
-    document.body.appendChild(script)
-  })
-
-  return scriptLoadPromise
-}
-
-export default function ThrivecartEmbed({ productId }: ThrivecartEmbedProps) {
+export default function ThrivecartEmbed() {
   useEffect(() => {
-    loadThrivecartScript()
-  }, [])
+    // Dynamically inject Thrivecart script on client only
+    const script = document.createElement("script");
+    script.src = "https://tinder.thrivecart.com/embed/v1/thrivecart.js";
+    script.async = true;
+    document.body.appendChild(script);
+    return () => {
+      document.body.removeChild(script);
+    };
+  }, []);
 
-  return null
-}
-
-// ThriveCart checkout link generator
-export function getThriveCartCheckoutUrl(productSlug: string, email?: string): string {
-  const baseUrl = `https://tinder.thrivecart.com/${productSlug}`
-  if (email) {
-    return `${baseUrl}?passthrough[email]=${encodeURIComponent(email)}`
-  }
-  return baseUrl
-}
-
-// ThriveCart popup button component
-interface ThrivecartButtonProps extends Omit<ButtonProps, 'onClick'> {
-  productId: number
-  children: React.ReactNode
-  userEmail?: string
-}
-
-export function ThrivecartButton({ productId, children, className, userEmail, ...props }: ThrivecartButtonProps) {
-  const linkRef = useRef<HTMLAnchorElement>(null)
-
-  useEffect(() => {
-    // Ensure script is loaded when button mounts
-    loadThrivecartScript()
-  }, [])
-
-  const handleClick = (e: React.MouseEvent) => {
-    e.preventDefault()
-    
-    // Find the product from THRIVECART_PRODUCTS by productId
-    const product = Object.values(THRIVECART_PRODUCTS).find(p => p.productId === productId)
-    const slug = product?.slug || 'cb4-starter'
-    
-    // Build the checkout URL
-    let url = `https://tinder.thrivecart.com/${slug}/`
-    
-    // Add email passthrough if available
-    if (userEmail) {
-      url += `?passthrough[email]=${encodeURIComponent(userEmail)}`
-    }
-    
-    // Open in popup window (most reliable method)
-    const width = 600
-    const height = 700
-    const left = (window.innerWidth - width) / 2
-    const top = (window.innerHeight - height) / 2
-    window.open(
-      url,
-      'thrivecart_checkout',
-      `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes`
-    )
-  }
-
-  return (
-    <a
-      ref={linkRef}
-      href="#"
-      onClick={handleClick}
-      data-thrivecart-account="tinder"
-      data-thrivecart-tpl="v2"
-      data-thrivecart-product={productId}
-      className={cn(
-        "thrivecart-button thrivecart-button-styled cursor-pointer inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0",
-        props.variant === "outline" 
-          ? "border border-input bg-background shadow-xs hover:bg-accent hover:text-accent-foreground"
-          : "bg-primary text-primary-foreground shadow-xs hover:bg-primary/90",
-        props.size === "sm" ? "h-8 px-3 text-xs" : "h-9 px-4 py-2",
-        className
-      )}
-    >
-      {children}
-    </a>
-  )
+  return null;
 }
 
 // Product configurations matching edge function PRODUCT_CONFIG
@@ -169,4 +68,53 @@ export const THRIVECART_PRODUCTS = {
     price: 100,
     type: "topup",
   },
+}
+
+// ThriveCart checkout button component
+import { Button, ButtonProps } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
+
+interface ThrivecartButtonProps extends Omit<ButtonProps, 'onClick'> {
+  productId: number
+  children: React.ReactNode
+  userEmail?: string
+}
+
+export function ThrivecartButton({ productId, children, className, userEmail, ...props }: ThrivecartButtonProps) {
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault()
+    
+    // Find the product from THRIVECART_PRODUCTS by productId
+    const product = Object.values(THRIVECART_PRODUCTS).find(p => p.productId === productId)
+    const slug = product?.slug || 'cb4-starter'
+    
+    // Build the checkout URL
+    let url = `https://tinder.thrivecart.com/${slug}/`
+    
+    // Add email passthrough if available
+    if (userEmail) {
+      url += `?passthrough[email]=${encodeURIComponent(userEmail)}`
+    }
+    
+    // Open in popup window
+    const width = 600
+    const height = 700
+    const left = (window.innerWidth - width) / 2
+    const top = (window.innerHeight - height) / 2
+    window.open(
+      url,
+      'thrivecart_checkout',
+      `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes`
+    )
+  }
+
+  return (
+    <Button
+      onClick={handleClick}
+      className={cn(className)}
+      {...props}
+    >
+      {children}
+    </Button>
+  )
 }
