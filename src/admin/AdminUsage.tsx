@@ -1,230 +1,358 @@
-import { useEffect, useState } from "react"
-import { AdminLayout } from "./AdminLayout"
+import { useEffect, useState, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import { AdminLayout } from "./AdminLayout"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@/components/ui/table"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { BarChart3, MessageSquare, Image, Clock } from "lucide-react"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Badge } from "@/components/ui/badge"
+import { Card, CardContent } from "@/components/ui/card"
+import { Download, ChevronLeft, ChevronRight } from "lucide-react"
+import { toast } from "sonner"
 
-interface UsageRecord {
-  id: string
-  user_id: string
-  type: string
-  credits_used: number
-  created_at: string
-  user_email?: string
-}
+type TimeFilter = 'daily' | 'weekly' | 'monthly' | 'all'
 
 export default function AdminUsage() {
-  const [usage, setUsage] = useState<UsageRecord[]>([])
+  const [logs, setLogs] = useState<any[]>([])
+  const [filteredLogs, setFilteredLogs] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [timeRange, setTimeRange] = useState("7d")
-  const [stats, setStats] = useState({
-    totalCreditsUsed: 0,
-    chatMessages: 0,
-    imagesGenerated: 0
-  })
+  const [error, setError] = useState<string | null>(null)
+  const [userFilter, setUserFilter] = useState<string>("")
+  const [users, setUsers] = useState<any[]>([])
+  const [currentPage, setCurrentPage] = useState(1)
+  const [timeFilter, setTimeFilter] = useState<TimeFilter>('all')
+  const [searchQuery, setSearchQuery] = useState("")
+  const [totalCost, setTotalCost] = useState(0)
+  const logsPerPage = 20
 
-  useEffect(() => {
-    fetchUsage()
-  }, [timeRange])
-
-  async function fetchUsage() {
-    setLoading(true)
-    
-    const daysMap: Record<string, number> = {
-      '24h': 1,
-      '7d': 7,
-      '30d': 30,
-      '90d': 90
-    }
-    const days = daysMap[timeRange] || 7
-    const startDate = new Date()
-    startDate.setDate(startDate.getDate() - days)
-
+  const fetchUsage = useCallback(async () => {
     try {
-      // Fetch messages as usage proxy
-      const { data: messages, count: messageCount } = await supabase
-        .from('messages')
-        .select('id, thread_id, role, created_at', { count: 'exact' })
-        .gte('created_at', startDate.toISOString())
-        .eq('role', 'user')
-        .order('created_at', { ascending: false })
-        .limit(100)
+      setLoading(true)
 
-      // Get unique threads for user info
-      const threadIds = [...new Set(messages?.map(m => m.thread_id) || [])]
-      
-      let userMap: Record<string, string> = {}
-      if (threadIds.length > 0) {
-        const { data: threads } = await supabase
-          .from('chat_threads')
-          .select('id, user_id')
-          .in('id', threadIds)
+      const { data: usageData, error: usageError } = await supabase
+        .from("usage_logs")
+        .select(`
+          *,
+          users (
+            id,
+            name,
+            email
+          )
+        `)
+        .order("created_at", { ascending: false })
 
-        const userIds = [...new Set(threads?.map(t => t.user_id) || [])]
-        if (userIds.length > 0) {
-          const { data: users } = await supabase
-            .from('users')
-            .select('id, email')
-            .in('id', userIds)
+      if (usageError) throw usageError
 
-          const threadToUser: Record<string, string> = {}
-          threads?.forEach(t => {
-            const user = users?.find(u => u.id === t.user_id)
-            if (user) threadToUser[t.id] = user.email
-          })
-          userMap = threadToUser
-        }
-      }
+      const { data: usersData } = await supabase
+        .from("users")
+        .select("id, name, email")
+        .order("name", { ascending: true })
 
-      // Transform to usage records
-      const usageRecords: UsageRecord[] = (messages || []).map(m => ({
-        id: m.id,
-        user_id: m.thread_id,
-        type: 'chat',
-        credits_used: 0.1, // Approximate
-        created_at: m.created_at,
-        user_email: userMap[m.thread_id] || 'Unknown'
-      }))
+      setUsers(usersData || [])
+      setLogs(usageData || [])
+      setFilteredLogs(usageData || [])
 
-      setUsage(usageRecords)
-      setStats({
-        totalCreditsUsed: usageRecords.reduce((sum, u) => sum + u.credits_used, 0),
-        chatMessages: messageCount || 0,
-        imagesGenerated: 0 // Would need separate tracking
-      })
-    } catch (error) {
-      console.error('Error fetching usage:', error)
+      const cost = (usageData || []).reduce((sum: number, log: any) =>
+        sum + (parseFloat(log.estimated_cost) || 0), 0)
+      setTotalCost(cost)
+
+    } catch (err: any) {
+      console.error('Error fetching usage:', err)
+      setError(err.message)
+      toast.error('Failed to load usage logs')
     } finally {
       setLoading(false)
     }
+  }, [])
+
+  useEffect(() => {
+    fetchUsage()
+  }, [fetchUsage])
+
+  useEffect(() => {
+    let filtered = [...logs]
+
+    if (timeFilter !== 'all') {
+      const now = new Date()
+      const filterDate = new Date()
+
+      if (timeFilter === 'daily') {
+        filterDate.setDate(now.getDate() - 1)
+      } else if (timeFilter === 'weekly') {
+        filterDate.setDate(now.getDate() - 7)
+      } else if (timeFilter === 'monthly') {
+        filterDate.setMonth(now.getMonth() - 1)
+      }
+
+      filtered = filtered.filter(log => new Date(log.created_at) >= filterDate)
+    }
+
+    if (userFilter) {
+      filtered = filtered.filter(log => log.users?.email === userFilter)
+    }
+
+    if (searchQuery) {
+      filtered = filtered.filter(log =>
+        log.users?.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        log.users?.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        log.model?.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    }
+
+    setFilteredLogs(filtered)
+    setCurrentPage(1)
+
+    const cost = filtered.reduce((sum: number, log: any) =>
+      sum + (parseFloat(log.estimated_cost) || 0), 0)
+    setTotalCost(cost)
+  }, [logs, timeFilter, userFilter, searchQuery])
+
+  const exportToCSV = () => {
+    const csvData = [
+      ['User', 'Email', 'Model', 'Input Tokens', 'Output Tokens', 'Total Tokens', 'Cost ($)', 'Type', 'Date'],
+      ...filteredLogs.map(log => {
+        const isImageGen = log.model?.includes('Ideogram')
+        return [
+          log.users?.name || 'Unknown',
+          log.users?.email || '—',
+          log.model || '—',
+          isImageGen ? 'N/A' : (log.tokens_input || '—'),
+          isImageGen ? 'N/A' : (log.tokens_output || '—'),
+          isImageGen ? 'N/A' : ((log.tokens_input || 0) + (log.tokens_output || 0)),
+          log.estimated_cost ? Number(log.estimated_cost).toFixed(6) : '—',
+          isImageGen ? 'Image Generation' : 'Text Chat',
+          new Date(log.created_at).toLocaleString()
+        ]
+      })
+    ]
+
+    const csvContent = csvData.map(row => row.join(',')).join('\n')
+    const blob = new Blob([csvContent], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `usage-logs-${new Date().toISOString().split('T')[0]}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
-  const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
+  const indexOfLastLog = currentPage * logsPerPage
+  const indexOfFirstLog = indexOfLastLog - logsPerPage
+  const currentLogs = filteredLogs.slice(indexOfFirstLog, indexOfLastLog)
+  const totalPages = Math.ceil(filteredLogs.length / logsPerPage)
+
+  if (loading) {
+    return (
+      <AdminLayout currentPage="usage">
+        <div className="p-6 text-center">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-4"></div>
+          <p className="text-muted-foreground">Loading usage logs...</p>
+        </div>
+      </AdminLayout>
+    )
+  }
+
+  if (error) {
+    return (
+      <AdminLayout currentPage="usage">
+        <div className="p-6 text-center">
+          <p className="text-destructive mb-4">Error: {error}</p>
+          <Button onClick={fetchUsage}>Retry</Button>
+        </div>
+      </AdminLayout>
+    )
   }
 
   return (
     <AdminLayout currentPage="usage">
       <div className="p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h1 className="text-2xl font-bold text-foreground">Usage Analytics</h1>
-          <Select value={timeRange} onValueChange={setTimeRange}>
-            <SelectTrigger className="w-36 bg-surface border-border text-foreground">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="24h">Last 24 hours</SelectItem>
-              <SelectItem value="7d">Last 7 days</SelectItem>
-              <SelectItem value="30d">Last 30 days</SelectItem>
-              <SelectItem value="90d">Last 90 days</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-foreground mb-4">Usage Analytics</h1>
+          <div className="flex items-center gap-4">
+            <Card>
+              <CardContent className="p-4">
+                <div className="text-sm text-muted-foreground mb-1">Total Cost</div>
+                <div className="text-2xl font-bold text-primary">${totalCost.toFixed(4)}</div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="text-sm text-muted-foreground mb-1">Total Requests</div>
+                <div className="text-2xl font-bold text-foreground">{filteredLogs.length}</div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <Card className="bg-surface border-border">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Credits Used
-              </CardTitle>
-              <BarChart3 className="h-4 w-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-foreground">
-                {stats.totalCreditsUsed.toFixed(2)}
+        {/* Filters */}
+        <Card className="mb-6">
+          <CardContent className="p-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-muted-foreground mb-2">Time Period</label>
+                <div className="flex gap-1 bg-muted rounded-lg p-1">
+                  {(['daily', 'weekly', 'monthly', 'all'] as TimeFilter[]).map(filter => (
+                    <button
+                      key={filter}
+                      onClick={() => setTimeFilter(filter)}
+                      className={`flex-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                        timeFilter === filter
+                          ? 'bg-primary text-primary-foreground'
+                          : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      {filter.charAt(0).toUpperCase() + filter.slice(1)}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </CardContent>
-          </Card>
 
-          <Card className="bg-surface border-border">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Chat Messages
-              </CardTitle>
-              <MessageSquare className="h-4 w-4 text-blue-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-foreground">{stats.chatMessages}</div>
-            </CardContent>
-          </Card>
+              <div>
+                <label className="block text-sm font-medium text-muted-foreground mb-2">Filter by User</label>
+                <Select value={userFilter} onValueChange={setUserFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All Users" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">All Users</SelectItem>
+                    {users.map((user) => (
+                      <SelectItem key={user.id} value={user.email}>
+                        {user.name || user.email}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-          <Card className="bg-surface border-border">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                Images Generated
-              </CardTitle>
-              <Image className="h-4 w-4 text-purple-500" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-foreground">{stats.imagesGenerated}</div>
-            </CardContent>
-          </Card>
-        </div>
+              <div>
+                <label className="block text-sm font-medium text-muted-foreground mb-2">Search</label>
+                <Input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Name, email, model..."
+                />
+              </div>
 
-        {/* Recent Activity */}
-        <Card className="bg-surface border-border">
-          <CardHeader>
-            <CardTitle className="text-foreground">Recent Activity</CardTitle>
-          </CardHeader>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow className="border-border hover:bg-transparent">
-                  <TableHead className="text-muted-foreground">User</TableHead>
-                  <TableHead className="text-muted-foreground">Type</TableHead>
-                  <TableHead className="text-muted-foreground">Credits</TableHead>
-                  <TableHead className="text-muted-foreground">Time</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {loading ? (
-                  [...Array(5)].map((_, i) => (
-                    <TableRow key={i} className="border-border">
-                      <TableCell colSpan={4}>
-                        <div className="h-8 bg-muted rounded animate-pulse"></div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                ) : usage.length === 0 ? (
-                  <TableRow className="border-border">
-                    <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
-                      No activity in this time period
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  usage.slice(0, 20).map((record) => (
-                    <TableRow key={record.id} className="border-border hover:bg-surface-hover">
-                      <TableCell className="text-foreground">{record.user_email}</TableCell>
-                      <TableCell className="text-muted-foreground capitalize">{record.type}</TableCell>
-                      <TableCell className="text-foreground font-mono">{record.credits_used.toFixed(2)}</TableCell>
-                      <TableCell className="text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          {formatDate(record.created_at)}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
+              <div className="flex items-end">
+                <Button onClick={exportToCSV} className="w-full">
+                  <Download className="h-4 w-4 mr-2" />
+                  Export CSV
+                </Button>
+              </div>
+            </div>
           </CardContent>
         </Card>
+
+        {/* Table */}
+        <div className="bg-card border border-border rounded-lg overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-muted/50">
+                <TableHead>User</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Model / Type</TableHead>
+                <TableHead className="text-right">Input Tokens</TableHead>
+                <TableHead className="text-right">Output Tokens</TableHead>
+                <TableHead className="text-right">Total</TableHead>
+                <TableHead className="text-right">Cost ($)</TableHead>
+                <TableHead>Date</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {currentLogs.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                    No usage logs found
+                  </TableCell>
+                </TableRow>
+              ) : (
+                currentLogs.map((log, i) => {
+                  const isImageGen = log.model?.includes('Ideogram')
+
+                  return (
+                    <TableRow key={log.id || i}>
+                      <TableCell className="font-medium">{log.users?.name || "Unknown"}</TableCell>
+                      <TableCell className="text-muted-foreground">{log.users?.email || "—"}</TableCell>
+                      <TableCell>
+                        <Badge variant={isImageGen ? "secondary" : "outline"}>
+                          {isImageGen && '🎨 '}
+                          {log.model || "—"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {isImageGen ? (
+                          <span className="text-muted-foreground text-xs">N/A</span>
+                        ) : (
+                          (log.tokens_input || 0).toLocaleString()
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {isImageGen ? (
+                          <span className="text-muted-foreground text-xs">N/A</span>
+                        ) : (
+                          (log.tokens_output || 0).toLocaleString()
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right font-semibold">
+                        {isImageGen ? (
+                          <span className="text-muted-foreground text-xs">Image Gen</span>
+                        ) : (
+                          ((log.tokens_input || 0) + (log.tokens_output || 0)).toLocaleString()
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right font-mono">
+                        {log.estimated_cost ? Number(log.estimated_cost).toFixed(6) : "—"}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {new Date(log.created_at).toLocaleString()}
+                      </TableCell>
+                    </TableRow>
+                  )
+                })
+              )}
+            </TableBody>
+          </Table>
+        </div>
+
+        {/* Pagination */}
+        {filteredLogs.length > logsPerPage && (
+          <div className="flex justify-center items-center gap-2 mt-6">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
+              disabled={currentPage === 1}
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Previous
+            </Button>
+            <span className="text-sm text-muted-foreground px-4">
+              Page {currentPage} of {totalPages}
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
+              disabled={currentPage === totalPages}
+            >
+              Next
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
       </div>
     </AdminLayout>
   )

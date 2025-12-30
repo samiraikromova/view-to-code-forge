@@ -10,7 +10,11 @@ import {
   Settings, 
   LogOut,
   Home,
-  Shield
+  Shield,
+  Ticket,
+  FolderKanban,
+  MessageSquare,
+  Video
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -26,6 +30,10 @@ const navItems = [
   { id: "users", label: "Users", icon: Users, path: "/admin/users" },
   { id: "credits", label: "Credits", icon: CreditCard, path: "/admin/credits" },
   { id: "usage", label: "Usage Analytics", icon: BarChart3, path: "/admin/usage" },
+  { id: "coupons", label: "Coupons", icon: Ticket, path: "/admin/coupons" },
+  { id: "projects", label: "Projects", icon: FolderKanban, path: "/admin/projects" },
+  { id: "prompts", label: "System Prompts", icon: MessageSquare, path: "/admin/prompts" },
+  { id: "videos", label: "Videos", icon: Video, path: "/admin/videos" },
   { id: "settings", label: "Settings", icon: Settings, path: "/admin/settings" },
 ]
 

@@ -67,6 +67,10 @@ const App = () => {
             <Route path="/admin/users" element={<ProtectedRoute><AdminUsers /></ProtectedRoute>} />
             <Route path="/admin/credits" element={<ProtectedRoute><AdminCredits /></ProtectedRoute>} />
             <Route path="/admin/usage" element={<ProtectedRoute><AdminUsage /></ProtectedRoute>} />
+            <Route path="/admin/coupons" element={<ProtectedRoute><AdminCoupons /></ProtectedRoute>} />
+            <Route path="/admin/projects" element={<ProtectedRoute><AdminProjects /></ProtectedRoute>} />
+            <Route path="/admin/prompts" element={<ProtectedRoute><AdminPrompts /></ProtectedRoute>} />
+            <Route path="/admin/videos" element={<ProtectedRoute><AdminVideos /></ProtectedRoute>} />
             <Route path="/admin/settings" element={<ProtectedRoute><AdminSettings /></ProtectedRoute>} />
             
             {/* Catch-all */}
