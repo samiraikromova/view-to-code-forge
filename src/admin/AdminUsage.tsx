@@ -222,13 +222,13 @@ export default function AdminUsage() {
 
               <div>
                 <label className="block text-sm font-medium text-muted-foreground mb-2">Filter by User</label>
-                <Select value={userFilter} onValueChange={setUserFilter}>
+                <Select value={userFilter || "all"} onValueChange={(val) => setUserFilter(val === "all" ? "" : val)}>
                   <SelectTrigger>
                     <SelectValue placeholder="All Users" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All Users</SelectItem>
-                    {users.map((user) => (
+                    <SelectItem value="all">All Users</SelectItem>
+                    {users.filter(user => user.email).map((user) => (
                       <SelectItem key={user.id} value={user.email}>
                         {user.name || user.email}
                       </SelectItem>
