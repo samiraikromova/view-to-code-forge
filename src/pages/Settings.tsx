@@ -9,7 +9,7 @@ import { useNavigate } from "react-router-dom"
 import { PLANS, SubscriptionTier } from "@/types/subscription"
 import { useAuth } from "@/hooks/useAuth"
 import { supabase } from "@/lib/supabase"
-import ThrivecartEmbed, { getThriveCartCheckoutUrl, THRIVECART_PRODUCTS } from "@/components/ThrivecartEmbed"
+import ThrivecartEmbed, { ThrivecartButton, THRIVECART_PRODUCTS } from "@/components/ThrivecartEmbed"
 
 interface BillingRecord {
   id: string
@@ -74,10 +74,10 @@ export default function Settings() {
     }
   }
 
-  const handleUpgrade = (tier: SubscriptionTier) => {
-    const product = tier === 'starter' ? THRIVECART_PRODUCTS.starter : THRIVECART_PRODUCTS.pro
-    const checkoutUrl = getThriveCartCheckoutUrl(product.slug, user?.email || undefined)
-    window.open(checkoutUrl, "_blank")
+  const getProductId = (tier: SubscriptionTier): number => {
+    if (tier === 'starter') return THRIVECART_PRODUCTS.starter.productId
+    if (tier === 'pro') return THRIVECART_PRODUCTS.pro.productId
+    return 0
   }
 
   return (
@@ -119,9 +119,9 @@ export default function Settings() {
                   <p className="text-3xl font-bold text-foreground">{PLANS[currentTier].name}</p>
                 </div>
                 {currentTier !== 'pro' && (
-                  <Button onClick={() => handleUpgrade('pro')} variant="outline" className="gap-2">
+                  <ThrivecartButton productId={THRIVECART_PRODUCTS.pro.productId} variant="outline" className="gap-2">
                     Upgrade
-                  </Button>
+                  </ThrivecartButton>
                 )}
               </div>
             </CardContent>
@@ -157,9 +157,9 @@ export default function Settings() {
                 </div>
                 <div className="flex flex-col gap-2">
                   {currentTier !== "pro" && (
-                    <Button onClick={() => handleUpgrade('pro')} className="bg-accent hover:bg-accent/90">
+                    <ThrivecartButton productId={THRIVECART_PRODUCTS.pro.productId} className="bg-accent hover:bg-accent/90">
                       Upgrade to Pro
-                    </Button>
+                    </ThrivecartButton>
                   )}
                   {currentTier !== "free" && (
                     <Button variant="outline">Cancel Subscription</Button>
@@ -194,15 +194,15 @@ export default function Settings() {
                             </li>
                           ))}
                         </ul>
-                        {!isCurrent && (
-                          <Button
-                            onClick={() => handleUpgrade(tier)}
+                        {!isCurrent && tier !== "free" && (
+                          <ThrivecartButton
+                            productId={getProductId(tier)}
                             variant={tier === "pro" ? "default" : "outline"}
                             className="w-full mt-4"
                             size="sm"
                           >
-                            {tier === "pro" ? "Upgrade" : tier === "free" ? "Downgrade" : "Switch"}
-                          </Button>
+                            {tier === "pro" ? "Upgrade" : "Switch"}
+                          </ThrivecartButton>
                         )}
                       </div>
                     )

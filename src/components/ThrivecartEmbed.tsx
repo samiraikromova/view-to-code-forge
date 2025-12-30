@@ -1,4 +1,6 @@
 import { useEffect } from "react"
+import { Button, ButtonProps } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 
 interface ThrivecartEmbedProps {
   productId?: string
@@ -34,6 +36,32 @@ export function getThriveCartCheckoutUrl(productSlug: string, email?: string): s
     return `${baseUrl}?passthrough[email]=${encodeURIComponent(email)}`
   }
   return baseUrl
+}
+
+// ThriveCart popup button component
+interface ThrivecartButtonProps extends Omit<ButtonProps, 'onClick'> {
+  productId: number
+  children: React.ReactNode
+}
+
+export function ThrivecartButton({ productId, children, className, ...props }: ThrivecartButtonProps) {
+  return (
+    <a
+      data-thrivecart-account="leveraged-creator"
+      data-thrivecart-tpl="v2"
+      data-thrivecart-product={productId}
+      className={cn(
+        "thrivecart-button thrivecart-button-styled cursor-pointer inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-all disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0",
+        props.variant === "outline" 
+          ? "border border-input bg-background shadow-xs hover:bg-accent hover:text-accent-foreground"
+          : "bg-primary text-primary-foreground shadow-xs hover:bg-primary/90",
+        props.size === "sm" ? "h-8 px-3 text-xs" : "h-9 px-4 py-2",
+        className
+      )}
+    >
+      {children}
+    </a>
+  )
 }
 
 // Product configurations matching edge function PRODUCT_CONFIG
