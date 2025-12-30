@@ -116,10 +116,18 @@ export function ChatInterface({
     loadProjects();
   }, []);
 
-  // Set user tier from profile
+  // Set user tier from profile with proper mapping
   useEffect(() => {
     if (profile?.subscription_tier) {
-      setUserTier(profile.subscription_tier as SubscriptionTier);
+      // Map tier values from database to UI tiers
+      const tierMap: Record<string, SubscriptionTier> = {
+        'free': 'free',
+        'tier1': 'starter',
+        'starter': 'starter',
+        'tier2': 'pro',
+        'pro': 'pro'
+      };
+      setUserTier(tierMap[profile.subscription_tier] || 'free');
     }
   }, [profile]);
 
