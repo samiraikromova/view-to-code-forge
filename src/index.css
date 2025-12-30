@@ -24,10 +24,10 @@
     --popover: 300 8% 12%;
     --popover-foreground: 0 0% 100%;
 
-    /* Primary purple colors - deeper #341539 */
-    --primary: 310 47% 15%;
+    /* Primary purple colors - lighter for visibility */
+    --primary: 290 35% 45%;
     --primary-foreground: 0 0% 100%;
-    --primary-hover: 310 35% 22%;
+    --primary-hover: 290 40% 55%;
 
     --secondary: 300 5% 20%;
     --secondary-foreground: 0 0% 100%;
@@ -49,7 +49,7 @@
 
     --border: 300 5% 20%;
     --input: 300 5% 20%;
-    --ring: 310 47% 15%;
+    --ring: 290 35% 45%;
 
     --radius: 0.5rem;
 
@@ -60,12 +60,12 @@
     /* Sidebar colors */
     --sidebar-background: 300 8% 12%;
     --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 310 47% 15%;
+    --sidebar-primary: 290 35% 45%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 300 5% 20%;
     --sidebar-accent-foreground: 0 0% 100%;
     --sidebar-border: 300 5% 20%;
-    --sidebar-ring: 310 47% 15%;
+    --sidebar-ring: 290 35% 45%;
   }
 
   .dark {
@@ -87,10 +87,10 @@
     --popover: 300 8% 12%;
     --popover-foreground: 0 0% 100%;
 
-    /* Primary purple colors - deeper #341539 */
-    --primary: 310 47% 15%;
+    /* Primary purple colors - lighter for visibility */
+    --primary: 290 35% 45%;
     --primary-foreground: 0 0% 100%;
-    --primary-hover: 310 35% 22%;
+    --primary-hover: 290 40% 55%;
 
     --secondary: 300 5% 20%;
     --secondary-foreground: 0 0% 100%;
@@ -112,7 +112,7 @@
 
     --border: 300 5% 20%;
     --input: 300 5% 20%;
-    --ring: 310 47% 15%;
+    --ring: 290 35% 45%;
 
     --text-primary: 0 0% 100%;
     --text-secondary: 290 5% 65%;
@@ -121,12 +121,12 @@
     /* Sidebar colors */
     --sidebar-background: 300 8% 12%;
     --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 310 47% 15%;
+    --sidebar-primary: 290 35% 45%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 300 5% 20%;
     --sidebar-accent-foreground: 0 0% 100%;
     --sidebar-border: 300 5% 20%;
-    --sidebar-ring: 310 47% 15%;
+    --sidebar-ring: 290 35% 45%;
   }
 }
 

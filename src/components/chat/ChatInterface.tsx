@@ -575,7 +575,7 @@ export function ChatInterface({
         </div>
       )}
       {isEmpty ? <div className="flex flex-1 flex-col items-center justify-center px-4 transition-all duration-700 ease-out animate-fade-in">
-          <h1 className="mb-16 bg-gradient-to-r from-[hsl(290,30%,55%)] to-[hsl(310,47%,25%)] bg-clip-text text-5xl font-medium text-transparent animate-scale-in">
+          <h1 className="mb-16 bg-gradient-to-r from-[hsl(290,30%,55%)] to-[hsl(290,35%,45%)] bg-clip-text text-5xl font-medium text-transparent animate-scale-in">
             Hello, {profile?.name?.split(' ')[0] || 'there'}
           </h1>
           
