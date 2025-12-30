@@ -41,7 +41,7 @@ const topUpOptions = [
 
 export default function TopUp() {
   const navigate = useNavigate()
-  const { profile } = useAuth()
+  const { user, profile } = useAuth()
   const currentCredits = profile?.credits || 0
 
   return (
@@ -123,6 +123,7 @@ export default function TopUp() {
                   </ul>
                   <ThrivecartButton 
                     productId={product.productId}
+                    userEmail={user?.email}
                     className="w-full"
                     variant={option.popular ? "default" : "outline"}
                   >

@@ -23,7 +23,7 @@ import ConfirmCallback from "./auth/ConfirmCallback";
 import SignoutCallback from "./auth/SignoutCallback";
 
 // Admin pages
-import { AdminDashboard, AdminUsers, AdminCredits, AdminUsage, AdminSettings } from "./admin";
+import { AdminDashboard, AdminUsers, AdminCredits, AdminUsage, AdminSettings, AdminCoupons, AdminProjects, AdminPrompts, AdminVideos } from "./admin";
 
 const queryClient = new QueryClient();
 

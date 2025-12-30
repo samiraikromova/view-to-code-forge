@@ -1,4 +1,4 @@
-import { useEffect } from "react"
+import { useEffect, useRef } from "react"
 import { Button, ButtonProps } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
@@ -6,24 +6,38 @@ interface ThrivecartEmbedProps {
   productId?: string
 }
 
-export default function ThrivecartEmbed({ productId }: ThrivecartEmbedProps) {
-  useEffect(() => {
-    // Dynamically inject Thrivecart script on client only
+// Global script loader - ensures script is loaded once
+let scriptLoaded = false
+let scriptLoadPromise: Promise<void> | null = null
+
+function loadThrivecartScript(): Promise<void> {
+  if (scriptLoaded) return Promise.resolve()
+  if (scriptLoadPromise) return scriptLoadPromise
+
+  scriptLoadPromise = new Promise((resolve) => {
     const existingScript = document.querySelector('script[src*="thrivecart.js"]')
-    if (existingScript) return
+    if (existingScript) {
+      scriptLoaded = true
+      resolve()
+      return
+    }
 
     const script = document.createElement("script")
     script.src = "https://tinder.thrivecart.com/embed/v1/thrivecart.js"
     script.async = true
-    document.body.appendChild(script)
-
-    return () => {
-      // Only remove if we added it
-      const scriptToRemove = document.querySelector('script[src*="thrivecart.js"]')
-      if (scriptToRemove) {
-        document.body.removeChild(scriptToRemove)
-      }
+    script.onload = () => {
+      scriptLoaded = true
+      resolve()
     }
+    document.body.appendChild(script)
+  })
+
+  return scriptLoadPromise
+}
+
+export default function ThrivecartEmbed({ productId }: ThrivecartEmbedProps) {
+  useEffect(() => {
+    loadThrivecartScript()
   }, [])
 
   return null
@@ -42,11 +56,70 @@ export function getThriveCartCheckoutUrl(productSlug: string, email?: string): s
 interface ThrivecartButtonProps extends Omit<ButtonProps, 'onClick'> {
   productId: number
   children: React.ReactNode
+  userEmail?: string
 }
 
-export function ThrivecartButton({ productId, children, className, ...props }: ThrivecartButtonProps) {
+export function ThrivecartButton({ productId, children, className, userEmail, ...props }: ThrivecartButtonProps) {
+  const linkRef = useRef<HTMLAnchorElement>(null)
+
+  useEffect(() => {
+    // Ensure script is loaded when button mounts
+    loadThrivecartScript().then(() => {
+      // ThriveCart script looks for elements with data-thrivecart-product
+      // After script loads, it should automatically attach handlers
+      // Force re-initialization if needed
+      if (typeof (window as any).ThriveCart !== 'undefined') {
+        try {
+          (window as any).ThriveCart.modal.refresh?.()
+        } catch (e) {
+          // Ignore if refresh method doesn't exist
+        }
+      }
+    })
+  }, [])
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.preventDefault()
+    
+    // Build the checkout URL with passthrough data
+    let url = `https://tinder.thrivecart.com/leveraged-creator/${productId}/`
+    
+    // Add email passthrough if available
+    if (userEmail) {
+      url += `?passthrough[email]=${encodeURIComponent(userEmail)}`
+    }
+    
+    // Try to use ThriveCart modal if available
+    if (typeof (window as any).ThriveCart !== 'undefined') {
+      try {
+        (window as any).ThriveCart.modal.open({
+          account: 'leveraged-creator',
+          product: productId,
+          ...(userEmail && { passthrough: { email: userEmail } })
+        })
+        return
+      } catch (err) {
+        console.log('ThriveCart modal not available, using popup')
+      }
+    }
+    
+    // Fallback: open in popup window
+    const width = 600
+    const height = 700
+    const left = (window.innerWidth - width) / 2
+    const top = (window.innerHeight - height) / 2
+    window.open(
+      url,
+      'thrivecart_checkout',
+      `width=${width},height=${height},left=${left},top=${top},scrollbars=yes`
+    )
+  }
+
   return (
     <a
+      ref={linkRef}
+      href="#"
+      onClick={handleClick}
       data-thrivecart-account="leveraged-creator"
       data-thrivecart-tpl="v2"
       data-thrivecart-product={productId}
