@@ -64,49 +64,25 @@ export function ThrivecartButton({ productId, children, className, userEmail, ..
 
   useEffect(() => {
     // Ensure script is loaded when button mounts
-    loadThrivecartScript().then(() => {
-      // ThriveCart script looks for elements with data-thrivecart-product
-      // After script loads, it should automatically attach handlers
-      // Force re-initialization if needed
-      if (typeof (window as any).ThriveCart !== 'undefined') {
-        try {
-          (window as any).ThriveCart.modal.refresh?.()
-        } catch (e) {
-          // Ignore if refresh method doesn't exist
-        }
-      }
-    })
+    loadThrivecartScript()
   }, [])
 
   const handleClick = (e: React.MouseEvent) => {
     e.preventDefault()
     
-    // Find the product slug from THRIVECART_PRODUCTS
+    // Find the product from THRIVECART_PRODUCTS by productId
     const product = Object.values(THRIVECART_PRODUCTS).find(p => p.productId === productId)
+    const slug = product?.slug || 'cb4-starter'
     
-    // Build the checkout URL with the correct slug
-    let url = `https://tinder.thrivecart.com/${product?.slug || `cb4-starter`}/`
+    // Build the checkout URL
+    let url = `https://tinder.thrivecart.com/${slug}/`
     
     // Add email passthrough if available
     if (userEmail) {
       url += `?passthrough[email]=${encodeURIComponent(userEmail)}`
     }
     
-    // Try to use ThriveCart modal if available
-    if (typeof (window as any).ThriveCart !== 'undefined') {
-      try {
-        (window as any).ThriveCart.modal.open({
-          account: 'tinder',
-          product: productId,
-          ...(userEmail && { passthrough: { email: userEmail } })
-        })
-        return
-      } catch (err) {
-        console.log('ThriveCart modal not available, using popup')
-      }
-    }
-    
-    // Fallback: open in popup window
+    // Open in popup window (most reliable method)
     const width = 600
     const height = 700
     const left = (window.innerWidth - width) / 2
@@ -114,7 +90,7 @@ export function ThrivecartButton({ productId, children, className, userEmail, ..
     window.open(
       url,
       'thrivecart_checkout',
-      `width=${width},height=${height},left=${left},top=${top},scrollbars=yes`
+      `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes`
     )
   }
 
