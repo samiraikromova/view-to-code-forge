@@ -61,11 +61,6 @@ const Chat = () => {
   const [lessonId, setLessonId] = useState<string | null>(null);
   const [contentType, setContentType] = useState<"recordings" | "materials">("materials");
   const [transcriptForNewChat, setTranscriptForNewChat] = useState<File | null>(null);
-  const [pendingTranscriptInfo, setPendingTranscriptInfo] = useState<{
-    name: string;
-    url: string;
-    recordingTitle: string;
-  } | null>(null);
   
   // Call Recordings Data from Supabase
   const [recordingsData, setRecordingsData] = useState<Module[]>([]);
@@ -128,52 +123,6 @@ const Chat = () => {
     fetchCourseVideos();
   }, [user?.id]);
 
-  // Handle transcript loading from URL params (Ask AI flow)
-  useEffect(() => {
-    const openTranscript = searchParams.get('openTranscript');
-    
-    if (openTranscript === 'true') {
-      const pendingTranscript = sessionStorage.getItem('pendingTranscriptFile');
-      
-      if (pendingTranscript) {
-        const transcriptInfo = JSON.parse(pendingTranscript);
-        setPendingTranscriptInfo(transcriptInfo);
-        sessionStorage.removeItem('pendingTranscriptFile');
-        // Clear the URL param
-        setSearchParams({});
-      }
-    }
-  }, [searchParams, setSearchParams]);
-
-  // Load transcript when pending info is set
-  useEffect(() => {
-    if (pendingTranscriptInfo) {
-      loadTranscriptFile(pendingTranscriptInfo);
-      setPendingTranscriptInfo(null);
-    }
-  }, [pendingTranscriptInfo]);
-
-  const loadTranscriptFile = async (transcriptInfo: {
-    name: string;
-    url: string;
-    recordingTitle: string;
-  }) => {
-    try {
-      const response = await fetch(transcriptInfo.url);
-      const transcriptData = await response.json();
-      
-      const formattedTranscript = formatTranscriptForChat(transcriptData, transcriptInfo.recordingTitle);
-      
-      const blob = new Blob([formattedTranscript], { type: 'text/plain' });
-      const file = new File([blob], transcriptInfo.name, { type: 'text/plain' });
-      
-      setTranscriptForNewChat(file);
-      toast.success('Transcript loaded successfully');
-    } catch (error) {
-      console.error('Error loading transcript:', error);
-      toast.error('Failed to load transcript');
-    }
-  };
 
   const formatTranscriptForChat = (transcriptData: any, title: string) => {
     let formatted = `# ${title}\n`;
@@ -313,22 +262,30 @@ const Chat = () => {
     setLessonId(null);
   };
 
-  const handleAskAIAboutVideo = (lessonId: string) => {
+  const handleAskAIAboutVideo = async (lessonId: string) => {
     const currentData = contentType === "recordings" ? recordingsData : materialsData;
     const lesson = currentData.flatMap((m) => m.lessons).find((l) => l.id === lessonId);
     
     if (lesson?.transcriptUrl) {
-      // For recordings with transcript URL - use Ask AI flow
-      sessionStorage.setItem('pendingTranscriptFile', JSON.stringify({
-        name: `${lesson.title.replace(/\s+/g, '_')}_transcript.txt`,
-        url: lesson.transcriptUrl,
-        recordingTitle: lesson.title
-      }));
-      
-      setMode("chat");
-      setChatId(null);
-      // Trigger the transcript loading
-      setSearchParams({ openTranscript: 'true' });
+      try {
+        // Fetch the transcript from the URL
+        const response = await fetch(lesson.transcriptUrl);
+        const transcriptData = await response.json();
+        
+        // Format the transcript for chat
+        const formattedTranscript = formatTranscriptForChat(transcriptData, lesson.title);
+        
+        // Create a file from the transcript
+        const blob = new Blob([formattedTranscript], { type: 'text/plain' });
+        const file = new File([blob], `${lesson.title.replace(/\s+/g, '_')}_transcript.txt`, { type: 'text/plain' });
+        
+        setTranscriptForNewChat(file);
+        setMode("chat");
+        setChatId(null);
+      } catch (error) {
+        console.error('Error loading transcript:', error);
+        toast.error('Failed to load transcript');
+      }
     } else if (lesson?.overview || lesson?.description) {
       // Fallback: use overview or description as transcript content
       const content = lesson.overview || lesson.description || '';

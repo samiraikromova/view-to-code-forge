@@ -115,24 +115,11 @@ export const VideoPlayer = ({ lesson, contentType, onAskAI, onVideoComplete }: V
     }
   };
 
-  const handleDownloadTranscript = async () => {
+  const handleDownloadTranscript = () => {
     if (lesson.transcriptUrl) {
-      try {
-        const response = await fetch(lesson.transcriptUrl);
-        const blob = await response.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `${lesson.title.replace(/[^a-zA-Z0-9]/g, '_')}_transcript.json`;
-        document.body.appendChild(a);
-        a.click();
-        window.URL.revokeObjectURL(url);
-        document.body.removeChild(a);
-        toast.success('Transcript downloaded');
-      } catch (error) {
-        console.error('Error downloading transcript:', error);
-        toast.error('Failed to download transcript');
-      }
+      // Open the Google Drive URL directly - it will handle the download
+      window.open(lesson.transcriptUrl, '_blank');
+      toast.success('Opening transcript for download');
     }
   };
 
