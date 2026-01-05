@@ -13,6 +13,10 @@ export interface ChatPayload {
   fileUrls?: Array<{ url: string; name: string; type?: string; size?: number }>
   systemPrompt?: string
   conversationHistory: Array<{ role: string; content: string }>
+  userContext?: {
+    businessName?: string | null
+    address?: string | null
+  }
 }
 
 export interface ImagePayload {

@@ -50,4 +50,6 @@ export type UserProfile = {
   total_tokens?: number
   total_cost?: number
   last_credit_update?: string
+  business_name?: string | null
+  address?: string | null
 }

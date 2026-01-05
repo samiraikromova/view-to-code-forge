@@ -16,6 +16,10 @@ export interface ChatRequestPayload {
   fileUrls?: Array<{ url: string; name: string; type?: string; size?: number }>
   systemPrompt?: string
   conversationHistory: Array<{ role: string; content: string }>
+  userContext?: {
+    businessName?: string | null
+    address?: string | null
+  }
 }
 
 export interface ChatApiResponse {
@@ -41,6 +45,7 @@ export async function sendChatToN8N(payload: ChatRequestPayload): Promise<ChatAp
         fileUrls: payload.fileUrls || [],
         systemPrompt: payload.systemPrompt || '',
         conversationHistory: payload.conversationHistory,
+        userContext: payload.userContext || {},
       }),
     })
 

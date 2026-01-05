@@ -489,7 +489,11 @@ export function ChatInterface({
           threadId: activeThreadId,
           fileUrls: fileObjs,
           systemPrompt: systemPrompt || effectiveProject?.systemPrompt || '',
-          conversationHistory
+          conversationHistory,
+          userContext: {
+            businessName: profile?.business_name,
+            address: profile?.address
+          }
         });
 
         aiReply = n8nResult.reply || n8nResult.output || 'No response received';
