@@ -26,7 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Plus, Trash2 } from "lucide-react"
+import { Plus, Trash2, FolderPlus, Clock } from "lucide-react"
 import { toast } from "sonner"
 
 interface Video {
@@ -37,6 +37,7 @@ interface Video {
   category: 'course' | 'call_recording'
   module: string
   duration: string
+  duration_formatted: string
   thumbnail_url?: string
   order_index: number
 }
@@ -45,6 +46,9 @@ export default function AdminVideos() {
   const [videos, setVideos] = useState<Video[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
+  const [showModuleModal, setShowModuleModal] = useState(false)
+  const [moduleType, setModuleType] = useState<'course' | 'call_recording'>('course')
+  const [newModuleName, setNewModuleName] = useState('')
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -66,6 +70,7 @@ export default function AdminVideos() {
       .from('course_videos')
       .select('*')
       .order('category', { ascending: true })
+      .order('module', { ascending: true })
       .order('order_index', { ascending: true })
 
     if (error) {
@@ -123,8 +128,38 @@ export default function AdminVideos() {
     }
   }
 
+  // Get unique modules/months
+  const courseModules = [...new Set(videos.filter(v => v.category === 'course').map(v => v.module))].filter(Boolean)
+  const callMonths = [...new Set(videos.filter(v => v.category === 'call_recording').map(v => v.module))].filter(Boolean)
+
   const courseVideos = videos.filter(v => v.category === 'course')
   const callRecordings = videos.filter(v => v.category === 'call_recording')
+
+  // Group videos by module
+  const groupByModule = (vids: Video[]) => {
+    const groups: { [key: string]: Video[] } = {}
+    vids.forEach(v => {
+      const key = v.module || 'Uncategorized'
+      if (!groups[key]) groups[key] = []
+      groups[key].push(v)
+    })
+    return groups
+  }
+
+  const courseGroups = groupByModule(courseVideos)
+  const callGroups = groupByModule(callRecordings)
+
+  const openModuleModal = (type: 'course' | 'call_recording') => {
+    setModuleType(type)
+    setNewModuleName('')
+    setShowModuleModal(true)
+  }
+
+  const formatDuration = (video: Video) => {
+    if (video.duration_formatted) return video.duration_formatted
+    if (video.duration) return video.duration
+    return '-'
+  }
 
   return (
     <AdminLayout currentPage="videos">
@@ -146,102 +181,134 @@ export default function AdminVideos() {
           <div className="space-y-8">
             {/* Course Videos */}
             <div>
-              <h2 className="text-lg font-semibold mb-4 text-foreground">📚 Course Videos</h2>
-              <div className="bg-card border border-border rounded-lg overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-muted/50">
-                      <TableHead>Title</TableHead>
-                      <TableHead>Module</TableHead>
-                      <TableHead>VdoCipher ID</TableHead>
-                      <TableHead>Duration</TableHead>
-                      <TableHead>Order</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {courseVideos.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
-                          No course videos
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      courseVideos.map((video) => (
-                        <TableRow key={video.id}>
-                          <TableCell className="font-medium">{video.title}</TableCell>
-                          <TableCell className="text-muted-foreground">{video.module}</TableCell>
-                          <TableCell className="font-mono text-xs text-muted-foreground">
-                            {video.vdocipher_id.substring(0, 12)}...
-                          </TableCell>
-                          <TableCell>{video.duration}</TableCell>
-                          <TableCell>{video.order_index}</TableCell>
-                          <TableCell>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => deleteVideo(video.id)}
-                              className="text-destructive hover:text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-foreground">📚 Course Videos</h2>
+                <Button variant="outline" size="sm" onClick={() => openModuleModal('course')}>
+                  <FolderPlus className="h-4 w-4 mr-2" />
+                  New Module
+                </Button>
               </div>
+              
+              {Object.keys(courseGroups).length === 0 ? (
+                <div className="bg-card border border-border rounded-lg p-6 text-center text-muted-foreground">
+                  No course videos yet
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {Object.entries(courseGroups).map(([moduleName, vids]) => (
+                    <div key={moduleName} className="bg-card border border-border rounded-lg overflow-hidden">
+                      <div className="bg-muted/50 px-4 py-2 border-b border-border">
+                        <h3 className="font-medium text-foreground">{moduleName}</h3>
+                        <span className="text-xs text-muted-foreground">{vids.length} video{vids.length !== 1 ? 's' : ''}</span>
+                      </div>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Title</TableHead>
+                            <TableHead>VdoCipher ID</TableHead>
+                            <TableHead>
+                              <div className="flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                Duration
+                              </div>
+                            </TableHead>
+                            <TableHead>Order</TableHead>
+                            <TableHead>Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {vids.map((video) => (
+                            <TableRow key={video.id}>
+                              <TableCell className="font-medium">{video.title}</TableCell>
+                              <TableCell className="font-mono text-xs text-muted-foreground">
+                                {video.vdocipher_id?.substring(0, 12)}...
+                              </TableCell>
+                              <TableCell className="text-muted-foreground">{formatDuration(video)}</TableCell>
+                              <TableCell>{video.order_index}</TableCell>
+                              <TableCell>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => deleteVideo(video.id)}
+                                  className="text-destructive hover:text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Call Recordings */}
             <div>
-              <h2 className="text-lg font-semibold mb-4 text-foreground">📞 Call Recordings</h2>
-              <div className="bg-card border border-border rounded-lg overflow-hidden">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-muted/50">
-                      <TableHead>Title</TableHead>
-                      <TableHead>Period</TableHead>
-                      <TableHead>VdoCipher ID</TableHead>
-                      <TableHead>Duration</TableHead>
-                      <TableHead>Order</TableHead>
-                      <TableHead>Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {callRecordings.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
-                          No call recordings
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      callRecordings.map((video) => (
-                        <TableRow key={video.id}>
-                          <TableCell className="font-medium">{video.title}</TableCell>
-                          <TableCell className="text-muted-foreground">{video.module}</TableCell>
-                          <TableCell className="font-mono text-xs text-muted-foreground">
-                            {video.vdocipher_id.substring(0, 12)}...
-                          </TableCell>
-                          <TableCell>{video.duration}</TableCell>
-                          <TableCell>{video.order_index}</TableCell>
-                          <TableCell>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => deleteVideo(video.id)}
-                              className="text-destructive hover:text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-foreground">📞 Call Recordings</h2>
+                <Button variant="outline" size="sm" onClick={() => openModuleModal('call_recording')}>
+                  <FolderPlus className="h-4 w-4 mr-2" />
+                  New Month
+                </Button>
               </div>
+              
+              {Object.keys(callGroups).length === 0 ? (
+                <div className="bg-card border border-border rounded-lg p-6 text-center text-muted-foreground">
+                  No call recordings yet
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {Object.entries(callGroups).map(([monthName, vids]) => (
+                    <div key={monthName} className="bg-card border border-border rounded-lg overflow-hidden">
+                      <div className="bg-muted/50 px-4 py-2 border-b border-border">
+                        <h3 className="font-medium text-foreground">{monthName}</h3>
+                        <span className="text-xs text-muted-foreground">{vids.length} recording{vids.length !== 1 ? 's' : ''}</span>
+                      </div>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Title</TableHead>
+                            <TableHead>VdoCipher ID</TableHead>
+                            <TableHead>
+                              <div className="flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                Duration
+                              </div>
+                            </TableHead>
+                            <TableHead>Order</TableHead>
+                            <TableHead>Actions</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {vids.map((video) => (
+                            <TableRow key={video.id}>
+                              <TableCell className="font-medium">{video.title}</TableCell>
+                              <TableCell className="font-mono text-xs text-muted-foreground">
+                                {video.vdocipher_id?.substring(0, 12)}...
+                              </TableCell>
+                              <TableCell className="text-muted-foreground">{formatDuration(video)}</TableCell>
+                              <TableCell>{video.order_index}</TableCell>
+                              <TableCell>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => deleteVideo(video.id)}
+                                  className="text-destructive hover:text-destructive"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}
@@ -257,7 +324,7 @@ export default function AdminVideos() {
                 <Label>Category</Label>
                 <Select
                   value={formData.category}
-                  onValueChange={(v) => setFormData({ ...formData, category: v as 'course' | 'call_recording' })}
+                  onValueChange={(v) => setFormData({ ...formData, category: v as 'course' | 'call_recording', module: '' })}
                 >
                   <SelectTrigger className="mt-1">
                     <SelectValue />
@@ -267,6 +334,32 @@ export default function AdminVideos() {
                     <SelectItem value="call_recording">📞 Call Recording</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              <div>
+                <Label>{formData.category === 'course' ? 'Module' : 'Month'}</Label>
+                <Select
+                  value={formData.module}
+                  onValueChange={(v) => setFormData({ ...formData, module: v })}
+                >
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder={`Select ${formData.category === 'course' ? 'module' : 'month'}...`} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(formData.category === 'course' ? courseModules : callMonths).map((m) => (
+                      <SelectItem key={m} value={m}>{m}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Or type a new one below
+                </p>
+                <Input
+                  className="mt-2"
+                  value={formData.module}
+                  onChange={(e) => setFormData({ ...formData, module: e.target.value })}
+                  placeholder={formData.category === 'course' ? 'e.g., Module 1: Foundations' : 'e.g., January 2025'}
+                />
               </div>
 
               <div>
@@ -296,17 +389,6 @@ export default function AdminVideos() {
                   value={formData.vdocipher_id}
                   onChange={(e) => setFormData({ ...formData, vdocipher_id: e.target.value })}
                   placeholder="e.g., 5f8d9e3c4b2a1d6e7f8a9b0c"
-                  required
-                />
-              </div>
-
-              <div>
-                <Label>{formData.category === 'course' ? 'Module' : 'Period'}</Label>
-                <Input
-                  className="mt-1"
-                  value={formData.module}
-                  onChange={(e) => setFormData({ ...formData, module: e.target.value })}
-                  placeholder={formData.category === 'course' ? 'e.g., Module 1: Foundations' : 'e.g., January 2025'}
                   required
                 />
               </div>
@@ -346,6 +428,55 @@ export default function AdminVideos() {
                 <Button type="button" variant="outline" onClick={() => setShowModal(false)}>Cancel</Button>
               </div>
             </form>
+          </DialogContent>
+        </Dialog>
+
+        {/* New Module/Month Modal */}
+        <Dialog open={showModuleModal} onOpenChange={setShowModuleModal}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>
+                {moduleType === 'course' ? 'Create New Module' : 'Create New Month'}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label>{moduleType === 'course' ? 'Module Name' : 'Month Name'}</Label>
+                <Input
+                  className="mt-1"
+                  value={newModuleName}
+                  onChange={(e) => setNewModuleName(e.target.value)}
+                  placeholder={moduleType === 'course' ? 'e.g., Module 3: Advanced Topics' : 'e.g., February 2025'}
+                />
+              </div>
+              <p className="text-sm text-muted-foreground">
+                {moduleType === 'course' 
+                  ? 'This will create a new module. You can then add videos to it.'
+                  : 'This will create a new month period. You can then add call recordings to it.'}
+              </p>
+              <div className="flex gap-3">
+                <Button 
+                  className="flex-1"
+                  onClick={() => {
+                    if (!newModuleName.trim()) {
+                      toast.error('Please enter a name')
+                      return
+                    }
+                    setShowModuleModal(false)
+                    setShowModal(true)
+                    setFormData(prev => ({
+                      ...prev,
+                      category: moduleType,
+                      module: newModuleName.trim()
+                    }))
+                    toast.success(`${moduleType === 'course' ? 'Module' : 'Month'} created! Now add a video.`)
+                  }}
+                >
+                  Create & Add Video
+                </Button>
+                <Button variant="outline" onClick={() => setShowModuleModal(false)}>Cancel</Button>
+              </div>
+            </div>
           </DialogContent>
         </Dialog>
       </div>
