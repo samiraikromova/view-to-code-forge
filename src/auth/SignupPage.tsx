@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { ArrowLeft, Loader2, Mail, Lock, User, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, Loader2, Mail, Lock, User, Eye, EyeOff, Building2, MapPin } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -14,6 +14,8 @@ const SignupPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [businessName, setBusinessName] = useState("");
+  const [address, setAddress] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -48,7 +50,9 @@ const SignupPage = () => {
         options: {
           emailRedirectTo: redirectUrl,
           data: {
-            full_name: fullName
+            full_name: fullName,
+            business_name: businessName,
+            address: address
           }
         }
       });
@@ -112,6 +116,38 @@ const SignupPage = () => {
                   placeholder="John Doe"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
+                  className="h-12 pl-10 bg-surface border-border"
+                  disabled={isLoading}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="businessName" className="text-foreground">Business Name</Label>
+              <div className="relative">
+                <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="businessName"
+                  type="text"
+                  placeholder="Your Company LLC"
+                  value={businessName}
+                  onChange={(e) => setBusinessName(e.target.value)}
+                  className="h-12 pl-10 bg-surface border-border"
+                  disabled={isLoading}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="address" className="text-foreground">Address</Label>
+              <div className="relative">
+                <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  id="address"
+                  type="text"
+                  placeholder="123 Main St, City, State"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
                   className="h-12 pl-10 bg-surface border-border"
                   disabled={isLoading}
                 />
