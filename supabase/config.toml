@@ -22,3 +22,6 @@ verify_jwt = false
 
 [functions.thrivecart-topup]
 verify_jwt = false
+
+[functions.vdocipher-otp]
+verify_jwt = false

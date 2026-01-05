@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { Play, Download, MessageSquare, Calendar, Clock, Users } from "lucide-react";
 import { Lesson } from "./LearnSidebar";
 import ReactMarkdown from "react-markdown";
@@ -5,6 +6,7 @@ import remarkGfm from "remark-gfm";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { supabase } from "@/lib/supabase";
 
 interface VideoPlayerProps {
   lesson: Lesson;
@@ -13,9 +15,51 @@ interface VideoPlayerProps {
 }
 
 export const VideoPlayer = ({ lesson, contentType, onAskAI }: VideoPlayerProps) => {
+  const [videoOtp, setVideoOtp] = useState<string | null>(null);
+  const [playbackInfo, setPlaybackInfo] = useState<string | null>(null);
+  const [videoLoading, setVideoLoading] = useState(false);
+  const [videoError, setVideoError] = useState<string | null>(null);
+
+  // Fetch OTP when lesson changes
+  useEffect(() => {
+    const fetchOtp = async () => {
+      if (!lesson.vdocipherId) return;
+      
+      setVideoLoading(true);
+      setVideoError(null);
+      
+      try {
+        const { data, error } = await supabase.functions.invoke('vdocipher-otp', {
+          body: { videoId: lesson.vdocipherId }
+        });
+        
+        if (error) {
+          console.error('Error fetching OTP:', error);
+          setVideoError('Failed to load video');
+          return;
+        }
+        
+        if (data.error) {
+          console.error('VdoCipher error:', data.error);
+          setVideoError(data.error);
+          return;
+        }
+        
+        setVideoOtp(data.otp);
+        setPlaybackInfo(data.playbackInfo);
+      } catch (err) {
+        console.error('Error fetching video OTP:', err);
+        setVideoError('Failed to load video');
+      } finally {
+        setVideoLoading(false);
+      }
+    };
+    
+    fetchOtp();
+  }, [lesson.vdocipherId]);
+
   const handleDownloadTranscript = async () => {
     if (lesson.transcriptUrl) {
-      // Download from URL
       try {
         const response = await fetch(lesson.transcriptUrl);
         const blob = await response.blob();
@@ -58,14 +102,32 @@ export const VideoPlayer = ({ lesson, contentType, onAskAI }: VideoPlayerProps) 
     <div className="space-y-6">
       {/* Video Container */}
       <div className="relative w-full aspect-video bg-surface rounded-2xl overflow-hidden border border-border">
-        {lesson.vdocipherId ? (
+        {lesson.vdocipherId && videoOtp && playbackInfo ? (
           <iframe
-            src={`https://player.vdocipher.com/v2/?otp=YOUR_OTP&playbackInfo=YOUR_PLAYBACK_INFO`}
+            src={`https://player.vdocipher.com/v2/?otp=${videoOtp}&playbackInfo=${playbackInfo}`}
             className="w-full h-full"
             frameBorder="0"
             allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
             allowFullScreen
           />
+        ) : lesson.vdocipherId && videoLoading ? (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="text-center space-y-4">
+              <div className="w-20 h-20 rounded-full bg-accent/20 flex items-center justify-center mx-auto animate-pulse">
+                <Play className="h-10 w-10 text-accent fill-accent" />
+              </div>
+              <p className="text-sm text-muted-foreground">Loading video...</p>
+            </div>
+          </div>
+        ) : lesson.vdocipherId && videoError ? (
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="text-center space-y-4">
+              <div className="w-20 h-20 rounded-full bg-destructive/20 flex items-center justify-center mx-auto">
+                <Play className="h-10 w-10 text-destructive" />
+              </div>
+              <p className="text-sm text-muted-foreground">{videoError}</p>
+            </div>
+          </div>
         ) : (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center space-y-4">
@@ -142,14 +204,6 @@ export const VideoPlayer = ({ lesson, contentType, onAskAI }: VideoPlayerProps) 
           )}
         </div>
 
-        {/* Overview/Summary for Call Recordings */}
-        {lesson.overview && (
-          <div className="rounded-xl border border-border bg-surface/50 p-4">
-            <h3 className="text-sm font-semibold text-foreground mb-2">Call Summary</h3>
-            <p className="text-sm text-muted-foreground">{lesson.overview}</p>
-          </div>
-        )}
-
         {/* Keywords */}
         {lesson.keywords && lesson.keywords.length > 0 && (
           <div className="rounded-xl border border-border bg-surface/50 p-4">
@@ -164,11 +218,11 @@ export const VideoPlayer = ({ lesson, contentType, onAskAI }: VideoPlayerProps) 
           </div>
         )}
 
-        {/* Description/Notes with Enhanced Markdown Styling */}
+        {/* Description/Notes with Enhanced Markdown Styling - renamed to Call Summary */}
         {lesson.description && (
           <div className="rounded-xl border border-border bg-surface/30 p-6">
             <h3 className="text-base font-semibold text-foreground mb-4 pb-2 border-b border-border/50">
-              Lesson Notes
+              Call Summary
             </h3>
             <div className="prose prose-sm max-w-none 
               prose-headings:text-foreground prose-headings:font-semibold
