@@ -52,7 +52,7 @@ export function ChatInterface({
   const [messages, setMessages] = useState<Message[]>([]);
   const [isStreaming, setIsStreaming] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
-  const [selectedModel, setSelectedModel] = useState("claude-opus-4");
+  const [selectedModel, setSelectedModel] = useState("claude-haiku-4");
   const [extendedThinking, setExtendedThinking] = useState(false);
   const [isDraggingGlobal, setIsDraggingGlobal] = useState(false);
   const [dragCounter, setDragCounter] = useState(0);

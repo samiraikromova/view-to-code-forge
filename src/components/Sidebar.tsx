@@ -162,8 +162,8 @@ export function Sidebar({
                   </button>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 hover:bg-transparent">
-                          <MoreVertical className="h-3 w-3 text-muted-foreground" />
+                        <Button variant="ghost" size="icon" className="h-6 w-6 flex-shrink-0 hover:bg-surface-hover text-muted-foreground">
+                          <MoreVertical className="h-3 w-3" />
                         </Button>
                       </DropdownMenuTrigger>
                         <DropdownMenuContent align="start" side="right" sideOffset={4}>
@@ -200,8 +200,8 @@ export function Sidebar({
                     </button>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0 hover:bg-transparent">
-                        <MoreVertical className="h-3 w-3 text-muted-foreground" />
+                      <Button variant="ghost" size="icon" className="h-6 w-6 flex-shrink-0 hover:bg-surface-hover text-muted-foreground">
+                        <MoreVertical className="h-3 w-3" />
                       </Button>
                     </DropdownMenuTrigger>
                       <DropdownMenuContent align="start" side="right" sideOffset={4}>
