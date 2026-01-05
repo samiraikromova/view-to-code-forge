@@ -263,22 +263,71 @@ const Chat = () => {
   };
 
   const handleAskAIAboutVideo = async (lessonId: string) => {
+    if (!user?.id) {
+      toast.error('Please log in to use this feature');
+      return;
+    }
+    
     const currentData = contentType === "recordings" ? recordingsData : materialsData;
     const lesson = currentData.flatMap((m) => m.lessons).find((l) => l.id === lessonId);
     
     if (lesson?.transcriptUrl) {
       try {
-        // Fetch the transcript from the URL
+        toast.info('Downloading transcript...');
+        
+        // Fetch the transcript from the URL (Google Drive)
         const response = await fetch(lesson.transcriptUrl);
+        if (!response.ok) {
+          throw new Error('Failed to download transcript from source');
+        }
         const transcriptData = await response.json();
         
         // Format the transcript for chat
         const formattedTranscript = formatTranscriptForChat(transcriptData, lesson.title);
         
         // Create a file from the transcript
+        const filename = `${lesson.title.replace(/\s+/g, '_')}_transcript.txt`;
         const blob = new Blob([formattedTranscript], { type: 'text/plain' });
-        const file = new File([blob], `${lesson.title.replace(/\s+/g, '_')}_transcript.txt`, { type: 'text/plain' });
+        const file = new File([blob], filename, { type: 'text/plain' });
         
+        toast.info('Uploading transcript to storage...');
+        
+        // Upload to Supabase storage
+        const filePath = `${user.id}/${Date.now()}-${filename}`;
+        const { error: uploadError } = await supabase.storage
+          .from('chat-files')
+          .upload(filePath, file, { cacheControl: '3600', upsert: false });
+        
+        if (uploadError) {
+          console.error('Upload error:', uploadError);
+          throw new Error('Failed to upload transcript');
+        }
+        
+        // Get public URL
+        const { data: urlData } = supabase.storage.from('chat-files').getPublicUrl(filePath);
+        
+        if (!urlData?.publicUrl) {
+          throw new Error('Failed to get transcript URL');
+        }
+        
+        // Store in file_uploads table (thread_id and message_id will be null initially)
+        const { error: dbError } = await supabase
+          .from('file_uploads')
+          .insert({
+            filename: filename,
+            file_path: filePath,
+            file_type: 'text/plain',
+            file_size: file.size
+          });
+        
+        if (dbError) {
+          console.error('DB error:', dbError);
+          // Don't fail - file is uploaded, just log the error
+        }
+        
+        toast.success('Transcript ready for chat');
+        
+        // Pass file to chat - it will be sent to n8n with the first message
         setTranscriptForNewChat(file);
         setMode("chat");
         setChatId(null);
@@ -289,10 +338,20 @@ const Chat = () => {
     } else if (lesson?.overview || lesson?.description) {
       // Fallback: use overview or description as transcript content
       const content = lesson.overview || lesson.description || '';
+      const filename = `${lesson.title.replace(/\s+/g, "_")}_notes.txt`;
       const blob = new Blob([content], { type: "text/plain" });
-      const file = new File([blob], `${lesson.title.replace(/\s+/g, "_")}_notes.txt`, {
-        type: "text/plain",
-      });
+      const file = new File([blob], filename, { type: "text/plain" });
+      
+      // Upload fallback content to storage too
+      try {
+        const filePath = `${user.id}/${Date.now()}-${filename}`;
+        await supabase.storage
+          .from('chat-files')
+          .upload(filePath, file, { cacheControl: '3600', upsert: false });
+      } catch (e) {
+        console.error('Failed to upload notes file:', e);
+      }
+      
       setTranscriptForNewChat(file);
       setMode("chat");
       setChatId(null);
