@@ -1,9 +1,11 @@
 import { useState } from "react";
-import { PanelLeft, Search, PlayCircle, CheckCircle2, UserIcon, Sparkles, CreditCard, LogOut, ChevronUp } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { PanelLeft, Search, PlayCircle, CheckCircle2, UserIcon, Sparkles, CreditCard, LogOut, ChevronUp, TrendingUp, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ContentToggle } from "./ContentToggle";
 import { ModeSwitcher } from "@/components/ModeSwitcher";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
 import {
   Dialog,
   DialogContent,
@@ -58,8 +60,14 @@ export const LearnSidebar = ({
   onModeChange,
   onToggleLessonComplete,
 }: LearnSidebarProps) => {
+  const navigate = useNavigate();
+  const { profile, signOut } = useAuth();
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+
+  const userName = profile?.name || profile?.email?.split('@')[0] || 'User';
+  const userInitial = userName.charAt(0).toUpperCase();
+  const userCredits = profile?.credits ?? 0;
 
   const allLessons = modules.flatMap(m => m.lessons);
   const filteredLessons = allLessons.filter(lesson => {
@@ -227,30 +235,39 @@ export const LearnSidebar = ({
             <DropdownMenuTrigger asChild>
               <button className="flex items-center gap-3 p-3 w-full hover:bg-surface-hover transition-colors cursor-pointer">
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                  <span className="text-sm font-medium">C</span>
+                  <span className="text-sm font-medium">{userInitial}</span>
                 </div>
                 <div className="flex-1 overflow-hidden text-left">
-                  <p className="truncate text-xs font-medium text-foreground">Cameron</p>
-                  <p className="truncate text-xs text-muted-foreground">50,993 credits</p>
+                  <p className="truncate text-xs font-medium text-foreground">{userName}</p>
+                  <p className="truncate text-xs text-muted-foreground">{typeof userCredits === 'number' ? userCredits.toFixed(2) : '0.00'} credits</p>
                 </div>
                 <ChevronUp className="h-4 w-4 text-muted-foreground flex-shrink-0" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem className="text-muted-foreground">
+              <DropdownMenuItem onClick={() => navigate("/profile")} className="text-muted-foreground">
                 <UserIcon className="mr-2 h-4 w-4" />
                 Profile
               </DropdownMenuItem>
-              <DropdownMenuItem className="text-muted-foreground">
+              <DropdownMenuItem onClick={() => navigate("/analytics")} className="text-muted-foreground">
+                <TrendingUp className="mr-2 h-4 w-4" />
+                Analytics
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate("/settings")} className="text-muted-foreground">
+                <Settings className="mr-2 h-4 w-4" />
+                Settings
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => navigate("/settings")} className="text-muted-foreground">
                 <Sparkles className="mr-2 h-4 w-4" />
                 Upgrade to Pro
               </DropdownMenuItem>
-              <DropdownMenuItem className="text-muted-foreground">
+              <DropdownMenuItem onClick={() => navigate("/pricing/top-up")} className="text-muted-foreground">
                 <CreditCard className="mr-2 h-4 w-4" />
                 Top up credits
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-destructive focus:text-destructive">
+              <DropdownMenuItem onClick={() => signOut()} className="text-destructive focus:text-destructive">
                 <LogOut className="mr-2 h-4 w-4" />
                 Log out
               </DropdownMenuItem>
@@ -261,25 +278,34 @@ export const LearnSidebar = ({
             <DropdownMenuTrigger asChild>
               <button className="flex flex-col items-center gap-2 p-3 w-full hover:bg-surface-hover transition-colors cursor-pointer">
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground">
-                  <span className="text-sm font-medium">C</span>
+                  <span className="text-sm font-medium">{userInitial}</span>
                 </div>
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem className="text-muted-foreground">
+              <DropdownMenuItem onClick={() => navigate("/profile")} className="text-muted-foreground">
                 <UserIcon className="mr-2 h-4 w-4" />
                 Profile
               </DropdownMenuItem>
-              <DropdownMenuItem className="text-muted-foreground">
+              <DropdownMenuItem onClick={() => navigate("/analytics")} className="text-muted-foreground">
+                <TrendingUp className="mr-2 h-4 w-4" />
+                Analytics
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => navigate("/settings")} className="text-muted-foreground">
+                <Settings className="mr-2 h-4 w-4" />
+                Settings
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => navigate("/settings")} className="text-muted-foreground">
                 <Sparkles className="mr-2 h-4 w-4" />
                 Upgrade to Pro
               </DropdownMenuItem>
-              <DropdownMenuItem className="text-muted-foreground">
+              <DropdownMenuItem onClick={() => navigate("/pricing/top-up")} className="text-muted-foreground">
                 <CreditCard className="mr-2 h-4 w-4" />
                 Top up credits
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="text-destructive focus:text-destructive">
+              <DropdownMenuItem onClick={() => signOut()} className="text-destructive focus:text-destructive">
                 <LogOut className="mr-2 h-4 w-4" />
                 Log out
               </DropdownMenuItem>

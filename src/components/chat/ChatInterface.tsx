@@ -20,6 +20,9 @@ interface Message {
   timestamp: string;
 }
 
+// Default project slug - CB4
+const DEFAULT_PROJECT_SLUG = 'cb4';
+
 interface ChatInterfaceProps {
   chatId: string | null;
   onNewChat: () => void;
@@ -131,10 +134,12 @@ export function ChatInterface({
     }
   }, [profile]);
 
-  // Load messages for existing chat
+  // Load messages for existing chat and auto-select its project
   useEffect(() => {
     if (chatId && user) {
       loadMessages(chatId);
+      // Fetch thread's project and auto-select it
+      loadThreadProject(chatId);
     } else {
       setMessages([]);
       setCurrentThreadId(null);
@@ -143,6 +148,25 @@ export function ChatInterface({
       setExternalFiles([]);
     }
   }, [chatId, user]);
+
+  // Load thread's project from database
+  const loadThreadProject = async (threadId: string) => {
+    const { data: thread } = await supabase
+      .from('chat_threads')
+      .select('project_id')
+      .eq('id', threadId)
+      .single();
+
+    if (thread?.project_id && projects.length > 0) {
+      const project = projects.find(p => p.id === thread.project_id);
+      if (project) {
+        setSelectedProject(project);
+        if ('systemPrompt' in project) {
+          setSystemPrompt((project as any).systemPrompt || "");
+        }
+      }
+    }
+  };
 
   const loadMessages = async (threadId: string) => {
     const { data } = await supabase
@@ -420,13 +444,18 @@ export function ChatInterface({
       let aiReply = '';
       let cost = 0;
 
+      // Get the effective project - use selected or find cb4 as default
+      const effectiveProject = selectedProject || projects.find(p => p.slug === DEFAULT_PROJECT_SLUG);
+      const effectiveProjectId = effectiveProject?.id || projects[0]?.id || '';
+      const effectiveProjectSlug = effectiveProject?.slug || DEFAULT_PROJECT_SLUG;
+
       if (isImageGeneration && imageSettings) {
         // Handle image generation
         const imageResult = await generateImageViaAPI({
           message: content,
           userId: user.id,
-          projectId: selectedProject?.id || 'default',
-          projectSlug: selectedProject?.slug || 'default',
+          projectId: effectiveProjectId,
+          projectSlug: effectiveProjectSlug,
           quality: imageSettings.quality,
           numImages: imageSettings.numImages,
           aspectRatio: imageSettings.aspectRatio,
@@ -454,12 +483,12 @@ export function ChatInterface({
         const n8nResult = await sendChatMessage({
           message: content,
           userId: user.id,
-          projectId: selectedProject?.id || 'default',
-          projectSlug: selectedProject?.slug || 'default',
+          projectId: effectiveProjectId,
+          projectSlug: effectiveProjectSlug,
           model: selectedModel,
           threadId: activeThreadId,
           fileUrls: fileObjs,
-          systemPrompt: systemPrompt,
+          systemPrompt: systemPrompt || effectiveProject?.systemPrompt || '',
           conversationHistory
         });
 
@@ -594,6 +623,7 @@ export function ChatInterface({
               onExternalFilesProcessed={handleFilesChange}
               userTier={userTier}
               onUpgradeClick={() => setShowUpgradeDialog(true)}
+              projects={projects}
             />
           </div>
 
@@ -639,6 +669,7 @@ export function ChatInterface({
                 onExternalFilesProcessed={handleFilesChange}
                 userTier={userTier}
                 onUpgradeClick={() => setShowUpgradeDialog(true)}
+                projects={projects}
               />
             </div>
           </div>
@@ -682,6 +713,7 @@ export function ChatInterface({
               onExternalFilesProcessed={handleFilesChange}
               userTier={userTier}
               onUpgradeClick={() => setShowUpgradeDialog(true)}
+              projects={projects}
             />
           </div>
         </div>}
