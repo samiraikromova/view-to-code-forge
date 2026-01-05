@@ -71,6 +71,7 @@ interface ChatInputProps {
   onExternalFilesProcessed?: (files: File[]) => void;
   userTier?: SubscriptionTier;
   onUpgradeClick?: () => void;
+  projects?: Project[];
 }
 export function ChatInput({
   onSendMessage,
@@ -85,7 +86,8 @@ export function ChatInput({
   externalFiles = [],
   onExternalFilesProcessed,
   userTier = "starter",
-  onUpgradeClick
+  onUpgradeClick,
+  projects = []
 }: ChatInputProps) {
   const [message, setMessage] = useState("");
   const [files, setFiles] = useState<File[]>([]);
@@ -340,7 +342,7 @@ export function ChatInput({
                   <input ref={fileInputRef} type="file" multiple className="hidden" onChange={handleFileSelect} accept="*/*" />
                   
                   <ProjectSelector 
-                    projects={mockProjects} 
+                    projects={projects.length > 0 ? projects : mockProjects} 
                     selected={selectedProject} 
                     onChange={onSelectProject}
                     userTier={userTier}
