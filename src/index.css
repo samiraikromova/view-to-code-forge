@@ -183,6 +183,20 @@
     animation: shimmer-border-1 3s ease-in-out infinite;
   }
 
+  /* Slide-in animation for panels */
+  @keyframes slide-in-left {
+    from {
+      transform: translateX(-100%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+
+  .animate-slide-in-right {
+    animation: slide-in-left 0.3s ease-out;
+  }
+
   /* Markdown content styling */
   .markdown-content {
     @apply text-sm leading-relaxed;
