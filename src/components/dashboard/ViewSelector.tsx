@@ -1,6 +1,6 @@
+import { BarChart3, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
-
-type ViewType = "metrics" | "usage";
+import type { ViewType } from "@/types/dashboard";
 
 interface ViewSelectorProps {
   currentView: ViewType;
@@ -13,24 +13,26 @@ export function ViewSelector({ currentView, onViewChange }: ViewSelectorProps) {
       <button
         onClick={() => onViewChange("metrics")}
         className={cn(
-          "px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-200",
+          "flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-200",
           currentView === "metrics"
             ? "bg-primary text-primary-foreground shadow-sm"
             : "text-muted-foreground hover:text-foreground"
         )}
       >
+        <BarChart3 className="w-4 h-4" />
         Metrics
       </button>
       <button
-        onClick={() => onViewChange("usage")}
+        onClick={() => onViewChange("leaderboard")}
         className={cn(
-          "px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-200",
-          currentView === "usage"
+          "flex items-center gap-1.5 px-4 py-1.5 text-sm font-medium rounded-md transition-all duration-200",
+          currentView === "leaderboard"
             ? "bg-primary text-primary-foreground shadow-sm"
             : "text-muted-foreground hover:text-foreground"
         )}
       >
-        Usage
+        <Users className="w-4 h-4" />
+        Leaderboard
       </button>
     </div>
   );

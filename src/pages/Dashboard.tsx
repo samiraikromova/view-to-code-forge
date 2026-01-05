@@ -1,217 +1,201 @@
-import { useState, useEffect } from "react";
-import { RefreshCw, Calendar, ChevronDown, CreditCard, MessageCircle, Clock, TrendingUp } from "lucide-react";
-import { ViewSelector, ViewType } from "@/components/dashboard/ViewSelector";
-import { MetricCard } from "@/components/dashboard/MetricCard";
+import { useState, useCallback } from "react";
+import { Plus, Sparkles, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { useAuth } from "@/hooks/useAuth";
-import { supabase } from "@/lib/supabase";
-import { cn } from "@/lib/utils";
-
-interface UsageStats {
-  totalChats: number;
-  totalMessages: number;
-  creditsUsed: number;
-  avgMessagesPerChat: number;
-}
+import { ViewSelector } from "@/components/dashboard/ViewSelector";
+import { MetricContainer } from "@/components/dashboard/MetricContainer";
+import { GoalCard } from "@/components/dashboard/GoalCard";
+import { GoalBuilder } from "@/components/dashboard/GoalBuilder";
+import { ComparisonChart } from "@/components/dashboard/ComparisonChart";
+import { LeaderboardTable } from "@/components/dashboard/LeaderboardTable";
+import { DateRangePicker } from "@/components/dashboard/DateRangePicker";
+import {
+  getMockMetricsData,
+  getMockComparisonData,
+  getMockLeaderboardUsers,
+  getMockGoals,
+} from "@/lib/dashboardUtils";
+import type { ViewType, Goal, TimePreset } from "@/types/dashboard";
 
 export function Dashboard() {
-  const { user, profile } = useAuth();
   const [currentView, setCurrentView] = useState<ViewType>("metrics");
-  const [isLoading, setIsLoading] = useState(true);
-  const [stats, setStats] = useState<UsageStats>({
-    totalChats: 0,
-    totalMessages: 0,
-    creditsUsed: 0,
-    avgMessagesPerChat: 0,
-  });
+  const [isGoalBuilderOpen, setIsGoalBuilderOpen] = useState(false);
+  const [goals, setGoals] = useState<Goal[]>(getMockGoals());
+  const [selectedPreset, setSelectedPreset] = useState("last30days");
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Fetch usage statistics
-  useEffect(() => {
-    const fetchStats = async () => {
-      if (!user?.id) return;
-      
-      setIsLoading(true);
-      
-      try {
-        // Fetch chat threads count
-        const { count: chatCount } = await supabase
-          .from("chat_threads")
-          .select("*", { count: "exact", head: true })
-          .eq("user_id", user.id);
+  // Mock data
+  const metricsData = getMockMetricsData();
+  const comparisonData = getMockComparisonData("revenue");
+  const leaderboardUsers = getMockLeaderboardUsers();
 
-        // Fetch messages count
-        const { count: messageCount } = await supabase
-          .from("messages")
-          .select("*", { count: "exact", head: true })
-          .eq("thread_id", user.id);
-
-        // Calculate stats
-        const totalChats = chatCount || 0;
-        const totalMessages = messageCount || 0;
-        const avgMessages = totalChats > 0 ? totalMessages / totalChats : 0;
-
-        setStats({
-          totalChats,
-          totalMessages,
-          creditsUsed: Math.max(0, 100 - (profile?.credits || 0)), // Estimate based on starting credits
-          avgMessagesPerChat: Math.round(avgMessages * 10) / 10,
-        });
-      } catch (error) {
-        console.error("Error fetching stats:", error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchStats();
-  }, [user?.id, profile]);
-
-  const handleRefresh = () => {
+  const handleRefresh = useCallback(() => {
     setIsLoading(true);
-    setTimeout(() => setIsLoading(false), 600);
-  };
+    setTimeout(() => setIsLoading(false), 1000);
+  }, []);
+
+  const handleCreateGoal = useCallback(
+    (newGoal: Omit<Goal, "id" | "currentValue" | "previousValue">) => {
+      const metric = metricsData[newGoal.metricKey];
+      setGoals((prev) => [
+        ...prev,
+        {
+          ...newGoal,
+          id: Date.now().toString(),
+          currentValue: metric?.current || 0,
+          previousValue: metric?.previous || 0,
+        },
+      ]);
+    },
+    [metricsData]
+  );
+
+  const handleRemoveGoal = useCallback((id: string) => {
+    setGoals((prev) => prev.filter((g) => g.id !== id));
+  }, []);
+
+  const handlePresetChange = useCallback((preset: TimePreset) => {
+    setSelectedPreset(preset.value);
+  }, []);
 
   return (
-    <ScrollArea className="flex-1">
-      <div className="p-6 max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8">
-          <ViewSelector currentView={currentView} onViewChange={setCurrentView} />
+    <div className="flex-1 flex flex-col min-h-0 p-6 overflow-auto">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <ViewSelector currentView={currentView} onViewChange={setCurrentView} />
 
-          <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={handleRefresh}
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <RefreshCw className={cn("h-4 w-4 mr-2", isLoading && "animate-spin")} />
-              Refresh
-            </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsGoalBuilderOpen(!isGoalBuilderOpen)}
+            className="gap-1.5 bg-surface/60 border-border/50"
+          >
+            <Plus className="w-4 h-4" />
+            Add Goal
+          </Button>
 
-            <Button
-              variant="outline"
-              size="sm"
-              className="text-muted-foreground hover:text-foreground"
-            >
-              <Calendar className="h-4 w-4 mr-2" />
-              Last 30 Days
-              <ChevronDown className="h-4 w-4 ml-2" />
-            </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            className="gap-1.5 bg-surface/60 border-border/50"
+          >
+            <Sparkles className="w-4 h-4" />
+            Ask AI
+          </Button>
+
+          <DateRangePicker
+            selectedPreset={selectedPreset}
+            onPresetChange={handlePresetChange}
+          />
+
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={handleRefresh}
+            className={isLoading ? "animate-spin" : ""}
+          >
+            <RefreshCw className="w-4 h-4" />
+          </Button>
+        </div>
+      </div>
+
+      {/* Goal Builder */}
+      <GoalBuilder
+        isOpen={isGoalBuilderOpen}
+        onClose={() => setIsGoalBuilderOpen(false)}
+        onCreateGoal={handleCreateGoal}
+        className="mb-6"
+      />
+
+      {/* Active Goals */}
+      {goals.length > 0 && (
+        <div className="mb-6">
+          <h2 className="text-sm font-medium text-muted-foreground mb-3">Active Goals</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {goals.map((goal) => (
+              <GoalCard key={goal.id} goal={goal} onRemove={handleRemoveGoal} />
+            ))}
           </div>
         </div>
+      )}
 
-        {/* Metrics Grid */}
-        {currentView === "metrics" && (
-          <div className={cn(
-            "grid gap-6 animate-fade-in",
-            "grid-cols-1 md:grid-cols-2 lg:grid-cols-4"
-          )}>
-            <MetricCard
-              title="Available Credits"
-              value={(profile?.credits || 0).toFixed(2)}
-              icon={CreditCard}
+      {/* Main Content */}
+      {currentView === "metrics" ? (
+        <div className="space-y-6">
+          {/* Row 1: Cost/Refunds | Chart | CTR/CPM */}
+          <div className="grid grid-cols-1 lg:grid-cols-6 gap-4">
+            <MetricContainer
+              metrics={[
+                { key: "cashCollected", data: metricsData.cashCollected },
+                { key: "refunds", data: metricsData.refunds },
+              ]}
+              className="lg:col-span-1"
             />
-            <MetricCard
-              title="Total Chats"
-              value={stats.totalChats}
-              icon={MessageCircle}
+            <ComparisonChart
+              data={comparisonData}
+              metricKey="revenue"
+              className="lg:col-span-4"
             />
-            <MetricCard
-              title="Total Messages"
-              value={stats.totalMessages}
-              icon={Clock}
-            />
-            <MetricCard
-              title="Credits Used"
-              value={stats.creditsUsed.toFixed(2)}
-              icon={TrendingUp}
+            <MetricContainer
+              metrics={[
+                { key: "ctr", data: metricsData.ctr },
+                { key: "cpm", data: metricsData.cpm },
+              ]}
+              className="lg:col-span-1"
             />
           </div>
-        )}
 
-        {/* Usage View */}
-        {currentView === "usage" && (
-          <div className="animate-fade-in">
-            <div className="grid gap-6 grid-cols-1 md:grid-cols-2">
-              <div className="rounded-xl p-6 bg-surface/60 border border-border/40">
-                <h3 className="text-sm font-medium text-foreground mb-4">Credit Usage</h3>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Current Balance</span>
-                    <span className="text-lg font-semibold text-foreground">
-                      {(profile?.credits || 0).toFixed(2)}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Subscription Tier</span>
-                    <span className="text-lg font-semibold text-foreground capitalize">
-                      {profile?.subscription_tier || "Free"}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Total Used</span>
-                    <span className="text-lg font-semibold text-foreground">
-                      {stats.creditsUsed.toFixed(2)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="rounded-xl p-6 bg-surface/60 border border-border/40">
-                <h3 className="text-sm font-medium text-foreground mb-4">Chat Statistics</h3>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Total Conversations</span>
-                    <span className="text-lg font-semibold text-foreground">
-                      {stats.totalChats}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Total Messages</span>
-                    <span className="text-lg font-semibold text-foreground">
-                      {stats.totalMessages}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Avg. Messages/Chat</span>
-                    <span className="text-lg font-semibold text-foreground">
-                      {stats.avgMessagesPerChat}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Subscription Info */}
-            <div className="mt-6 rounded-xl p-6 bg-surface/60 border border-border/40">
-              <h3 className="text-sm font-medium text-foreground mb-4">Subscription</h3>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Current Plan</p>
-                  <p className="text-lg font-semibold text-foreground capitalize">
-                    {profile?.subscription_tier || "Free"}
-                  </p>
-                </div>
-                <Button variant="outline" size="sm">
-                  Upgrade
-                </Button>
-              </div>
-            </div>
+          {/* Row 2: Profit/ROAS/ROI | Revenue/Initial/Recurring | Clients */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <MetricContainer
+              metrics={[
+                { key: "profit", data: metricsData.profit },
+                { key: "roas", data: metricsData.roas },
+                { key: "roi", data: metricsData.roi },
+              ]}
+            />
+            <MetricContainer
+              metrics={[
+                { key: "revenue", data: metricsData.revenue },
+                { key: "initialRevenue", data: metricsData.initialRevenue },
+                { key: "recurringRevenue", data: metricsData.recurringRevenue },
+              ]}
+            />
+            <MetricContainer
+              metrics={[
+                { key: "clients", data: metricsData.clients },
+                { key: "aov", data: metricsData.aov },
+                { key: "ltv", data: metricsData.ltv },
+              ]}
+            />
           </div>
-        )}
 
-        {/* Loading Skeleton */}
-        {isLoading && (
-          <div className="absolute inset-0 bg-background/50 flex items-center justify-center">
-            <div className="animate-spin">
-              <RefreshCw className="h-6 w-6 text-accent" />
-            </div>
+          {/* Row 3: Profile Visits | Followers/Conversion | Outreach/Responses */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <MetricContainer
+              metrics={[
+                { key: "profileVisits", data: metricsData.profileVisits },
+              ]}
+            />
+            <MetricContainer
+              metrics={[
+                { key: "followers", data: metricsData.followers },
+                { key: "conversionRate", data: metricsData.conversionRate },
+              ]}
+            />
+            <MetricContainer
+              metrics={[
+                { key: "outreach", data: metricsData.outreach },
+                { key: "responses", data: metricsData.responses },
+                { key: "calls", data: metricsData.calls },
+              ]}
+            />
           </div>
-        )}
-      </div>
-    </ScrollArea>
+        </div>
+      ) : (
+        <LeaderboardTable users={leaderboardUsers} />
+      )}
+    </div>
   );
 }
 
