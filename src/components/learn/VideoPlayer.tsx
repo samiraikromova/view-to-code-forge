@@ -1,8 +1,10 @@
-import { Play, Download, MessageSquare } from "lucide-react";
+import { Play, Download, MessageSquare, Calendar, Clock, Users } from "lucide-react";
 import { Lesson } from "./LearnSidebar";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
 
 interface VideoPlayerProps {
   lesson: Lesson;
@@ -11,30 +13,57 @@ interface VideoPlayerProps {
 }
 
 export const VideoPlayer = ({ lesson, contentType, onAskAI }: VideoPlayerProps) => {
-  const handleDownloadTranscript = () => {
-    if (!lesson.transcript) return;
-    
-    const blob = new Blob([lesson.transcript], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${lesson.title.replace(/[^a-zA-Z0-9]/g, '_')}_transcript.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+  const handleDownloadTranscript = async () => {
+    if (lesson.transcriptUrl) {
+      // Download from URL
+      try {
+        const response = await fetch(lesson.transcriptUrl);
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${lesson.title.replace(/[^a-zA-Z0-9]/g, '_')}_transcript.json`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        toast.success('Transcript downloaded');
+      } catch (error) {
+        console.error('Error downloading transcript:', error);
+        toast.error('Failed to download transcript');
+      }
+    }
   };
+
+  // Parse date from title or callDate
+  const getCallDate = () => {
+    if (lesson.callDate) {
+      return new Date(lesson.callDate).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric'
+      });
+    }
+    // Try to extract date from title like "LC Group Call 11/28"
+    const dateMatch = lesson.title.match(/(\d{1,2})\/(\d{1,2})/);
+    if (dateMatch) {
+      return `${dateMatch[1]}/${dateMatch[2]}`;
+    }
+    return null;
+  };
+
+  const callDate = getCallDate();
 
   return (
     <div className="space-y-6">
       {/* Video Container */}
       <div className="relative w-full aspect-video bg-surface rounded-2xl overflow-hidden border border-border">
-        {lesson.embedUrl ? (
+        {lesson.vdocipherId ? (
           <iframe
-            src={lesson.embedUrl}
+            src={`https://player.vdocipher.com/v2/?otp=YOUR_OTP&playbackInfo=YOUR_PLAYBACK_INFO`}
             className="w-full h-full"
             frameBorder="0"
-            allow="autoplay; fullscreen; picture-in-picture"
+            allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
             allowFullScreen
           />
         ) : (
@@ -43,7 +72,7 @@ export const VideoPlayer = ({ lesson, contentType, onAskAI }: VideoPlayerProps) 
               <div className="w-20 h-20 rounded-full bg-accent/20 flex items-center justify-center mx-auto">
                 <Play className="h-10 w-10 text-accent fill-accent" />
               </div>
-              <p className="text-sm text-muted-foreground">Video player placeholder</p>
+              <p className="text-sm text-muted-foreground">Video will be available soon</p>
             </div>
           </div>
         )}
@@ -55,8 +84,31 @@ export const VideoPlayer = ({ lesson, contentType, onAskAI }: VideoPlayerProps) 
           <h2 className="text-2xl font-semibold text-foreground mb-2">
             {lesson.title}
           </h2>
-          <div className="flex items-center gap-3 text-sm text-muted-foreground">
-            <span>{lesson.duration}</span>
+          <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
+            {lesson.durationFormatted && (
+              <span className="flex items-center gap-1">
+                <Clock className="h-4 w-4" />
+                {lesson.durationFormatted}
+              </span>
+            )}
+            {!lesson.durationFormatted && lesson.duration && (
+              <span className="flex items-center gap-1">
+                <Clock className="h-4 w-4" />
+                {lesson.duration}
+              </span>
+            )}
+            {callDate && (
+              <span className="flex items-center gap-1">
+                <Calendar className="h-4 w-4" />
+                {callDate}
+              </span>
+            )}
+            {lesson.speakerCount && (
+              <span className="flex items-center gap-1">
+                <Users className="h-4 w-4" />
+                {lesson.speakerCount} speakers
+              </span>
+            )}
             {lesson.completed && (
               <span className="text-accent">• Completed</span>
             )}
@@ -65,7 +117,7 @@ export const VideoPlayer = ({ lesson, contentType, onAskAI }: VideoPlayerProps) 
 
         {/* Action Buttons */}
         <div className="flex items-center gap-3">
-          {lesson.transcript && (
+          {lesson.transcriptUrl && (
             <>
               <Button 
                 variant="outline" 
@@ -90,11 +142,25 @@ export const VideoPlayer = ({ lesson, contentType, onAskAI }: VideoPlayerProps) 
           )}
         </div>
 
-        {/* Summary */}
-        {lesson.summary && (
+        {/* Overview/Summary for Call Recordings */}
+        {lesson.overview && (
           <div className="rounded-xl border border-border bg-surface/50 p-4">
-            <h3 className="text-sm font-semibold text-foreground mb-2">Summary</h3>
-            <p className="text-sm text-muted-foreground">{lesson.summary}</p>
+            <h3 className="text-sm font-semibold text-foreground mb-2">Call Summary</h3>
+            <p className="text-sm text-muted-foreground">{lesson.overview}</p>
+          </div>
+        )}
+
+        {/* Keywords */}
+        {lesson.keywords && lesson.keywords.length > 0 && (
+          <div className="rounded-xl border border-border bg-surface/50 p-4">
+            <h3 className="text-sm font-semibold text-foreground mb-3">Keywords</h3>
+            <div className="flex flex-wrap gap-2">
+              {lesson.keywords.map((keyword, index) => (
+                <Badge key={index} variant="secondary" className="text-xs">
+                  {keyword}
+                </Badge>
+              ))}
+            </div>
           </div>
         )}
 
