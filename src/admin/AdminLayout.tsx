@@ -14,7 +14,9 @@ import {
   Ticket,
   FolderKanban,
   MessageSquare,
-  Video
+  Video,
+  PanelLeftClose,
+  PanelLeft
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -42,6 +44,7 @@ export function AdminLayout({ children, currentPage }: AdminLayoutProps) {
   const { user, profile, signOut, loading } = useAuth()
   const [isAdmin, setIsAdmin] = useState<boolean | null>(null)
   const [checking, setChecking] = useState(true)
+  const [isCollapsed, setIsCollapsed] = useState(false)
 
   useEffect(() => {
     async function checkAdmin() {
@@ -88,13 +91,37 @@ export function AdminLayout({ children, currentPage }: AdminLayoutProps) {
   return (
     <div className="flex h-screen bg-background">
       {/* Sidebar */}
-      <div className="w-64 border-r border-border bg-surface flex flex-col theme-light-purple">
-        <div className="p-4 border-b border-border">
-          <div className="flex items-center gap-2">
-            <Shield className="h-6 w-6 text-primary" />
-            <span className="font-bold text-foreground">Admin Panel</span>
+      <div className={cn(
+        "border-r border-border bg-surface flex flex-col theme-light-purple transition-all duration-300",
+        isCollapsed ? "w-16" : "w-64"
+      )}>
+        <div className="p-4 border-b border-border flex items-center justify-between">
+          <div className={cn("flex items-center gap-2", isCollapsed && "justify-center w-full")}>
+            <Shield className="h-6 w-6 text-primary flex-shrink-0" />
+            {!isCollapsed && <span className="font-bold text-foreground">Admin Panel</span>}
           </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className={cn("h-8 w-8 flex-shrink-0", isCollapsed && "hidden")}
+          >
+            <PanelLeftClose className="h-4 w-4" />
+          </Button>
         </div>
+        
+        {isCollapsed && (
+          <div className="p-2 border-b border-border">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsCollapsed(false)}
+              className="w-full h-8"
+            >
+              <PanelLeft className="h-4 w-4" />
+            </Button>
+          </div>
+        )}
         
         <ScrollArea className="flex-1">
           <nav className="p-2 space-y-1">
@@ -104,39 +131,47 @@ export function AdminLayout({ children, currentPage }: AdminLayoutProps) {
                 onClick={() => navigate(item.path)}
                 className={cn(
                   "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors",
+                  isCollapsed && "justify-center px-2",
                   currentPage === item.id 
                     ? "bg-primary/20 text-primary" 
                     : "text-muted-foreground hover:bg-surface-hover hover:text-foreground"
                 )}
+                title={isCollapsed ? item.label : undefined}
               >
-                <item.icon className="h-4 w-4" />
-                {item.label}
+                <item.icon className="h-4 w-4 flex-shrink-0" />
+                {!isCollapsed && item.label}
               </button>
             ))}
           </nav>
         </ScrollArea>
 
         <div className="p-3 border-t border-border">
-          <div className="flex items-center gap-3 mb-3 px-2">
-            <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center">
-              <span className="text-sm font-medium text-primary-foreground">
-                {profile?.name?.charAt(0) || user?.email?.charAt(0)?.toUpperCase()}
-              </span>
+          {!isCollapsed && (
+            <div className="flex items-center gap-3 mb-3 px-2">
+              <div className="h-8 w-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
+                <span className="text-sm font-medium text-primary-foreground">
+                  {profile?.name?.charAt(0) || user?.email?.charAt(0)?.toUpperCase()}
+                </span>
+              </div>
+              <div className="flex-1 overflow-hidden">
+                <p className="text-sm font-medium text-foreground truncate">
+                  {profile?.name || 'Admin'}
+                </p>
+                <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
+              </div>
             </div>
-            <div className="flex-1 overflow-hidden">
-              <p className="text-sm font-medium text-foreground truncate">
-                {profile?.name || 'Admin'}
-              </p>
-              <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
-            </div>
-          </div>
+          )}
           <Button 
             variant="ghost" 
-            className="w-full justify-start text-destructive hover:text-destructive hover:bg-destructive/10"
+            className={cn(
+              "w-full text-destructive hover:text-destructive hover:bg-destructive/10",
+              isCollapsed ? "justify-center px-2" : "justify-start"
+            )}
             onClick={handleSignOut}
+            title={isCollapsed ? "Sign Out" : undefined}
           >
-            <LogOut className="h-4 w-4 mr-2" />
-            Sign Out
+            <LogOut className="h-4 w-4 flex-shrink-0" />
+            {!isCollapsed && <span className="ml-2">Sign Out</span>}
           </Button>
         </div>
       </div>
