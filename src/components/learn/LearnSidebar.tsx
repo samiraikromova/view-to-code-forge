@@ -33,6 +33,12 @@ export interface Lesson {
   transcript?: string;
   summary?: string;
   transcriptUrl?: string;
+  vdocipherId?: string;
+  overview?: string;
+  keywords?: string[];
+  callDate?: string;
+  speakerCount?: number;
+  durationFormatted?: string;
 }
 
 interface LearnSidebarProps {
