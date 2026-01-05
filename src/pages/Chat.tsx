@@ -71,35 +71,54 @@ const Chat = () => {
   const [recordingsData, setRecordingsData] = useState<Module[]>([]);
   const [materialsData, setMaterialsData] = useState<Module[]>([]);
   const [videosLoading, setVideosLoading] = useState(true);
+  const [userProgress, setUserProgress] = useState<Map<string, boolean>>(new Map());
 
-  // Fetch course videos from Supabase
+  // Fetch course videos and user progress from Supabase
   useEffect(() => {
     const fetchCourseVideos = async () => {
+      if (!user?.id) return;
+      
       setVideosLoading(true);
       
-      const { data, error } = await supabase
-        .from('course_videos')
-        .select('*')
-        .order('order_index', { ascending: true });
+      // Fetch videos and user progress in parallel
+      const [videosResult, progressResult] = await Promise.all([
+        supabase
+          .from('course_videos')
+          .select('*')
+          .order('order_index', { ascending: true }),
+        supabase
+          .from('user_video_progress')
+          .select('video_id, completed')
+          .eq('user_id', user.id)
+      ]);
 
-      if (error) {
-        console.error('Error fetching course videos:', error);
+      if (videosResult.error) {
+        console.error('Error fetching course videos:', videosResult.error);
         toast.error('Failed to load course content');
         setVideosLoading(false);
         return;
       }
 
-      if (data) {
+      // Build progress map
+      const progressMap = new Map<string, boolean>();
+      if (progressResult.data) {
+        progressResult.data.forEach((p: { video_id: string; completed: boolean }) => {
+          progressMap.set(p.video_id, p.completed);
+        });
+      }
+      setUserProgress(progressMap);
+
+      if (videosResult.data) {
         // Separate call recordings and course materials
-        const recordings = data.filter((v: CourseVideo) => v.category === 'call_recording');
-        const materials = data.filter((v: CourseVideo) => v.category === 'course');
+        const recordings = videosResult.data.filter((v: CourseVideo) => v.category === 'call_recording');
+        const materials = videosResult.data.filter((v: CourseVideo) => v.category === 'course');
 
         // Group recordings by module (month)
-        const recordingsGrouped = groupVideosByModule(recordings);
+        const recordingsGrouped = groupVideosByModule(recordings, progressMap);
         setRecordingsData(recordingsGrouped);
 
         // Group materials by module
-        const materialsGrouped = groupVideosByModule(materials);
+        const materialsGrouped = groupVideosByModule(materials, progressMap);
         setMaterialsData(materialsGrouped);
       }
       
@@ -107,7 +126,7 @@ const Chat = () => {
     };
 
     fetchCourseVideos();
-  }, []);
+  }, [user?.id]);
 
   // Handle transcript loading from URL params (Ask AI flow)
   useEffect(() => {
@@ -187,7 +206,7 @@ const Chat = () => {
     return formatted;
   };
 
-  const groupVideosByModule = (videos: CourseVideo[]): Module[] => {
+  const groupVideosByModule = (videos: CourseVideo[], progressMap: Map<string, boolean>): Module[] => {
     const moduleMap = new Map<string, Lesson[]>();
     
     videos.forEach(video => {
@@ -202,7 +221,7 @@ const Chat = () => {
         moduleId: moduleTitle,
         title: video.title,
         duration: video.duration_formatted || video.duration || '',
-        completed: false,
+        completed: progressMap.get(video.id) || false,
         description: video.description || '',
         vdocipherId: video.vdocipher_id || undefined,
         transcriptUrl: video.transcript_url || undefined,
@@ -247,12 +266,18 @@ const Chat = () => {
   // Learn mode handlers
   const handleSelectLesson = (id: string) => setLessonId(id);
 
-  const handleToggleComplete = (id: string) => {
+  const handleToggleComplete = async (id: string) => {
+    if (!user?.id) return;
+    
+    const currentCompleted = userProgress.get(id) || false;
+    const newCompleted = !currentCompleted;
+    
+    // Optimistic update
     const updateLessons = (modules: Module[]) =>
       modules.map((mod) => ({
         ...mod,
         lessons: mod.lessons.map((l) =>
-          l.id === id ? { ...l, completed: !l.completed } : l
+          l.id === id ? { ...l, completed: newCompleted } : l
         ),
       }));
 
@@ -260,6 +285,26 @@ const Chat = () => {
       setRecordingsData(updateLessons);
     } else {
       setMaterialsData(updateLessons);
+    }
+    setUserProgress(prev => new Map(prev).set(id, newCompleted));
+
+    // Upsert to database
+    const { error } = await supabase
+      .from('user_video_progress')
+      .upsert({
+        user_id: user.id,
+        video_id: id,
+        completed: newCompleted,
+        completed_at: newCompleted ? new Date().toISOString() : null
+      }, {
+        onConflict: 'user_id,video_id'
+      });
+
+    if (error) {
+      console.error('Error updating progress:', error);
+      toast.error('Failed to update progress');
+      // Revert on error
+      setUserProgress(prev => new Map(prev).set(id, currentCompleted));
     }
   };
 
@@ -295,6 +340,24 @@ const Chat = () => {
       setMode("chat");
       setChatId(null);
     }
+  };
+
+  const handleVideoComplete = (lessonId: string) => {
+    // Update local state when video completes
+    const updateLessons = (modules: Module[]) =>
+      modules.map((mod) => ({
+        ...mod,
+        lessons: mod.lessons.map((l) =>
+          l.id === lessonId ? { ...l, completed: true } : l
+        ),
+      }));
+
+    if (contentType === "recordings") {
+      setRecordingsData(updateLessons);
+    } else {
+      setMaterialsData(updateLessons);
+    }
+    setUserProgress(prev => new Map(prev).set(lessonId, true));
   };
 
   const currentData = contentType === "recordings" ? recordingsData : materialsData;
@@ -344,6 +407,7 @@ const Chat = () => {
               modules={currentData}
               contentType={contentType}
               onAskAI={handleAskAIAboutVideo}
+              onVideoComplete={handleVideoComplete}
             />
           </div>
         </>

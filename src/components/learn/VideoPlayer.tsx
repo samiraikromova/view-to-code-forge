@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Play, Download, MessageSquare, Calendar, Clock, Users } from "lucide-react";
 import { Lesson } from "./LearnSidebar";
 import ReactMarkdown from "react-markdown";
@@ -7,21 +7,28 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
+import { useAuth } from "@/hooks/useAuth";
 
 interface VideoPlayerProps {
   lesson: Lesson;
   contentType: "recordings" | "materials";
   onAskAI?: (lessonId: string) => void;
+  onVideoComplete?: (lessonId: string) => void;
 }
 
-export const VideoPlayer = ({ lesson, contentType, onAskAI }: VideoPlayerProps) => {
+export const VideoPlayer = ({ lesson, contentType, onAskAI, onVideoComplete }: VideoPlayerProps) => {
+  const { user } = useAuth();
   const [videoOtp, setVideoOtp] = useState<string | null>(null);
   const [playbackInfo, setPlaybackInfo] = useState<string | null>(null);
   const [videoLoading, setVideoLoading] = useState(false);
   const [videoError, setVideoError] = useState<string | null>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
+  const hasMarkedComplete = useRef(false);
 
   // Fetch OTP when lesson changes
   useEffect(() => {
+    hasMarkedComplete.current = false; // Reset on lesson change
+    
     const fetchOtp = async () => {
       if (!lesson.vdocipherId) return;
       
@@ -56,7 +63,57 @@ export const VideoPlayer = ({ lesson, contentType, onAskAI }: VideoPlayerProps) 
     };
     
     fetchOtp();
-  }, [lesson.vdocipherId]);
+  }, [lesson.vdocipherId, lesson.id]);
+
+  // Listen for VdoCipher video end event via postMessage
+  useEffect(() => {
+    const handleMessage = async (event: MessageEvent) => {
+      // VdoCipher sends messages when video events occur
+      if (event.data && typeof event.data === 'string') {
+        try {
+          const data = JSON.parse(event.data);
+          // Check if video ended (progress >= 95%)
+          if (data.event === 'progress' && data.currentTime && data.duration) {
+            const progress = (data.currentTime / data.duration) * 100;
+            if (progress >= 95 && !hasMarkedComplete.current && !lesson.completed) {
+              hasMarkedComplete.current = true;
+              await markVideoComplete();
+            }
+          }
+          // Also check for 'ended' event
+          if (data.event === 'ended' && !hasMarkedComplete.current && !lesson.completed) {
+            hasMarkedComplete.current = true;
+            await markVideoComplete();
+          }
+        } catch {
+          // Not JSON, ignore
+        }
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [lesson.id, lesson.completed, user?.id]);
+
+  const markVideoComplete = async () => {
+    if (!user?.id) return;
+    
+    const { error } = await supabase
+      .from('user_video_progress')
+      .upsert({
+        user_id: user.id,
+        video_id: lesson.id,
+        completed: true,
+        completed_at: new Date().toISOString()
+      }, {
+        onConflict: 'user_id,video_id'
+      });
+
+    if (!error) {
+      toast.success('Video marked as complete!');
+      onVideoComplete?.(lesson.id);
+    }
+  };
 
   const handleDownloadTranscript = async () => {
     if (lesson.transcriptUrl) {
@@ -104,6 +161,7 @@ export const VideoPlayer = ({ lesson, contentType, onAskAI }: VideoPlayerProps) 
       <div className="relative w-full aspect-video bg-surface rounded-2xl overflow-hidden border border-border">
         {lesson.vdocipherId && videoOtp && playbackInfo ? (
           <iframe
+            ref={iframeRef}
             src={`https://player.vdocipher.com/v2/?otp=${videoOtp}&playbackInfo=${playbackInfo}`}
             className="w-full h-full"
             frameBorder="0"
