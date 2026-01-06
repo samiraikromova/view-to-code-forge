@@ -22,7 +22,7 @@ import type {
   GoalType,
 } from "@/types/dashboard";
 
-// Metric definitions
+// Metric definitions with tooltips
 export const metricDefinitions: Record<MetricKey, MetricDefinition> = {
   cashCollected: {
     key: "cashCollected",
@@ -30,6 +30,7 @@ export const metricDefinitions: Record<MetricKey, MetricDefinition> = {
     shortLabel: "COST",
     format: "currency",
     icon: DollarSign,
+    description: "The total amount spent on advertising during this period.",
   },
   revenue: {
     key: "revenue",
@@ -37,6 +38,7 @@ export const metricDefinitions: Record<MetricKey, MetricDefinition> = {
     shortLabel: "REVENUE",
     format: "currency",
     icon: DollarSign,
+    description: "The total income generated from sales during this period.",
   },
   profit: {
     key: "profit",
@@ -44,27 +46,31 @@ export const metricDefinitions: Record<MetricKey, MetricDefinition> = {
     shortLabel: "PROFIT",
     format: "currency",
     icon: TrendingUp,
+    description: "Your revenue minus ad spend and refunds. This is your actual earnings.",
   },
   roas: {
     key: "roas",
-    label: "ROAS",
+    label: "Return On Ad Spend",
     shortLabel: "ROAS",
     format: "multiplier",
     icon: BarChart3,
+    description: "Revenue divided by ad cost, showing how much revenue you generate for every dollar spent.",
   },
   roi: {
     key: "roi",
-    label: "ROI",
+    label: "Return On Investment",
     shortLabel: "ROI",
     format: "percent",
     icon: Percent,
+    description: "Your profit as a percentage of ad spend. Shows how much you earn back on every dollar invested.",
   },
   margin: {
     key: "margin",
-    label: "Margin",
+    label: "Profit Margin",
     shortLabel: "MARGIN",
     format: "percent",
     icon: Percent,
+    description: "Your profit as a percentage of revenue. Higher margin means more efficient operations.",
   },
   adSpend: {
     key: "adSpend",
@@ -72,6 +78,7 @@ export const metricDefinitions: Record<MetricKey, MetricDefinition> = {
     shortLabel: "AD SPEND",
     format: "currency",
     icon: CreditCard,
+    description: "The total amount spent on advertising during this period.",
   },
   refunds: {
     key: "refunds",
@@ -79,20 +86,23 @@ export const metricDefinitions: Record<MetricKey, MetricDefinition> = {
     shortLabel: "REFUNDS",
     format: "currency",
     icon: CreditCard,
+    description: "The total amount refunded to customers during this period.",
   },
   ctr: {
     key: "ctr",
-    label: "CTR",
+    label: "Click Through Rate",
     shortLabel: "CTR",
     format: "percent",
     icon: Percent,
+    description: "The percentage of people who clicked your ad after seeing it. Higher CTR means your ad is resonating.",
   },
   cpm: {
     key: "cpm",
-    label: "CPM",
+    label: "Cost Per Mille",
     shortLabel: "CPM",
     format: "currency",
     icon: DollarSign,
+    description: "The cost to show your ad 1,000 times. Lower CPM means more efficient ad spend for awareness.",
   },
   followers: {
     key: "followers",
@@ -100,6 +110,7 @@ export const metricDefinitions: Record<MetricKey, MetricDefinition> = {
     shortLabel: "FOLLOWERS",
     format: "number",
     icon: Users,
+    description: "New followers gained during this period. These are people who chose to follow your profile.",
   },
   profileVisits: {
     key: "profileVisits",
@@ -107,6 +118,7 @@ export const metricDefinitions: Record<MetricKey, MetricDefinition> = {
     shortLabel: "PV",
     format: "number",
     icon: Eye,
+    description: "The number of people who visited your profile after seeing your ad or content.",
   },
   outreach: {
     key: "outreach",
@@ -114,6 +126,7 @@ export const metricDefinitions: Record<MetricKey, MetricDefinition> = {
     shortLabel: "OUTREACH",
     format: "number",
     icon: MessageSquare,
+    description: "The number of people you or your team reached out to via DMs or messages.",
   },
   responses: {
     key: "responses",
@@ -121,6 +134,7 @@ export const metricDefinitions: Record<MetricKey, MetricDefinition> = {
     shortLabel: "RESPONSES",
     format: "number",
     icon: MessageSquare,
+    description: "The number of people who responded to your outreach messages.",
   },
   calls: {
     key: "calls",
@@ -128,6 +142,7 @@ export const metricDefinitions: Record<MetricKey, MetricDefinition> = {
     shortLabel: "CALLS",
     format: "number",
     icon: Phone,
+    description: "The number of sales or discovery calls booked during this period.",
   },
   clients: {
     key: "clients",
@@ -135,13 +150,15 @@ export const metricDefinitions: Record<MetricKey, MetricDefinition> = {
     shortLabel: "CLIENTS",
     format: "number",
     icon: Users,
+    description: "The number of new clients acquired during this period.",
   },
   initialRevenue: {
     key: "initialRevenue",
     label: "Initial Revenue",
-    shortLabel: "INITIAL",
+    shortLabel: "INITIAL $",
     format: "currency",
     icon: DollarSign,
+    description: "Revenue from first-time purchases or upfront payments from new clients.",
   },
   recurringRevenue: {
     key: "recurringRevenue",
@@ -149,20 +166,23 @@ export const metricDefinitions: Record<MetricKey, MetricDefinition> = {
     shortLabel: "RECURRING",
     format: "currency",
     icon: DollarSign,
+    description: "Revenue from subscriptions, retainers, or repeat purchases from existing clients.",
   },
   aov: {
     key: "aov",
-    label: "AOV",
+    label: "Average Order Value",
     shortLabel: "AOV",
     format: "currency",
     icon: DollarSign,
+    description: "The average amount spent per transaction or client.",
   },
   ltv: {
     key: "ltv",
-    label: "LTV",
+    label: "Lifetime Value",
     shortLabel: "LTV",
     format: "currency",
     icon: DollarSign,
+    description: "The average total revenue generated from a client over their entire relationship with you.",
   },
   conversionRate: {
     key: "conversionRate",
@@ -170,13 +190,15 @@ export const metricDefinitions: Record<MetricKey, MetricDefinition> = {
     shortLabel: "CONV.",
     format: "percent",
     icon: Percent,
+    description: "The percentage of leads or visitors who become paying customers.",
   },
   costPerPV: {
     key: "costPerPV",
-    label: "Cost Per PV",
+    label: "Cost Per Profile Visit",
     shortLabel: "COST/PV",
     format: "currency",
     icon: DollarSign,
+    description: "How much you spend on average to get one person to visit your profile.",
   },
   pvToFollower: {
     key: "pvToFollower",
@@ -192,6 +214,7 @@ export const metricDefinitions: Record<MetricKey, MetricDefinition> = {
     shortLabel: "COST/F",
     format: "currency",
     icon: DollarSign,
+    description: "How much you spend on average to acquire one new follower.",
   },
   outreachToResponse: {
     key: "outreachToResponse",
@@ -215,6 +238,7 @@ export const metricDefinitions: Record<MetricKey, MetricDefinition> = {
     shortLabel: "COST/R",
     format: "currency",
     icon: DollarSign,
+    description: "How much you spend on average to get one response from outreach.",
   },
   outreachToCall: {
     key: "outreachToCall",
@@ -238,6 +262,7 @@ export const metricDefinitions: Record<MetricKey, MetricDefinition> = {
     shortLabel: "COST/C",
     format: "currency",
     icon: DollarSign,
+    description: "How much you spend on average to book one sales call.",
   },
   newClients: {
     key: "newClients",
@@ -245,6 +270,7 @@ export const metricDefinitions: Record<MetricKey, MetricDefinition> = {
     shortLabel: "NEW",
     format: "number",
     icon: Users,
+    description: "The number of first-time clients acquired during this period.",
   },
   repeatClients: {
     key: "repeatClients",
@@ -252,6 +278,7 @@ export const metricDefinitions: Record<MetricKey, MetricDefinition> = {
     shortLabel: "REPEAT",
     format: "number",
     icon: Users,
+    description: "Clients who have purchased from you more than once.",
   },
   sales: {
     key: "sales",
@@ -259,6 +286,7 @@ export const metricDefinitions: Record<MetricKey, MetricDefinition> = {
     shortLabel: "SALES",
     format: "number",
     icon: Target,
+    description: "The number of sales closed during this period.",
   },
   followerToSale: {
     key: "followerToSale",
@@ -278,10 +306,11 @@ export const metricDefinitions: Record<MetricKey, MetricDefinition> = {
   },
   cac: {
     key: "cac",
-    label: "CAC",
+    label: "Customer Acquisition Cost",
     shortLabel: "CAC",
     format: "currency",
     icon: DollarSign,
+    description: "How much you spend on average to acquire one paying customer.",
   },
   followerToOutreach: {
     key: "followerToOutreach",
@@ -297,6 +326,7 @@ export const metricDefinitions: Record<MetricKey, MetricDefinition> = {
     shortLabel: "COST/O",
     format: "currency",
     icon: DollarSign,
+    description: "How much you spend on average for each outreach attempt.",
   },
 };
 
