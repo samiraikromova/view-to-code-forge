@@ -90,7 +90,7 @@ export function DateRangePicker({
                 key={preset.value}
                 onClick={() => handlePresetClick(preset)}
                 className={cn(
-                  "w-full px-3 py-1.5 text-sm text-left transition-colors whitespace-nowrap",
+                  "w-full px-2 py-1 text-xs text-left transition-colors whitespace-nowrap",
                   selectedPreset === preset.value
                     ? "bg-primary text-primary-foreground"
                     : "text-foreground hover:bg-muted"
