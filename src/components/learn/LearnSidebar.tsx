@@ -3,7 +3,6 @@ import { useNavigate } from "react-router-dom";
 import { PanelLeft, Search, PlayCircle, CheckCircle2, UserIcon, Sparkles, CreditCard, LogOut, ChevronUp, TrendingUp, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ContentToggle } from "./ContentToggle";
-import { ModeSwitcher } from "@/components/ModeSwitcher";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -49,8 +48,6 @@ interface LearnSidebarProps {
   modules: Module[];
   isCollapsed: boolean;
   onCollapsedChange: (collapsed: boolean) => void;
-  mode: "chat" | "learn";
-  onModeChange: (mode: "chat" | "learn") => void;
   onToggleLessonComplete: (lessonId: string) => void;
 }
 
@@ -62,8 +59,6 @@ export const LearnSidebar = ({
   modules,
   isCollapsed,
   onCollapsedChange,
-  mode,
-  onModeChange,
   onToggleLessonComplete,
 }: LearnSidebarProps) => {
   const navigate = useNavigate();
@@ -98,88 +93,90 @@ export const LearnSidebar = ({
   return (
     <div
       className={cn(
-        "h-screen bg-sidebar flex flex-col transition-all duration-300 border-r border-border",
+        "h-full bg-sidebar flex flex-col transition-all duration-300 border-r border-border flex-shrink-0",
         isCollapsed ? "w-14" : "w-64"
       )}
     >
       {/* Header */}
-      <div className="relative flex items-center justify-center gap-2 border-b border-border/50 px-4 py-3">
+      <div className="flex items-center justify-between border-b border-border/50 px-3 py-3">
         {!isCollapsed ? (
           <>
-            <Dialog open={searchOpen} onOpenChange={setSearchOpen}>
-              <DialogTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-muted-foreground hover:bg-surface-hover absolute left-4"
-                >
-                  <Search className="h-5 w-5" />
-                </Button>
-              </DialogTrigger>
-            <DialogContent className="max-w-2xl max-h-[80vh]">
-              <DialogHeader>
-                <DialogTitle>Search Lessons</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <Input
-                  placeholder="Search for lessons..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full"
-                />
-                <div className="max-h-[400px] overflow-y-auto space-y-2">
-                  {filteredLessons.map((lesson) => (
-                    <button
-                      key={lesson.id}
-                      onClick={() => {
-                        onLessonSelect(lesson.id);
-                        setSearchOpen(false);
-                        setSearchQuery("");
-                      }}
-                      className="w-full text-left p-3 rounded-lg hover:bg-surface transition-colors"
-                    >
-                      <div className="flex items-center gap-2">
-                        {lesson.completed ? (
-                          <CheckCircle2 className="h-4 w-4 text-accent" />
-                        ) : (
-                          <PlayCircle className="h-4 w-4 text-muted-foreground" />
-                        )}
-                        <div className="flex-1">
-                          <div className="text-sm font-medium text-foreground">
-                            {highlightMatch(lesson.title, searchQuery)}
+            {/* Logo Badge */}
+            <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
+              <span className="text-primary-foreground font-bold text-xs">CB</span>
+            </div>
+            
+            <div className="flex items-center gap-1">
+              <Dialog open={searchOpen} onOpenChange={setSearchOpen}>
+                <DialogTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:bg-surface-hover"
+                  >
+                    <Search className="h-4 w-4" />
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl max-h-[80vh]">
+                  <DialogHeader>
+                    <DialogTitle>Search Lessons</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <Input
+                      placeholder="Search for lessons..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full"
+                    />
+                    <div className="max-h-[400px] overflow-y-auto space-y-2">
+                      {filteredLessons.map((lesson) => (
+                        <button
+                          key={lesson.id}
+                          onClick={() => {
+                            onLessonSelect(lesson.id);
+                            setSearchOpen(false);
+                            setSearchQuery("");
+                          }}
+                          className="w-full text-left p-3 rounded-lg hover:bg-surface transition-colors"
+                        >
+                          <div className="flex items-center gap-2">
+                            {lesson.completed ? (
+                              <CheckCircle2 className="h-4 w-4 text-accent" />
+                            ) : (
+                              <PlayCircle className="h-4 w-4 text-muted-foreground" />
+                            )}
+                            <div className="flex-1">
+                              <div className="text-sm font-medium text-foreground">
+                                {highlightMatch(lesson.title, searchQuery)}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {lesson.duration}
+                              </div>
+                            </div>
                           </div>
-                          <div className="text-xs text-muted-foreground">
-                            {lesson.duration}
-                          </div>
-                        </div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
-          
-          <ModeSwitcher currentMode={mode} onModeChange={onModeChange} />
-          
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onCollapsedChange(!isCollapsed)}
-            className="h-8 w-8 text-muted-foreground hover:bg-surface-hover absolute right-4"
-          >
-            <PanelLeft className="h-5 w-5" />
-          </Button>
-        </>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </DialogContent>
+              </Dialog>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => onCollapsedChange(true)}
+                className="h-8 w-8 text-muted-foreground hover:bg-surface-hover"
+              >
+                <PanelLeft className="h-4 w-4" />
+              </Button>
+            </div>
+          </>
         ) : (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => onCollapsedChange(!isCollapsed)}
-            className="h-8 w-8 text-muted-foreground hover:bg-surface-hover mx-auto"
+          <button 
+            onClick={() => onCollapsedChange(false)}
+            className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center mx-auto hover:ring-2 hover:ring-primary/50 transition-all"
           >
-            <PanelLeft className="h-5 w-5" />
-          </Button>
+            <span className="text-primary-foreground font-bold text-xs">CB</span>
+          </button>
         )}
       </div>
 
@@ -235,7 +232,7 @@ export const LearnSidebar = ({
       </div>
 
       {/* Profile */}
-      <div className="mt-auto border-t border-border">
+      <div className="border-t border-border flex-shrink-0">
         {!isCollapsed ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
