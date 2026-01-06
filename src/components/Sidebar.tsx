@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { PanelLeft, Plus, CreditCard, User, LogOut, MoreVertical, Star, Search, UserIcon, Sparkles, Trash2, Pencil, X, ChevronUp, TrendingUp, Settings } from "lucide-react";
+import { PanelLeft, Plus, CreditCard, LogOut, MoreVertical, Star, Search, UserIcon, Sparkles, Trash2, Pencil, X, ChevronUp, TrendingUp, Settings } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { ModeSwitcher } from "@/components/ModeSwitcher";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { deleteThread, updateThreadTitle, starThread } from "@/api/chat/chatApi";
@@ -24,8 +24,6 @@ interface SidebarProps {
   setChats: (chats: Chat[]) => void;
   isCollapsed: boolean;
   onCollapsedChange: (collapsed: boolean) => void;
-  mode: "chat" | "learn";
-  onModeChange: (mode: "chat" | "learn") => void;
   onRefreshChats?: () => void;
 }
 export function Sidebar({
@@ -36,8 +34,6 @@ export function Sidebar({
   setChats,
   isCollapsed,
   onCollapsedChange,
-  mode,
-  onModeChange,
   onRefreshChats
 }: SidebarProps) {
   const navigate = useNavigate();
@@ -117,20 +113,27 @@ export function Sidebar({
   };
   return <div className={cn("flex h-full flex-col border-r border-border bg-surface transition-all duration-300 flex-shrink-0", isCollapsed ? "w-14" : "w-72")}>
       {/* Header */}
-      <div className="relative flex items-center justify-center gap-2 border-b border-border/50 px-4 py-3">
+      <div className="flex items-center justify-between border-b border-border/50 px-3 py-3">
         {!isCollapsed ? <>
-          <Button variant="ghost" size="icon" onClick={() => setIsSearchModalOpen(true)} className="h-8 w-8 text-muted-foreground hover:bg-surface-hover absolute left-4">
-            <Search className="h-5 w-5" />
-          </Button>
+          {/* Logo Badge */}
+          <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
+            <span className="text-primary-foreground font-bold text-xs">CB</span>
+          </div>
           
-          <ModeSwitcher currentMode={mode} onModeChange={onModeChange} />
-          
-          <Button variant="ghost" size="icon" onClick={() => onCollapsedChange(!isCollapsed)} className="h-8 w-8 text-muted-foreground hover:bg-surface-hover absolute right-4">
-            <PanelLeft className="h-5 w-5" />
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon" onClick={() => setIsSearchModalOpen(true)} className="h-8 w-8 text-muted-foreground hover:bg-surface-hover">
+              <Search className="h-4 w-4" />
             </Button>
-        </> : <Button variant="ghost" size="icon" onClick={() => onCollapsedChange(!isCollapsed)} className="h-8 w-8 text-muted-foreground hover:bg-surface-hover mx-auto">
-            <PanelLeft className="h-5 w-5" />
-          </Button>}
+            <Button variant="ghost" size="icon" onClick={() => onCollapsedChange(true)} className="h-8 w-8 text-muted-foreground hover:bg-surface-hover">
+              <PanelLeft className="h-4 w-4" />
+            </Button>
+          </div>
+        </> : <button 
+            onClick={() => onCollapsedChange(false)}
+            className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center mx-auto hover:ring-2 hover:ring-primary/50 transition-all"
+          >
+            <span className="text-primary-foreground font-bold text-xs">CB</span>
+          </button>}
       </div>
 
       {/* New Chat Button */}
@@ -235,12 +238,22 @@ export function Sidebar({
                 </div>
                 <div className="flex-1 overflow-hidden text-left">
                   <p className="truncate text-xs font-medium text-foreground">{userName}</p>
-                  <p className="truncate text-xs text-muted-foreground">{typeof userCredits === 'number' ? userCredits.toFixed(2) : '0.00'} credits</p>
                 </div>
                 <ChevronUp className="h-4 w-4 text-muted-foreground flex-shrink-0" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuContent align="start" side="top" className="w-56">
+              {/* Credit Usage Gauge */}
+              <div className="px-3 py-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-muted-foreground">Credits</span>
+                  <span className="text-xs font-medium text-foreground">
+                    {typeof userCredits === 'number' ? userCredits.toFixed(1) : '0.0'} available
+                  </span>
+                </div>
+                <Progress value={Math.min(userCredits, 100)} className="h-2" />
+              </div>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => navigate("/profile")} className="text-muted-foreground">
                 <UserIcon className="mr-2 h-4 w-4" />
                 Profile
@@ -276,7 +289,18 @@ export function Sidebar({
                 </div>
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuContent align="start" side="top" className="w-56">
+              {/* Credit Usage Gauge */}
+              <div className="px-3 py-3">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs text-muted-foreground">Credits</span>
+                  <span className="text-xs font-medium text-foreground">
+                    {typeof userCredits === 'number' ? userCredits.toFixed(1) : '0.0'} available
+                  </span>
+                </div>
+                <Progress value={Math.min(userCredits, 100)} className="h-2" />
+              </div>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => navigate("/profile")} className="text-muted-foreground">
                 <UserIcon className="mr-2 h-4 w-4" />
                 Profile
