@@ -21,11 +21,11 @@ const numImagesOptions = [1, 2, 3, 4];
 
 const aspectRatioOptions = [
   { value: 'square_hd', label: 'Square HD (1:1)' },
+  { value: 'square', label: 'Square (1:1)' },
   { value: 'portrait_16_9', label: 'Portrait (9:16)' },
+  { value: 'portrait_4_3', label: 'Portrait (3:4)' },
   { value: 'landscape_16_9', label: 'Landscape (16:9)' },
-  { value: 'landscape_21_9', label: 'Ultra Wide (21:9)' },
-  { value: 'landscape_4_3', label: 'Landscape (4:3)' },
-  { value: 'portrait_4_3', label: 'Portrait (3:4)' }
+  { value: 'landscape_4_3', label: 'Landscape (4:3)' }
 ];
 
 export function ImageGenerationSelectors({
