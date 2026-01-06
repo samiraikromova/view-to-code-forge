@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Play, Download, MessageSquare, Calendar, Clock, Users } from "lucide-react";
+import { Play, ExternalLink, MessageSquare, Calendar, Clock, Users } from "lucide-react";
 import { Lesson } from "./LearnSidebar";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -124,11 +124,10 @@ export const VideoPlayer = ({ lesson, contentType, onAskAI, onVideoComplete }: V
     }
   };
 
-  const handleDownloadTranscript = () => {
+  const handleOpenTranscript = () => {
     if (lesson.transcriptUrl) {
-      // Open the Google Drive URL directly - it will handle the download
       window.open(lesson.transcriptUrl, '_blank');
-      toast.success('Opening transcript for download');
+      toast.success('Opening transcript');
     }
   };
 
@@ -242,15 +241,15 @@ export const VideoPlayer = ({ lesson, contentType, onAskAI, onVideoComplete }: V
 
         {/* Action Buttons */}
         <div className="flex items-center gap-3">
-          {lesson.transcriptUrl && (
+        {lesson.transcriptUrl && (
             <>
               <Button 
                 variant="outline" 
                 size="sm"
-                onClick={handleDownloadTranscript}
+                onClick={handleOpenTranscript}
               >
-                <Download className="h-4 w-4 mr-2" />
-                Download Transcript
+                <ExternalLink className="h-4 w-4 mr-2" />
+                Open Transcript
               </Button>
               {onAskAI && (
                 <Button 
