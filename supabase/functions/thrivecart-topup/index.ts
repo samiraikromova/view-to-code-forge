@@ -164,11 +164,7 @@ serve(async (req) => {
           amount: config.amount,
           type: 'purchase',
           payment_method: 'thrivecart',
-          metadata: {
-            order_id: body.order?.id || body.order_id,
-            product_id: productId,
-            price: config.price
-          }
+          stripe_payment_id: body.order?.id || body.order_id || null
         });
 
         console.log(`✅ Top-up successful: +${config.amount} credits for ${email}`);
@@ -196,9 +192,9 @@ serve(async (req) => {
         await supabase.from('credit_transactions').insert({
           user_id: user.id,
           amount: -config.amount,
-          type: 'refund',
+          type: 'purchase',
           payment_method: 'thrivecart',
-          metadata: { order_id: body.order?.id || body.order_id, product_id: productId }
+          stripe_payment_id: body.order?.id || body.order_id || null
         });
 
         console.log(`💸 Refund processed: -${config.amount} credits for ${email}`);
