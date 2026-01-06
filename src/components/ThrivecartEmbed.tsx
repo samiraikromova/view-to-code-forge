@@ -70,51 +70,51 @@ export const THRIVECART_PRODUCTS = {
   },
 }
 
-// ThriveCart checkout button component
-import { Button, ButtonProps } from "@/components/ui/button"
+// ThriveCart Link component - uses anchor tag with data attributes for popup
 import { cn } from "@/lib/utils"
 
-interface ThrivecartButtonProps extends Omit<ButtonProps, 'onClick'> {
+interface ThrivecartLinkProps {
   productId: number
   children: React.ReactNode
-  userEmail?: string
+  className?: string
 }
 
-export function ThrivecartButton({ productId, children, className, userEmail, ...props }: ThrivecartButtonProps) {
-  const handleClick = (e: React.MouseEvent) => {
-    e.preventDefault()
-    
-    // Find the product from THRIVECART_PRODUCTS by productId
-    const product = Object.values(THRIVECART_PRODUCTS).find(p => p.productId === productId)
-    const slug = product?.slug || 'cb4-starter'
-    
-    // Build the checkout URL
-    let url = `https://tinder.thrivecart.com/${slug}/`
-    
-    // Add email passthrough if available
-    if (userEmail) {
-      url += `?passthrough[email]=${encodeURIComponent(userEmail)}`
-    }
-    
-    // Open in popup window
-    const width = 600
-    const height = 700
-    const left = (window.innerWidth - width) / 2
-    const top = (window.innerHeight - height) / 2
-    window.open(
-      url,
-      'thrivecart_checkout',
-      `width=${width},height=${height},left=${left},top=${top},scrollbars=yes,resizable=yes`
-    )
-  }
-
+export function ThrivecartLink({ productId, children, className }: ThrivecartLinkProps) {
   return (
-    <Button
-      onClick={handleClick}
-      className={cn(className)}
-      {...props}
+    <a
+      data-thrivecart-account="tinder"
+      data-thrivecart-tpl="v2"
+      data-thrivecart-product={productId}
+      className={cn(
+        "thrivecart-button cursor-pointer inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50",
+        className
+      )}
     >
       {children}
+    </a>
+  )
+}
+
+// Button variant for styled buttons
+import { Button, ButtonProps } from "@/components/ui/button"
+
+interface ThrivecartButtonProps extends Omit<ButtonProps, 'onClick' | 'asChild'> {
+  productId: number
+  children: React.ReactNode
+  userEmail?: string // Not used in new approach but kept for backward compatibility
+}
+
+export function ThrivecartButton({ productId, children, className, variant, size, userEmail, ...props }: ThrivecartButtonProps) {
+  return (
+    <Button asChild variant={variant} size={size} className={className} {...props}>
+      <a
+        data-thrivecart-account="tinder"
+        data-thrivecart-tpl="v2"
+        data-thrivecart-product={productId}
+        className="thrivecart-button cursor-pointer"
+      >
+        {children}
+      </a>
     </Button>
   )
 }
