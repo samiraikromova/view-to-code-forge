@@ -4,25 +4,33 @@ import { cn } from "@/lib/utils";
 // ThriveCart account name
 const THRIVECART_ACCOUNT = "leveraged-creator";
 
+// Declare ThriveCart global
+declare global {
+  interface Window {
+    thrivecart?: {
+      modal?: {
+        open?: (config: { product: number; account: string }) => void;
+      };
+    };
+  }
+}
+
 // Component that dynamically injects the ThriveCart script
 export default function ThrivecartEmbed() {
   useEffect(() => {
     // Check if script already exists
     const existingScript = document.querySelector('script[src*="thrivecart.js"]');
-    if (existingScript) return;
+    if (existingScript) {
+      return;
+    }
 
     // Dynamically inject Thrivecart script on client only
     const script = document.createElement("script");
-    script.src = "https://tinder.thrivecart.com/embed/v1/thrivecart.js";
+    script.src = "//tinder.thrivecart.com/embed/v1/thrivecart.js";
     script.async = true;
     document.body.appendChild(script);
 
-    return () => {
-      // Only remove if we added it
-      if (script.parentNode) {
-        document.body.removeChild(script);
-      }
-    };
+    // Don't remove on cleanup - ThriveCart should stay loaded
   }, []);
 
   return null;
@@ -97,6 +105,7 @@ export function ThrivecartLink({ productId, children, className }: ThrivecartLin
       data-thrivecart-tpl="v2"
       data-thrivecart-product={productId}
       className={cn("thrivecart-button thrivecart-button-styled thrivecart-button_style-rounded thrivecart-button-custom cursor-pointer", className)}
+      style={{ backgroundColor: "#D97757" }}
     >
       {children}
     </a>
@@ -122,8 +131,11 @@ export function ThrivecartButton({
   variant = "default",
   size,
 }: ThrivecartButtonProps) {
+  const baseClasses = "thrivecart-button thrivecart-button-styled thrivecart-button_style-rounded thrivecart-button-custom";
+  
   const buttonClasses = cn(
-    "thrivecart-button thrivecart-button-styled thrivecart-button_style-rounded thrivecart-button-custom inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer",
+    baseClasses,
+    "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer",
     variant === "default" && "bg-primary text-primary-foreground shadow hover:bg-primary/90",
     variant === "outline" && "border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground",
     variant === "ghost" && "hover:bg-accent hover:text-accent-foreground",
@@ -139,6 +151,7 @@ export function ThrivecartButton({
       data-thrivecart-tpl="v2"
       data-thrivecart-product={productId}
       className={buttonClasses}
+      style={variant === "default" ? { backgroundColor: "#D97757" } : undefined}
     >
       {children}
     </a>
