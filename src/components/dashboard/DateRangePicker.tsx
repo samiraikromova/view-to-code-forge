@@ -195,7 +195,7 @@ export function DateRangePicker({
                 "h-8 w-full text-xs transition-colors flex items-center justify-center relative hover:bg-muted",
                 !dayObj.isCurrentMonth && "text-muted-foreground/40",
                 dayObj.isCurrentMonth && "text-foreground",
-                (isStart || isEnd) && "bg-accent text-accent-foreground font-semibold",
+                (isStart || isEnd) && "bg-accent text-white font-semibold",
                 inRange && "bg-accent/30",
                 isStart && "rounded-l-md",
                 isEnd && "rounded-r-md",
