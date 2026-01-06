@@ -451,6 +451,16 @@ const Main = () => {
 
                 {/* View Selector */}
                 <ViewSelector currentView={dashboardView} onViewChange={setDashboardView} />
+
+                {/* Refresh Button - moved to left side */}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleDashboardRefresh}
+                  className={dashboardLoading ? "animate-spin" : ""}
+                >
+                  <RefreshCw className="w-4 h-4" />
+                </Button>
               </>
             )}
           </div>
@@ -488,15 +498,6 @@ const Main = () => {
                   selectedPreset={dashboardPreset}
                   onPresetChange={handleDashboardPresetChange}
                 />
-
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleDashboardRefresh}
-                  className={dashboardLoading ? "animate-spin" : ""}
-                >
-                  <RefreshCw className="w-4 h-4" />
-                </Button>
               </>
             )}
           </div>
