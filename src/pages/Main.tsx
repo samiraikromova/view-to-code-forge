@@ -434,7 +434,18 @@ const Main = () => {
 
         {/* Content */}
         <div className="flex flex-1 min-h-0 overflow-hidden">
-          {mode === "dashboard" && <Dashboard />}
+          {mode === "dashboard" && (
+            <Dashboard 
+              onAskAI={(csvData) => {
+                // Create a file from CSV and switch to chat
+                const blob = new Blob([csvData], { type: "text/csv" });
+                const file = new File([blob], "dashboard_metrics.csv", { type: "text/csv" });
+                setTranscriptForNewChat(file);
+                setMode("chat");
+                setChatId(null);
+              }}
+            />
+          )}
           
           {mode === "chat" && (
             <ChatInterface
