@@ -82,15 +82,15 @@ export function DateRangePicker({
         align="end"
         sideOffset={4}
       >
-        <div className="flex">
+        <div className="flex w-fit">
           {/* Preset list - compact */}
-          <div className="py-1 min-w-[80px]">
+          <div className="py-1">
             {timePresets.map((preset) => (
               <button
                 key={preset.value}
                 onClick={() => handlePresetClick(preset)}
                 className={cn(
-                  "w-full px-1.5 py-0.5 text-[10px] text-left transition-colors",
+                  "block px-3 py-1.5 text-sm text-left transition-colors whitespace-nowrap",
                   selectedPreset === preset.value
                     ? "bg-primary text-primary-foreground"
                     : "text-foreground hover:bg-muted"
