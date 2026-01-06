@@ -115,25 +115,22 @@ export function Sidebar({
       {/* Header */}
       <div className="flex items-center justify-between border-b border-border/50 px-3 py-3">
         {!isCollapsed ? <>
-          {/* Logo Badge */}
-          <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
-            <span className="text-primary-foreground font-bold text-xs">CB</span>
-          </div>
+          {/* Search Button */}
+          <Button variant="ghost" size="icon" onClick={() => setIsSearchModalOpen(true)} className="h-8 w-8 text-muted-foreground hover:bg-surface-hover">
+            <Search className="h-4 w-4" />
+          </Button>
           
-          <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" onClick={() => setIsSearchModalOpen(true)} className="h-8 w-8 text-muted-foreground hover:bg-surface-hover">
-              <Search className="h-4 w-4" />
-            </Button>
-            <Button variant="ghost" size="icon" onClick={() => onCollapsedChange(true)} className="h-8 w-8 text-muted-foreground hover:bg-surface-hover">
-              <PanelLeft className="h-4 w-4" />
-            </Button>
-          </div>
-        </> : <button 
+          <Button variant="ghost" size="icon" onClick={() => onCollapsedChange(true)} className="h-8 w-8 text-muted-foreground hover:bg-surface-hover">
+            <PanelLeft className="h-4 w-4" />
+          </Button>
+        </> : <Button 
+            variant="ghost"
+            size="icon"
             onClick={() => onCollapsedChange(false)}
-            className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center mx-auto hover:ring-2 hover:ring-primary/50 transition-all"
+            className="h-8 w-8 text-muted-foreground hover:bg-surface-hover mx-auto"
           >
-            <span className="text-primary-foreground font-bold text-xs">CB</span>
-          </button>}
+            <PanelLeft className="h-4 w-4" />
+          </Button>}
       </div>
 
       {/* New Chat Button */}

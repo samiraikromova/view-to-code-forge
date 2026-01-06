@@ -393,6 +393,33 @@ const Main = () => {
     <div className="relative flex h-screen w-full bg-background overflow-hidden">
       <AmbientBackground />
       
+      {/* Sidebar - Full height, outside main content column */}
+      {mode === "chat" && (
+        <Sidebar
+          currentChatId={chatId}
+          onChatSelect={handleSelectChat}
+          onNewChat={handleNewChat}
+          chats={chats}
+          setChats={setChats}
+          isCollapsed={sidebarCollapsed}
+          onCollapsedChange={setSidebarCollapsed}
+          onRefreshChats={loadThreads}
+        />
+      )}
+      
+      {mode === "learn" && (
+        <LearnSidebar
+          modules={currentData}
+          currentLessonId={lessonId}
+          onLessonSelect={handleSelectLesson}
+          onToggleLessonComplete={handleToggleComplete}
+          isCollapsed={learnSidebarCollapsed}
+          onCollapsedChange={setLearnSidebarCollapsed}
+          contentType={contentType}
+          onContentTypeChange={handleContentTypeChange}
+        />
+      )}
+      
       {/* Main Content Area */}
       <div className="relative z-10 flex flex-col flex-1 min-w-0">
         {/* Header */}
@@ -515,49 +542,25 @@ const Main = () => {
           )}
           
           {mode === "chat" && (
-            <>
-              <Sidebar
-                currentChatId={chatId}
-                onChatSelect={handleSelectChat}
-                onNewChat={handleNewChat}
-                chats={chats}
-                setChats={setChats}
-                isCollapsed={sidebarCollapsed}
-                onCollapsedChange={setSidebarCollapsed}
-                onRefreshChats={loadThreads}
-              />
-              <ChatInterface
-                chatId={chatId}
-                onNewChat={handleNewChat}
-                onCreateChat={handleChatCreated}
-                transcriptFile={transcriptForNewChat}
-                onTranscriptFileProcessed={() => setTranscriptForNewChat(null)}
-              />
-            </>
+            <ChatInterface
+              chatId={chatId}
+              onNewChat={handleNewChat}
+              onCreateChat={handleChatCreated}
+              transcriptFile={transcriptForNewChat}
+              onTranscriptFileProcessed={() => setTranscriptForNewChat(null)}
+            />
           )}
           
           {mode === "learn" && (
-            <>
-              <LearnSidebar
+            <div className="flex-1 flex flex-col min-w-0">
+              <LearnInterface
+                lessonId={lessonId}
                 modules={currentData}
-                currentLessonId={lessonId}
-                onLessonSelect={handleSelectLesson}
-                onToggleLessonComplete={handleToggleComplete}
-                isCollapsed={learnSidebarCollapsed}
-                onCollapsedChange={setLearnSidebarCollapsed}
                 contentType={contentType}
-                onContentTypeChange={handleContentTypeChange}
+                onAskAI={handleAskAIAboutVideo}
+                onVideoComplete={handleVideoComplete}
               />
-              <div className="flex-1 flex flex-col min-w-0">
-                <LearnInterface
-                  lessonId={lessonId}
-                  modules={currentData}
-                  contentType={contentType}
-                  onAskAI={handleAskAIAboutVideo}
-                  onVideoComplete={handleVideoComplete}
-                />
-              </div>
-            </>
+            </div>
           )}
         </div>
       </div>
