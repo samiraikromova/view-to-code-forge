@@ -457,7 +457,7 @@ const Main = () => {
                   variant="ghost"
                   size="icon"
                   onClick={handleDashboardRefresh}
-                  className={dashboardLoading ? "animate-spin" : ""}
+                  className={dashboardLoading ? "animate-spin animate-refresh-glow" : ""}
                 >
                   <RefreshCw className="w-4 h-4" />
                 </Button>
