@@ -1,11 +1,10 @@
 // ThriveCart API utilities
 // Webhook endpoints are handled by Supabase Edge Functions:
-// - Subscriptions: /functions/v1/thrivecart-webhook
-// - Top-ups: /functions/v1/thrivecart-topup
+// - All purchases (subscriptions + top-ups): /functions/v1/thrivecart-webhook
 
 export const THRIVECART_ACCOUNT = "leveraged-creator";
 
-// Product configurations
+// Product configurations matching edge function PRODUCT_CONFIG
 export const SUBSCRIPTION_PRODUCTS = {
   starter: {
     productId: 7,
@@ -30,7 +29,7 @@ export const TOPUP_PRODUCTS = {
   10000: { productId: 13, slug: "100-top-up", credits: 10000, price: 100 },
 };
 
-// Generate checkout URL
+// Generate checkout URL (for direct links, not popups)
 export function getCheckoutUrl(productSlug: string, email?: string): string {
   let url = `https://${THRIVECART_ACCOUNT}.thrivecart.com/${productSlug}/`;
   if (email) {
@@ -39,7 +38,7 @@ export function getCheckoutUrl(productSlug: string, email?: string): string {
   return url;
 }
 
-// Open checkout in popup
+// Open checkout in popup (fallback for when script doesn't work)
 export function openCheckoutPopup(productSlug: string, email?: string): void {
   const url = getCheckoutUrl(productSlug, email);
   const width = 600;
