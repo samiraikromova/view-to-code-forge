@@ -3,7 +3,7 @@
 // - Subscriptions: /functions/v1/thrivecart-webhook
 // - Top-ups: /functions/v1/thrivecart-topup
 
-export const THRIVECART_ACCOUNT = 'tinder';
+export const THRIVECART_ACCOUNT = 'leveraged-creator';
 
 // Product configurations
 export const SUBSCRIPTION_PRODUCTS = {

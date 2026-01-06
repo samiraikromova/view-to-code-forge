@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { cn } from "@/lib/utils";
 
 // ThriveCart account name
-const THRIVECART_ACCOUNT = "tinder";
+const THRIVECART_ACCOUNT = "leveraged-creator";
 
 export default function ThrivecartEmbed() {
   useEffect(() => {
@@ -13,7 +13,7 @@ export default function ThrivecartEmbed() {
 
     // Dynamically inject Thrivecart script
     const script = document.createElement("script");
-    script.src = `//tinder.thrivecart.com/embed/v1/thrivecart.js`;
+    script.src = `//leveraged-creator.thrivecart.com/embed/v1/thrivecart.js`;
     script.async = true;
     document.body.appendChild(script);
   }, []);
