@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Progress } from "@/components/ui/progress";
 
 export interface Module {
   id: string;
@@ -99,80 +98,85 @@ export const LearnSidebar = ({
       )}
     >
       {/* Header */}
-      <div className="flex items-center justify-end border-b border-border/50 px-3 py-3">
+      <div className="flex items-center justify-between border-b border-border/50 px-3 py-3">
         {!isCollapsed ? (
-          <div className="flex items-center gap-1">
-            <Dialog open={searchOpen} onOpenChange={setSearchOpen}>
-              <DialogTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8 text-muted-foreground hover:bg-surface-hover"
-                >
-                  <Search className="h-4 w-4" />
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl max-h-[80vh]">
-                <DialogHeader>
-                  <DialogTitle>Search Lessons</DialogTitle>
-                </DialogHeader>
-                <div className="space-y-4">
-                  <Input
-                    placeholder="Search for lessons..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full"
-                  />
-                  <div className="max-h-[400px] overflow-y-auto space-y-2">
-                    {filteredLessons.map((lesson) => (
-                      <button
-                        key={lesson.id}
-                        onClick={() => {
-                          onLessonSelect(lesson.id);
-                          setSearchOpen(false);
-                          setSearchQuery("");
-                        }}
-                        className="w-full text-left p-3 rounded-lg hover:bg-surface transition-colors"
-                      >
-                        <div className="flex items-center gap-2">
-                          {lesson.completed ? (
-                            <CheckCircle2 className="h-4 w-4 text-accent" />
-                          ) : (
-                            <PlayCircle className="h-4 w-4 text-muted-foreground" />
-                          )}
-                          <div className="flex-1">
-                            <div className="text-sm font-medium text-foreground">
-                              {highlightMatch(lesson.title, searchQuery)}
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              {lesson.duration}
+          <>
+            {/* Logo Badge */}
+            <div className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center">
+              <span className="text-primary-foreground font-bold text-xs">CB</span>
+            </div>
+            
+            <div className="flex items-center gap-1">
+              <Dialog open={searchOpen} onOpenChange={setSearchOpen}>
+                <DialogTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-muted-foreground hover:bg-surface-hover"
+                  >
+                    <Search className="h-4 w-4" />
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-2xl max-h-[80vh]">
+                  <DialogHeader>
+                    <DialogTitle>Search Lessons</DialogTitle>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <Input
+                      placeholder="Search for lessons..."
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      className="w-full"
+                    />
+                    <div className="max-h-[400px] overflow-y-auto space-y-2">
+                      {filteredLessons.map((lesson) => (
+                        <button
+                          key={lesson.id}
+                          onClick={() => {
+                            onLessonSelect(lesson.id);
+                            setSearchOpen(false);
+                            setSearchQuery("");
+                          }}
+                          className="w-full text-left p-3 rounded-lg hover:bg-surface transition-colors"
+                        >
+                          <div className="flex items-center gap-2">
+                            {lesson.completed ? (
+                              <CheckCircle2 className="h-4 w-4 text-accent" />
+                            ) : (
+                              <PlayCircle className="h-4 w-4 text-muted-foreground" />
+                            )}
+                            <div className="flex-1">
+                              <div className="text-sm font-medium text-foreground">
+                                {highlightMatch(lesson.title, searchQuery)}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {lesson.duration}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      </button>
-                    ))}
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              </DialogContent>
-            </Dialog>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => onCollapsedChange(true)}
-              className="h-8 w-8 text-muted-foreground hover:bg-surface-hover"
-            >
-              <PanelLeft className="h-4 w-4" />
-            </Button>
-          </div>
+                </DialogContent>
+              </Dialog>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => onCollapsedChange(true)}
+                className="h-8 w-8 text-muted-foreground hover:bg-surface-hover"
+              >
+                <PanelLeft className="h-4 w-4" />
+              </Button>
+            </div>
+          </>
         ) : (
-          <Button 
-            variant="ghost" 
-            size="icon" 
+          <button 
             onClick={() => onCollapsedChange(false)}
-            className="h-8 w-8 text-muted-foreground hover:bg-surface-hover mx-auto"
+            className="h-8 w-8 rounded-lg bg-primary flex items-center justify-center mx-auto hover:ring-2 hover:ring-primary/50 transition-all"
           >
-            <PanelLeft className="h-4 w-4" />
-          </Button>
+            <span className="text-primary-foreground font-bold text-xs">CB</span>
+          </button>
         )}
       </div>
 
@@ -238,22 +242,12 @@ export const LearnSidebar = ({
                 </div>
                 <div className="flex-1 overflow-hidden text-left">
                   <p className="truncate text-xs font-medium text-foreground">{userName}</p>
+                  <p className="truncate text-xs text-muted-foreground">{typeof userCredits === 'number' ? userCredits.toFixed(2) : '0.00'} credits</p>
                 </div>
                 <ChevronUp className="h-4 w-4 text-muted-foreground flex-shrink-0" />
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" side="top" className="w-56">
-              {/* Credit Usage Gauge */}
-              <div className="px-3 py-3">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs text-muted-foreground">Credits</span>
-                  <span className="text-xs font-medium text-foreground">
-                    {typeof userCredits === 'number' ? userCredits.toFixed(1) : '0.0'} available
-                  </span>
-                </div>
-                <Progress value={Math.min(userCredits, 100)} className="h-2" />
-              </div>
-              <DropdownMenuSeparator />
+            <DropdownMenuContent align="end" className="w-48">
               <DropdownMenuItem onClick={() => navigate("/profile")} className="text-muted-foreground">
                 <UserIcon className="mr-2 h-4 w-4" />
                 Profile
@@ -291,18 +285,7 @@ export const LearnSidebar = ({
                 </div>
               </button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="start" side="top" className="w-56">
-              {/* Credit Usage Gauge */}
-              <div className="px-3 py-3">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs text-muted-foreground">Credits</span>
-                  <span className="text-xs font-medium text-foreground">
-                    {typeof userCredits === 'number' ? userCredits.toFixed(1) : '0.0'} available
-                  </span>
-                </div>
-                <Progress value={Math.min(userCredits, 100)} className="h-2" />
-              </div>
-              <DropdownMenuSeparator />
+            <DropdownMenuContent align="end" className="w-48">
               <DropdownMenuItem onClick={() => navigate("/profile")} className="text-muted-foreground">
                 <UserIcon className="mr-2 h-4 w-4" />
                 Profile

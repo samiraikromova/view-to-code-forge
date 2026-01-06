@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Sparkles, RefreshCw, UserIcon, CreditCard, LogOut, TrendingUp, Settings } from "lucide-react";
 import { MainNavigation, NavigationMode } from "@/components/MainNavigation";
 import { AmbientBackground } from "@/components/AmbientBackground";
 import { ChatInterface } from "@/components/chat/ChatInterface";
@@ -14,12 +13,6 @@ import { fetchUserThreads } from "@/api/chat/chatApi";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { CourseVideo } from "@/types/courseVideo";
-import { Button } from "@/components/ui/button";
-import { ViewSelector } from "@/components/dashboard/ViewSelector";
-import { DateRangePicker } from "@/components/dashboard/DateRangePicker";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Progress } from "@/components/ui/progress";
-import type { ViewType, TimePreset } from "@/types/dashboard";
 
 interface Chat {
   id: string;
@@ -28,7 +21,7 @@ interface Chat {
 }
 
 const Main = () => {
-  const { user, profile, signOut } = useAuth();
+  const { user } = useAuth();
   const navigate = useNavigate();
   const [mode, setMode] = useState<NavigationMode>("chat");
   const [chatId, setChatId] = useState<string | null>(null);
@@ -36,25 +29,6 @@ const Main = () => {
   const [threadsLoading, setThreadsLoading] = useState(true);
   const [showHistoryPanel, setShowHistoryPanel] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-
-  // Dashboard state (lifted here for unified header)
-  const [dashboardView, setDashboardView] = useState<ViewType>("metrics");
-  const [isGoalBuilderOpen, setIsGoalBuilderOpen] = useState(false);
-  const [dashboardPreset, setDashboardPreset] = useState("last30days");
-  const [dashboardLoading, setDashboardLoading] = useState(false);
-
-  const userName = profile?.name || profile?.email?.split("@")[0] || "User";
-  const userInitial = userName.charAt(0).toUpperCase();
-  const userCredits = profile?.credits ?? 0;
-
-  const handleDashboardRefresh = useCallback(() => {
-    setDashboardLoading(true);
-    setTimeout(() => setDashboardLoading(false), 1000);
-  }, []);
-
-  const handleDashboardPresetChange = useCallback((preset: TimePreset) => {
-    setDashboardPreset(preset.value);
-  }, []);
 
   // Fetch threads from Supabase on mount and when user changes
   const loadThreads = useCallback(async () => {
@@ -395,124 +369,16 @@ const Main = () => {
       
       {/* Main Content Area */}
       <div className="relative z-10 flex flex-col flex-1 min-w-0">
-        {/* Header - Unified with conditional left/right sections */}
-        <header className="relative flex items-center justify-between px-6 py-3 border-b border-border/50">
-          {/* Left section - Dashboard only: Profile + View Selector */}
-          <div className="flex items-center gap-3 min-w-0">
-            {mode === "dashboard" && (
-              <>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button className="h-8 w-8 rounded-full bg-primary text-primary-foreground text-sm font-medium hover:ring-2 hover:ring-primary/50 transition-all flex items-center justify-center flex-shrink-0">
-                      {userInitial}
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start" className="w-56">
-                    <div className="px-3 py-3">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs text-muted-foreground">Credits</span>
-                        <span className="text-xs font-medium text-foreground">
-                          {userCredits.toFixed(1)} available
-                        </span>
-                      </div>
-                      <Progress value={Math.min(userCredits, 100)} className="h-2" />
-                    </div>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => navigate("/profile")} className="text-muted-foreground">
-                      <UserIcon className="mr-2 h-4 w-4" />
-                      Profile
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate("/analytics")} className="text-muted-foreground">
-                      <TrendingUp className="mr-2 h-4 w-4" />
-                      Analytics
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate("/settings")} className="text-muted-foreground">
-                      <Settings className="mr-2 h-4 w-4" />
-                      Settings
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => navigate("/settings")} className="text-muted-foreground">
-                      <Sparkles className="mr-2 h-4 w-4" />
-                      Upgrade to Pro
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => navigate("/pricing/top-up")} className="text-muted-foreground">
-                      <CreditCard className="mr-2 h-4 w-4" />
-                      Top up credits
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => signOut()} className="text-destructive focus:text-destructive">
-                      <LogOut className="mr-2 h-4 w-4" />
-                      Log out
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <ViewSelector currentView={dashboardView} onViewChange={setDashboardView} />
-              </>
-            )}
-          </div>
-
+        {/* Header - Clean, minimal */}
+        <header className="relative flex items-center justify-center px-6 py-3 border-b border-border/50">
           {/* Center: Navigation - Absolutely centered */}
-          <div className="absolute left-1/2 -translate-x-1/2">
-            <MainNavigation currentMode={mode} onModeChange={handleModeChange} />
-          </div>
-
-          {/* Right section - Dashboard only: Add Goal, Ask AI, Date, Refresh */}
-          <div className="flex items-center gap-2 min-w-0">
-            {mode === "dashboard" && (
-              <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsGoalBuilderOpen(!isGoalBuilderOpen)}
-                  className="gap-1.5"
-                >
-                  <Plus className="w-4 h-4" />
-                  Add Goal
-                </Button>
-
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="gap-1.5"
-                  onClick={() => {
-                    // Trigger Ask AI from dashboard
-                    const dashboardEl = document.querySelector('[data-dashboard-ask-ai]');
-                    if (dashboardEl) {
-                      (dashboardEl as HTMLButtonElement).click();
-                    }
-                  }}
-                >
-                  <Sparkles className="w-4 h-4" />
-                  Ask AI
-                </Button>
-
-                <DateRangePicker
-                  selectedPreset={dashboardPreset}
-                  onPresetChange={handleDashboardPresetChange}
-                />
-
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleDashboardRefresh}
-                  className={dashboardLoading ? "animate-spin" : ""}
-                >
-                  <RefreshCw className="w-4 h-4" />
-                </Button>
-              </>
-            )}
-          </div>
+          <MainNavigation currentMode={mode} onModeChange={handleModeChange} />
         </header>
 
         {/* Content */}
         <div className="flex flex-1 min-h-0 overflow-hidden">
           {mode === "dashboard" && (
-            <Dashboard 
-              onAskAI={handleAskAIDashboard}
-              currentView={dashboardView}
-              isGoalBuilderOpen={isGoalBuilderOpen}
-              onGoalBuilderClose={() => setIsGoalBuilderOpen(false)}
-            />
+            <Dashboard onAskAI={handleAskAIDashboard} />
           )}
           
           {mode === "chat" && (
