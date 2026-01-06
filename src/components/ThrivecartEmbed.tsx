@@ -1,21 +1,26 @@
 import { useEffect } from "react";
 import { cn } from "@/lib/utils";
 
-// ThriveCart account name
+// ThriveCart account name - MUST match the account in the script URL
 const THRIVECART_ACCOUNT = "leveraged-creator";
 
 export default function ThrivecartEmbed() {
   useEffect(() => {
     // Check if script already exists
-    if (document.querySelector('script[src*="thrivecart.js"]')) {
+    const existingScript = document.querySelector('script[src*="thrivecart.js"]');
+    if (existingScript) {
       return;
     }
 
-    // Dynamically inject Thrivecart script
+    // Dynamically inject Thrivecart script - using correct embed URL
     const script = document.createElement("script");
-    script.src = `//leveraged-creator.thrivecart.com/embed/v1/thrivecart.js`;
+    script.src = "https://tinder.thrivecart.com/embed/v1/thrivecart.js";
     script.async = true;
     document.body.appendChild(script);
+
+    return () => {
+      // Cleanup on unmount (optional)
+    };
   }, []);
 
   return null;
@@ -86,7 +91,6 @@ interface ThrivecartLinkProps {
 export function ThrivecartLink({ productId, children, className }: ThrivecartLinkProps) {
   return (
     <a
-      href="#"
       data-thrivecart-account={THRIVECART_ACCOUNT}
       data-thrivecart-tpl="v2"
       data-thrivecart-product={productId}
@@ -121,7 +125,6 @@ export function ThrivecartButton({ productId, children, className, variant = "de
 
   return (
     <a
-      href="#"
       data-thrivecart-account={THRIVECART_ACCOUNT}
       data-thrivecart-tpl="v2"
       data-thrivecart-product={productId}
