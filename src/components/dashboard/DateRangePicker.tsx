@@ -243,7 +243,7 @@ export function DateRangePicker({
                 className={cn(
                   "text-left px-4 py-2 text-xs font-medium transition-colors whitespace-nowrap",
                   selectedPreset === preset.value
-                    ? "text-primary bg-primary/10 border-l-[3px] border-primary"
+                    ? "text-white bg-primary/80 border-l-[3px] border-primary"
                     : "text-muted-foreground border-l-[3px] border-transparent hover:bg-muted/50"
                 )}
               >
