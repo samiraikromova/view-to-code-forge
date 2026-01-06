@@ -54,13 +54,14 @@ export function ComparisonChart({ data, metricKey, className }: ComparisonChartP
   const containerRef = useRef<HTMLDivElement>(null);
   const definition = metricDefinitions[metricKey];
 
-  // Apply shimmer animation on mount
+  // Apply shimmer animation on mount with random variation
   useEffect(() => {
     if (containerRef.current) {
       const animations = ["shimmer-border-1", "shimmer-border-2", "shimmer-border-3"];
       const randomAnimation = animations[Math.floor(Math.random() * animations.length)];
       const randomDuration = (2.5 + Math.random() * 1.5).toFixed(2);
-      containerRef.current.style.animation = `${randomAnimation} ${randomDuration}s ease-in-out infinite`;
+      const randomDelay = (Math.random() * 2).toFixed(2);
+      containerRef.current.style.animation = `${randomAnimation} ${randomDuration}s ease-in-out ${randomDelay}s infinite`;
     }
   }, []);
 
@@ -74,9 +75,22 @@ export function ComparisonChart({ data, metricKey, className }: ComparisonChartP
       )}
     >
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
-          {definition.label} Comparison
-        </h3>
+        <div className="flex items-center gap-2">
+          <h3 className="text-sm font-medium text-foreground">
+            {definition.label}
+          </h3>
+          <span className="text-xs text-muted-foreground">vs Previous Period</span>
+        </div>
+        <div className="flex items-center gap-4 text-xs text-muted-foreground">
+          <div className="flex items-center gap-1.5">
+            <div className="w-4 h-0.5 bg-primary" />
+            <span>Current</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <div className="w-4 h-0.5 bg-muted-foreground" style={{ borderStyle: "dashed" }} />
+            <span>Previous</span>
+          </div>
+        </div>
       </div>
 
       <div className="h-[200px] w-full">
@@ -96,24 +110,6 @@ export function ComparisonChart({ data, metricKey, className }: ComparisonChartP
               tickFormatter={(value) => formatMetricValue(metricKey, value)}
             />
             <Tooltip content={<CustomTooltip metricKey={metricKey} />} />
-            <Legend
-              content={({ payload }) => (
-                <div className="flex items-center justify-center gap-4 mt-2">
-                  {payload?.map((entry) => (
-                    <div key={entry.value} className="flex items-center gap-1.5">
-                      <div
-                        className={cn(
-                          "w-3 h-0.5",
-                          entry.value === "current" ? "bg-primary" : "bg-muted-foreground"
-                        )}
-                        style={entry.value === "previous" ? { borderStyle: "dashed" } : undefined}
-                      />
-                      <span className="text-xs text-muted-foreground capitalize">{entry.value}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            />
             <Line
               type="monotone"
               dataKey="current"

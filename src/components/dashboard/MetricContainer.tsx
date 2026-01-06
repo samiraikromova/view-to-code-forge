@@ -16,13 +16,14 @@ interface MetricContainerProps {
 export function MetricContainer({ metrics, className }: MetricContainerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Apply shimmer animation on mount
+  // Apply shimmer animation on mount with random variation
   useEffect(() => {
     if (containerRef.current) {
       const animations = ["shimmer-border-1", "shimmer-border-2", "shimmer-border-3"];
       const randomAnimation = animations[Math.floor(Math.random() * animations.length)];
       const randomDuration = (2.5 + Math.random() * 1.5).toFixed(2);
-      containerRef.current.style.animation = `${randomAnimation} ${randomDuration}s ease-in-out infinite`;
+      const randomDelay = (Math.random() * 2).toFixed(2);
+      containerRef.current.style.animation = `${randomAnimation} ${randomDuration}s ease-in-out ${randomDelay}s infinite`;
     }
   }, []);
 
