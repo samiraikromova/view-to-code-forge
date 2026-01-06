@@ -156,16 +156,15 @@ export async function generateImageViaAPI(payload: ImageGenerationPayload): Prom
       console.error('❌ Failed to log usage:', usageError)
     }
 
-    // Save assistant messages (one per image)
+    // Save assistant message with all images (one message with all URLs)
     if (result.imageUrls && result.imageUrls.length > 0) {
-      for (const imageUrl of result.imageUrls) {
-        await supabase.from('messages').insert({
-          thread_id: currentThreadId,
-          role: 'assistant',
-          content: imageUrl,
-          model: `Ideogram - ${payload.quality}`
-        })
-      }
+      const uniqueUrls = [...new Set(result.imageUrls)]; // Deduplicate
+      await supabase.from('messages').insert({
+        thread_id: currentThreadId,
+        role: 'assistant',
+        content: uniqueUrls.join('\n'),
+        model: `Ideogram - ${payload.quality}`
+      })
     }
 
     return {

@@ -309,11 +309,7 @@ serve(async (req) => {
             amount: config.monthlyCredits,
             type: 'subscription',
             payment_method: 'thrivecart',
-            metadata: {
-              product_id: productId,
-              tier: config.tier,
-              order_id: body.order_id
-            }
+            stripe_payment_id: body.order_id || null
           });
 
           console.log(`✅ Credits added: ${config.monthlyCredits} (New total: ${newCredits})`);
@@ -408,9 +404,9 @@ serve(async (req) => {
           await supabase.from('credit_transactions').insert({
             user_id: user.id,
             amount: -creditsToRemove,
-            type: 'refund',
+            type: 'purchase',
             payment_method: 'thrivecart',
-            metadata: { product_id: productId, order_id: body.order_id }
+            stripe_payment_id: body.order_id || null
           });
 
           console.log(`✅ Refund processed. Credits removed: ${creditsToRemove}`);

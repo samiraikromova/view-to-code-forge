@@ -1,14 +1,26 @@
 import { useEffect } from "react";
+import { cn } from "@/lib/utils";
+import { Button, ButtonProps } from "@/components/ui/button";
 
 export default function ThrivecartEmbed() {
   useEffect(() => {
+    // Remove any existing ThriveCart script first
+    const existingScript = document.querySelector('script[src*="thrivecart.js"]');
+    if (existingScript) {
+      existingScript.remove();
+    }
+
     // Dynamically inject Thrivecart script on client only
     const script = document.createElement("script");
     script.src = "https://tinder.thrivecart.com/embed/v1/thrivecart.js";
     script.async = true;
     document.body.appendChild(script);
+    
     return () => {
-      document.body.removeChild(script);
+      const scriptToRemove = document.querySelector('script[src*="thrivecart.js"]');
+      if (scriptToRemove) {
+        scriptToRemove.remove();
+      }
     };
   }, []);
 
@@ -71,8 +83,6 @@ export const THRIVECART_PRODUCTS = {
 }
 
 // ThriveCart Link component - uses anchor tag with data attributes for popup
-import { cn } from "@/lib/utils"
-
 interface ThrivecartLinkProps {
   productId: number
   children: React.ReactNode
@@ -82,13 +92,15 @@ interface ThrivecartLinkProps {
 export function ThrivecartLink({ productId, children, className }: ThrivecartLinkProps) {
   return (
     <a
+      href="#"
       data-thrivecart-account="tinder"
       data-thrivecart-tpl="v2"
       data-thrivecart-product={productId}
       className={cn(
-        "thrivecart-button cursor-pointer inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50",
+        "thrivecart-button cursor-pointer inline-flex items-center justify-center",
         className
       )}
+      onClick={(e) => e.preventDefault()}
     >
       {children}
     </a>
@@ -96,25 +108,34 @@ export function ThrivecartLink({ productId, children, className }: ThrivecartLin
 }
 
 // Button variant for styled buttons
-import { Button, ButtonProps } from "@/components/ui/button"
-
 interface ThrivecartButtonProps extends Omit<ButtonProps, 'onClick' | 'asChild'> {
   productId: number
   children: React.ReactNode
-  userEmail?: string // Not used in new approach but kept for backward compatibility
+  userEmail?: string // Kept for backward compatibility
 }
 
-export function ThrivecartButton({ productId, children, className, variant, size, userEmail, ...props }: ThrivecartButtonProps) {
+export function ThrivecartButton({ productId, children, className, variant = "default", size, userEmail, ...props }: ThrivecartButtonProps) {
+  const buttonClasses = cn(
+    "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50",
+    variant === "default" && "bg-primary text-primary-foreground shadow hover:bg-primary/90",
+    variant === "outline" && "border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground",
+    variant === "ghost" && "hover:bg-accent hover:text-accent-foreground",
+    size === "sm" && "h-8 rounded-md px-3 text-xs",
+    size === "lg" && "h-10 rounded-md px-8",
+    !size && "h-9 px-4 py-2",
+    className
+  );
+
   return (
-    <Button asChild variant={variant} size={size} className={className} {...props}>
-      <a
-        data-thrivecart-account="tinder"
-        data-thrivecart-tpl="v2"
-        data-thrivecart-product={productId}
-        className="thrivecart-button cursor-pointer"
-      >
-        {children}
-      </a>
-    </Button>
+    <a
+      href="#"
+      data-thrivecart-account="tinder"
+      data-thrivecart-tpl="v2"
+      data-thrivecart-product={productId}
+      className={cn("thrivecart-button cursor-pointer", buttonClasses)}
+      onClick={(e) => e.preventDefault()}
+    >
+      {children}
+    </a>
   )
 }

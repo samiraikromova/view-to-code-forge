@@ -236,8 +236,9 @@ export function Message({ message }: MessageProps) {
     );
   }
 
-  // Check for image URLs in assistant messages
-  const imageUrls = message.imageUrls || extractImageUrls(message.content);
+  // Check for image URLs in assistant messages - deduplicate
+  const rawImageUrls = message.imageUrls || extractImageUrls(message.content);
+  const imageUrls = [...new Set(rawImageUrls)]; // Remove duplicates
   const hasImages = imageUrls.length > 0;
   const isMainlyImages = isImageResponse(message.content);
 
