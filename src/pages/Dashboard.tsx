@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import { Plus, Sparkles, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ViewSelector } from "@/components/dashboard/ViewSelector";
@@ -16,7 +17,12 @@ import {
 } from "@/lib/dashboardUtils";
 import type { ViewType, Goal, TimePreset, MetricKey } from "@/types/dashboard";
 
-export function Dashboard() {
+interface DashboardProps {
+  onAskAI?: (csvData: string) => void;
+}
+
+export function Dashboard({ onAskAI }: DashboardProps = {}) {
+  const navigate = useNavigate();
   const [currentView, setCurrentView] = useState<ViewType>("metrics");
   const [isGoalBuilderOpen, setIsGoalBuilderOpen] = useState(false);
   const [goals, setGoals] = useState<Goal[]>(getMockGoals());
@@ -62,6 +68,25 @@ export function Dashboard() {
     setSelectedChartMetric(metricKey);
   }, []);
 
+  const handleAskAI = useCallback(() => {
+    // Build CSV from metrics data
+    const headers = ["Metric", "Current", "Previous", "Change"];
+    const rows = Object.entries(metricsData).map(([key, data]) => {
+      const change = data.previous ? ((data.current - data.previous) / data.previous * 100).toFixed(1) : "N/A";
+      return [key, data.current, data.previous ?? "N/A", `${change}%`];
+    });
+    
+    const csv = [headers, ...rows].map(row => row.join(",")).join("\n");
+    
+    if (onAskAI) {
+      onAskAI(csv);
+    } else {
+      // Navigate to chat with CSV data stored
+      sessionStorage.setItem("dashboardCSV", csv);
+      navigate("/chat");
+    }
+  }, [metricsData, onAskAI, navigate]);
+
   return (
     <div className="flex-1 flex flex-col min-h-0 p-6 overflow-auto">
       {/* Header */}
@@ -83,6 +108,7 @@ export function Dashboard() {
             variant="outline"
             size="sm"
             className="gap-1.5 bg-surface/60 border-border/50"
+            onClick={handleAskAI}
           >
             <Sparkles className="w-4 h-4" />
             Ask AI

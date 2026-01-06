@@ -50,17 +50,26 @@ export function MainNavigation({ currentMode, onModeChange }: MainNavigationProp
 
   // Calculate pill position based on active item
   useEffect(() => {
-    if (navRef.current) {
-      const activeIndex = navItems.findIndex((item) => item.id === currentMode);
-      const buttons = navRef.current.querySelectorAll("button");
-      if (buttons[activeIndex]) {
-        const button = buttons[activeIndex] as HTMLElement;
-        setPillStyle({
-          left: button.offsetLeft,
-          width: button.offsetWidth,
-        });
+    const calculatePillPosition = () => {
+      if (navRef.current) {
+        const activeIndex = navItems.findIndex((item) => item.id === currentMode);
+        const buttons = navRef.current.querySelectorAll("button");
+        if (buttons[activeIndex]) {
+          const button = buttons[activeIndex] as HTMLElement;
+          setPillStyle({
+            left: button.offsetLeft,
+            width: button.offsetWidth,
+          });
+        }
       }
-    }
+    };
+    
+    // Calculate immediately
+    calculatePillPosition();
+    
+    // Recalculate after a short delay to handle layout shifts
+    const timeout = setTimeout(calculatePillPosition, 50);
+    return () => clearTimeout(timeout);
   }, [currentMode]);
 
   const handleMouseEnter = (itemId: NavigationMode) => {
