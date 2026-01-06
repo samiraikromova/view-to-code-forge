@@ -1,28 +1,10 @@
-import { useEffect } from "react";
 import { cn } from "@/lib/utils";
 
-// ThriveCart account name - MUST match the account in the script URL
+// ThriveCart account name - MUST match the account in the data attributes
 const THRIVECART_ACCOUNT = "leveraged-creator";
 
+// Component no longer needed since script is in index.html, but kept for compatibility
 export default function ThrivecartEmbed() {
-  useEffect(() => {
-    // Check if script already exists
-    const existingScript = document.querySelector('script[src*="thrivecart.js"]');
-    if (existingScript) {
-      return;
-    }
-
-    // Dynamically inject Thrivecart script - using correct embed URL
-    const script = document.createElement("script");
-    script.src = "https://tinder.thrivecart.com/embed/v1/thrivecart.js";
-    script.async = true;
-    document.body.appendChild(script);
-
-    return () => {
-      // Cleanup on unmount (optional)
-    };
-  }, []);
-
   return null;
 }
 
@@ -102,6 +84,8 @@ export function ThrivecartLink({ productId, children, className }: ThrivecartLin
 }
 
 // Styled button using ThriveCart popup
+// IMPORTANT: This must be a pure <a> tag with NO onClick handlers
+// The ThriveCart script automatically binds to elements with data-thrivecart-* attributes
 interface ThrivecartButtonProps {
   productId: number
   children: React.ReactNode
