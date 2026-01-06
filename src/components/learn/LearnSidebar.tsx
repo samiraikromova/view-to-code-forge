@@ -33,6 +33,7 @@ export interface Lesson {
   summary?: string;
   transcriptUrl?: string;
   vdocipherId?: string;
+  firefliesEmbedUrl?: string;
   overview?: string;
   keywords?: string[];
   callDate?: string;

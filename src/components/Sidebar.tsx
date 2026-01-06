@@ -151,12 +151,12 @@ export function Sidebar({
               {!isCollapsed && <div className="flex items-center justify-between px-2 py-1.5">
                   <div className="text-xs font-medium text-muted-foreground">Favorites</div>
                 </div>}
-              {filterChats(getStarredChats()).map(chat => <div key={chat.id} className="group flex items-center gap-1 rounded-lg hover:bg-surface-hover transition-colors px-1 pr-2">
+              {filterChats(getStarredChats()).map(chat => <div key={chat.id} className="group flex items-center gap-1 rounded-lg hover:bg-surface-hover transition-colors px-1">
                   {editingChatId === chat.id ? <input type="text" value={editValue} onChange={e => setEditValue(e.target.value)} onKeyDown={e => {
               if (e.key === "Enter") saveChatRename(chat.id);
               if (e.key === "Escape") cancelChatRename();
-            }} onBlur={() => saveChatRename(chat.id)} className="flex-1 rounded bg-surface px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-accent" autoFocus /> : <>
-                  <button onClick={() => onChatSelect(chat.id)} className={cn("flex flex-1 items-center justify-start truncate text-xs text-left px-2 py-1.5 min-w-0", currentChatId === chat.id ? "text-accent font-medium" : "text-muted-foreground")}>
+            }} onBlur={() => saveChatRename(chat.id)} className="flex-1 rounded bg-surface px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-accent min-w-0" autoFocus /> : <>
+                  <button onClick={() => onChatSelect(chat.id)} className={cn("flex flex-1 items-center justify-start text-xs text-left px-2 py-1.5 min-w-0 max-w-0", currentChatId === chat.id ? "text-accent font-medium" : "text-muted-foreground")}>
                     <Star className="mr-1 h-3 w-3 fill-accent text-accent flex-shrink-0" />
                     <span className="truncate">{chat.title}</span>
                   </button>
@@ -190,12 +190,12 @@ export function Sidebar({
             {!isCollapsed && <div className="flex items-center justify-between px-2 py-1.5">
                 <div className="text-xs font-medium text-muted-foreground">Recent</div>
               </div>}
-            {filterChats(getRecentChats()).map(chat => <div key={chat.id} className="group flex items-center gap-1 rounded-lg hover:bg-surface-hover transition-colors px-1 pr-2">
+            {filterChats(getRecentChats()).map(chat => <div key={chat.id} className="group flex items-center gap-1 rounded-lg hover:bg-surface-hover transition-colors px-1">
                 {editingChatId === chat.id ? <input type="text" value={editValue} onChange={e => setEditValue(e.target.value)} onKeyDown={e => {
               if (e.key === "Enter") saveChatRename(chat.id);
               if (e.key === "Escape") cancelChatRename();
-            }} onBlur={() => saveChatRename(chat.id)} className="flex-1 rounded bg-surface px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-accent" autoFocus /> : <>
-                    <button onClick={() => onChatSelect(chat.id)} className={cn("flex-1 justify-start truncate text-xs text-left px-2 py-1.5 min-w-0", currentChatId === chat.id ? "text-accent font-medium" : "text-muted-foreground")}>
+            }} onBlur={() => saveChatRename(chat.id)} className="flex-1 rounded bg-surface px-2 py-1 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-accent min-w-0" autoFocus /> : <>
+                    <button onClick={() => onChatSelect(chat.id)} className={cn("flex-1 justify-start text-xs text-left px-2 py-1.5 min-w-0 max-w-0", currentChatId === chat.id ? "text-accent font-medium" : "text-muted-foreground")}>
                       <span className="truncate block">{chat.title}</span>
                     </button>
                   <DropdownMenu>
