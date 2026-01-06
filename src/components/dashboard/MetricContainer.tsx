@@ -44,18 +44,18 @@ export function MetricContainer({
       )}
     >
       {/* All metrics displayed side by side */}
-      <div className="flex items-start">
+      <div className="flex items-center">
         {metrics.map((metric, index) => {
           const def = metricDefinitions[metric.key];
           const isSelected = selectedMetric === metric.key;
           const isClickable = !!onMetricClick;
           
           return (
-            <div key={metric.key} className="flex items-start flex-1">
+            <div key={metric.key} className="flex items-center justify-center flex-1">
               {/* Metric content */}
               <div 
                 className={cn(
-                  "flex flex-col min-w-0 flex-1",
+                  "flex flex-col items-center min-w-0 flex-1",
                   isClickable && "cursor-pointer",
                   isSelected && "ring-1 ring-primary rounded-md p-1 -m-1"
                 )}
@@ -81,7 +81,7 @@ export function MetricContainer({
                 </DelayedTooltip>
                 
                 {/* Value and trend with separate tooltip */}
-                <div className="flex items-center gap-1">
+                <div className="flex items-center justify-center gap-1">
                   <span className="text-base font-bold text-foreground">
                     {formatMetricValue(metric.key, metric.data.current)}
                   </span>
