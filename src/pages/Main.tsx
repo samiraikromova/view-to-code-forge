@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { History, User, Settings, CreditCard, LogOut, Sparkles, TrendingUp, UserIcon, ChevronDown } from "lucide-react";
+import { History, Settings, CreditCard, LogOut, Sparkles, TrendingUp, UserIcon } from "lucide-react";
 import { MainNavigation, NavigationMode } from "@/components/MainNavigation";
 import { AmbientBackground } from "@/components/AmbientBackground";
 import { ChatInterface } from "@/components/chat/ChatInterface";
@@ -9,7 +9,8 @@ import { LearnSidebar, Module, Lesson } from "@/components/learn/LearnSidebar";
 import { LearnInterface } from "@/components/learn/LearnInterface";
 import { Dashboard } from "@/pages/Dashboard";
 import { Button } from "@/components/ui/button";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
+import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/hooks/useAuth";
 import { fetchUserThreads } from "@/api/chat/chatApi";
 import { supabase } from "@/lib/supabase";
@@ -369,7 +370,7 @@ const Main = () => {
         {/* Header */}
         <header className="flex items-center justify-between px-6 py-4 border-b border-border/50 bg-surface/40 backdrop-blur-md">
           {/* Left: History button for chat mode */}
-          <div className="w-40">
+          <div className="w-20">
             {mode === "chat" && (
               <Button
                 variant="ghost"
@@ -387,20 +388,28 @@ const Main = () => {
           <MainNavigation currentMode={mode} onModeChange={handleModeChange} />
 
           {/* Right: User menu */}
-          <div className="w-40 flex justify-end">
+          <div className="flex justify-end">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <button className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface/60 border border-border/50 hover:bg-surface-hover transition-colors">
-                  <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground text-sm font-medium">
-                    {userInitial}
-                  </div>
-                  <span className="text-xs text-muted-foreground hidden sm:block">
-                    {userCredits.toFixed(2)} credits
-                  </span>
-                  <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                <button className="h-8 w-8 rounded-full bg-primary text-primary-foreground text-sm font-medium hover:ring-2 hover:ring-primary/50 transition-all flex items-center justify-center">
+                  {userInitial}
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
+              <DropdownMenuContent align="end" className="w-56">
+                {/* Credit Usage Gauge */}
+                <div className="px-3 py-3">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs text-muted-foreground">Credits</span>
+                    <span className="text-xs font-medium text-foreground">
+                      {userCredits.toFixed(1)} available
+                    </span>
+                  </div>
+                  <Progress 
+                    value={Math.min(userCredits, 100)} 
+                    className="h-2"
+                  />
+                </div>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => navigate("/profile")} className="text-muted-foreground">
                   <UserIcon className="mr-2 h-4 w-4" />
                   Profile
