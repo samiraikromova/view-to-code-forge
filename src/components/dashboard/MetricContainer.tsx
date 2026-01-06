@@ -11,9 +11,16 @@ interface MetricContainerProps {
     data: MetricValue;
   }>;
   className?: string;
+  onMetricClick?: (metricKey: MetricKey) => void;
+  selectedMetric?: MetricKey;
 }
 
-export function MetricContainer({ metrics, className }: MetricContainerProps) {
+export function MetricContainer({ 
+  metrics, 
+  className, 
+  onMetricClick,
+  selectedMetric 
+}: MetricContainerProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Apply shimmer animation on mount with random variation
@@ -31,41 +38,53 @@ export function MetricContainer({ metrics, className }: MetricContainerProps) {
     <div
       ref={containerRef}
       className={cn(
-        "rounded-xl p-4 transition-all duration-300 hover:scale-[1.02]",
+        "rounded-xl p-3 transition-all duration-300 hover:scale-[1.01]",
         "bg-surface/60 border border-border/40",
         className
       )}
     >
       {/* All metrics displayed side by side */}
-      <div className="flex items-start gap-0">
+      <div className="flex items-start">
         {metrics.map((metric, index) => {
           const def = metricDefinitions[metric.key];
+          const isSelected = selectedMetric === metric.key;
+          const isClickable = !!onMetricClick;
+          
           return (
-            <div key={metric.key} className="flex items-start">
+            <div key={metric.key} className="flex items-start flex-1">
               {/* Metric content */}
-              <div className="flex flex-col min-w-0">
+              <div 
+                className={cn(
+                  "flex flex-col min-w-0 flex-1",
+                  isClickable && "cursor-pointer",
+                  isSelected && "ring-1 ring-primary rounded-md p-1 -m-1"
+                )}
+                onClick={() => onMetricClick?.(metric.key)}
+              >
                 {/* Label */}
-                <span className="text-[10px] uppercase tracking-wider font-medium text-muted-foreground mb-1">
+                <span className="text-[10px] uppercase tracking-wider font-medium text-muted-foreground mb-0.5">
                   {def.shortLabel || def.label}
                 </span>
                 
                 {/* Value and trend */}
                 <DelayedTooltip
                   content={
-                    <div className="text-sm">
-                      <div>Previous: {formatMetricValue(metric.key, metric.data.previous)}</div>
-                      <div>
-                        Variance:{" "}
-                        {formatMetricValue(
-                          metric.key,
-                          metric.data.current - metric.data.previous
-                        )}
+                    <div className="text-xs">
+                      <div className="font-medium">{def.label}</div>
+                      <div className="text-muted-foreground mt-1">
+                        Previous: {formatMetricValue(metric.key, metric.data.previous)}
                       </div>
+                      <div className="text-muted-foreground">
+                        Change: {formatMetricValue(metric.key, metric.data.current - metric.data.previous)}
+                      </div>
+                      {isClickable && (
+                        <div className="text-primary mt-1 text-[10px]">Click to view in chart</div>
+                      )}
                     </div>
                   }
                 >
-                  <div className="flex items-center gap-1.5 cursor-default">
-                    <span className="text-lg font-bold text-foreground">
+                  <div className="flex items-center gap-1">
+                    <span className="text-base font-bold text-foreground">
                       {formatMetricValue(metric.key, metric.data.current)}
                     </span>
                     <TrendIndicator
@@ -80,7 +99,7 @@ export function MetricContainer({ metrics, className }: MetricContainerProps) {
 
               {/* Divider between metrics */}
               {index < metrics.length - 1 && (
-                <div className="mx-3 h-10 w-px bg-border/50 self-center" />
+                <div className="mx-2 h-8 w-px bg-border/50 self-center flex-shrink-0" />
               )}
             </div>
           );
