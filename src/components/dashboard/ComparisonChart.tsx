@@ -1,4 +1,4 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, CSSProperties } from "react";
 import {
   LineChart,
   Line,
@@ -17,6 +17,7 @@ interface ComparisonChartProps {
   data: ComparisonDataPoint[];
   metricKey: MetricKey;
   className?: string;
+  style?: CSSProperties;
 }
 
 interface CustomTooltipProps {
@@ -50,7 +51,7 @@ function CustomTooltip({ active, payload, label, metricKey }: CustomTooltipProps
   );
 }
 
-export function ComparisonChart({ data, metricKey, className }: ComparisonChartProps) {
+export function ComparisonChart({ data, metricKey, className, style }: ComparisonChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const definition = metricDefinitions[metricKey];
 
@@ -68,6 +69,7 @@ export function ComparisonChart({ data, metricKey, className }: ComparisonChartP
   return (
     <div
       ref={containerRef}
+      style={style}
       className={cn(
         "rounded-xl p-5 transition-all duration-300",
         "bg-surface/60 border border-border/40",

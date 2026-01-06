@@ -90,11 +90,17 @@ export function Dashboard({
 
       {/* Active Goals - Only show in metrics view */}
       {currentView === "metrics" && goals.length > 0 && (
-        <div className="mb-6">
+        <div className="mb-6 animate-fade-in">
           <h2 className="text-sm font-medium text-muted-foreground mb-3">Active Goals</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {goals.map((goal) => (
-              <GoalCard key={goal.id} goal={goal} onRemove={handleRemoveGoal} />
+            {goals.map((goal, index) => (
+              <div 
+                key={goal.id} 
+                className="animate-scale-in"
+                style={{ animationDelay: `${index * 50}ms`, animationFillMode: 'backwards' }}
+              >
+                <GoalCard goal={goal} onRemove={handleRemoveGoal} />
+              </div>
             ))}
           </div>
         </div>
@@ -105,7 +111,8 @@ export function Dashboard({
         <div className="grid grid-cols-4 lg:grid-cols-8 gap-3">
           {/* ROW 1: 2 + 4 + 2 = 8 */}
           <MetricContainer
-            className="col-span-2"
+            className="col-span-2 animate-fade-in"
+            style={{ animationDelay: '50ms', animationFillMode: 'backwards' }}
             metrics={[
               { key: "adSpend", data: metricsData.adSpend },
               { key: "refunds", data: metricsData.refunds },
@@ -114,7 +121,8 @@ export function Dashboard({
             selectedMetric={selectedChartMetric}
           />
           <MetricContainer
-            className="col-span-4"
+            className="col-span-4 animate-fade-in"
+            style={{ animationDelay: '100ms', animationFillMode: 'backwards' }}
             metrics={[
               { key: "profit", data: metricsData.profit },
               { key: "roas", data: metricsData.roas },
@@ -125,7 +133,8 @@ export function Dashboard({
             selectedMetric={selectedChartMetric}
           />
           <MetricContainer
-            className="col-span-2"
+            className="col-span-2 animate-fade-in"
+            style={{ animationDelay: '150ms', animationFillMode: 'backwards' }}
             metrics={[
               { key: "ctr", data: metricsData.ctr },
               { key: "cpm", data: metricsData.cpm },
@@ -136,7 +145,8 @@ export function Dashboard({
 
           {/* ROW 2: 3 + 3 + 2 = 8 */}
           <MetricContainer
-            className="col-span-3"
+            className="col-span-3 animate-fade-in"
+            style={{ animationDelay: '200ms', animationFillMode: 'backwards' }}
             metrics={[
               { key: "revenue", data: metricsData.revenue },
               { key: "initialRevenue", data: metricsData.initialRevenue },
@@ -146,7 +156,8 @@ export function Dashboard({
             selectedMetric={selectedChartMetric}
           />
           <MetricContainer
-            className="col-span-3"
+            className="col-span-3 animate-fade-in"
+            style={{ animationDelay: '250ms', animationFillMode: 'backwards' }}
             metrics={[
               { key: "clients", data: metricsData.clients },
               { key: "newClients", data: metricsData.newClients },
@@ -156,7 +167,8 @@ export function Dashboard({
             selectedMetric={selectedChartMetric}
           />
           <MetricContainer
-            className="col-span-2"
+            className="col-span-2 animate-fade-in"
+            style={{ animationDelay: '300ms', animationFillMode: 'backwards' }}
             metrics={[
               { key: "aov", data: metricsData.aov },
               { key: "ltv", data: metricsData.ltv },
@@ -167,7 +179,8 @@ export function Dashboard({
 
           {/* ROW 3: 2 + 3 + 3 = 8 */}
           <MetricContainer
-            className="col-span-2"
+            className="col-span-2 animate-fade-in"
+            style={{ animationDelay: '350ms', animationFillMode: 'backwards' }}
             metrics={[
               { key: "profileVisits", data: metricsData.profileVisits },
               { key: "costPerPV", data: metricsData.costPerPV },
@@ -176,7 +189,8 @@ export function Dashboard({
             selectedMetric={selectedChartMetric}
           />
           <MetricContainer
-            className="col-span-3"
+            className="col-span-3 animate-fade-in"
+            style={{ animationDelay: '400ms', animationFillMode: 'backwards' }}
             metrics={[
               { key: "followers", data: metricsData.followers },
               { key: "pvToFollower", data: metricsData.pvToFollower },
@@ -186,7 +200,8 @@ export function Dashboard({
             selectedMetric={selectedChartMetric}
           />
           <MetricContainer
-            className="col-span-3"
+            className="col-span-3 animate-fade-in"
+            style={{ animationDelay: '450ms', animationFillMode: 'backwards' }}
             metrics={[
               { key: "outreach", data: metricsData.outreach },
               { key: "followerToOutreach", data: metricsData.followerToOutreach },
@@ -198,7 +213,8 @@ export function Dashboard({
 
           {/* ROW 4: 4 + chart (4 wide, 3 rows tall) */}
           <MetricContainer
-            className="col-span-4"
+            className="col-span-4 animate-fade-in"
+            style={{ animationDelay: '500ms', animationFillMode: 'backwards' }}
             metrics={[
               { key: "responses", data: metricsData.responses },
               { key: "outreachToResponse", data: metricsData.outreachToResponse },
@@ -211,12 +227,14 @@ export function Dashboard({
           <ComparisonChart
             data={comparisonData}
             metricKey={selectedChartMetric}
-            className="col-span-4 row-span-3"
+            className="col-span-4 row-span-3 animate-fade-in"
+            style={{ animationDelay: '550ms', animationFillMode: 'backwards' }}
           />
 
           {/* ROW 5: 4 (chart continues) */}
           <MetricContainer
-            className="col-span-4"
+            className="col-span-4 animate-fade-in"
+            style={{ animationDelay: '600ms', animationFillMode: 'backwards' }}
             metrics={[
               { key: "calls", data: metricsData.calls },
               { key: "outreachToCall", data: metricsData.outreachToCall },
@@ -229,7 +247,8 @@ export function Dashboard({
 
           {/* ROW 6: 4 (chart continues) */}
           <MetricContainer
-            className="col-span-4"
+            className="col-span-4 animate-fade-in"
+            style={{ animationDelay: '650ms', animationFillMode: 'backwards' }}
             metrics={[
               { key: "sales", data: metricsData.sales },
               { key: "followerToSale", data: metricsData.followerToSale },
