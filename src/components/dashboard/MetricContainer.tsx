@@ -61,40 +61,52 @@ export function MetricContainer({
                 )}
                 onClick={() => onMetricClick?.(metric.key)}
               >
-                {/* Label */}
-                <span className="text-[10px] uppercase tracking-wider font-medium text-muted-foreground mb-0.5">
-                  {def.shortLabel || def.label}
-                </span>
-                
-                {/* Value and trend */}
+                {/* Label with tooltip */}
                 <DelayedTooltip
                   content={
-                    <div className="text-xs">
-                      <div className="font-medium">{def.label}</div>
-                      <div className="text-muted-foreground mt-1">
-                        Previous: {formatMetricValue(metric.key, metric.data.previous)}
-                      </div>
-                      <div className="text-muted-foreground">
-                        Change: {formatMetricValue(metric.key, metric.data.current - metric.data.previous)}
-                      </div>
+                    <div className="text-xs max-w-[200px]">
+                      <div className="font-medium">{def.shortLabel} — {def.label}</div>
+                      {def.description && (
+                        <div className="text-muted-foreground mt-1">{def.description}</div>
+                      )}
                       {isClickable && (
                         <div className="text-primary mt-1 text-[10px]">Click to view in chart</div>
                       )}
                     </div>
                   }
                 >
-                  <div className="flex items-center gap-1">
-                    <span className="text-base font-bold text-foreground">
-                      {formatMetricValue(metric.key, metric.data.current)}
-                    </span>
-                    <TrendIndicator
-                      metricKey={metric.key}
-                      current={metric.data.current}
-                      previous={metric.data.previous}
-                      size="sm"
-                    />
-                  </div>
+                  <span className="text-[10px] uppercase tracking-wider font-medium text-muted-foreground mb-0.5 cursor-help">
+                    {def.shortLabel || def.label}
+                  </span>
                 </DelayedTooltip>
+                
+                {/* Value and trend with separate tooltip */}
+                <div className="flex items-center gap-1">
+                  <span className="text-base font-bold text-foreground">
+                    {formatMetricValue(metric.key, metric.data.current)}
+                  </span>
+                  <DelayedTooltip
+                    content={
+                      <div className="text-xs">
+                        <div className="text-muted-foreground">
+                          Previous: {formatMetricValue(metric.key, metric.data.previous)}
+                        </div>
+                        <div className="text-muted-foreground">
+                          Change: {formatMetricValue(metric.key, metric.data.current - metric.data.previous)}
+                        </div>
+                      </div>
+                    }
+                  >
+                    <div>
+                      <TrendIndicator
+                        metricKey={metric.key}
+                        current={metric.data.current}
+                        previous={metric.data.previous}
+                        size="sm"
+                      />
+                    </div>
+                  </DelayedTooltip>
+                </div>
               </div>
 
               {/* Divider between metrics */}
