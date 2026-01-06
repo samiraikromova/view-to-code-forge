@@ -118,7 +118,8 @@ export function DateRangePicker({
 
   const handlePresetClick = (preset: TimePreset) => {
     if (preset.value === "custom") {
-      // Stay open to show calendar
+      // Set custom preset to show calendar, but stay open
+      onPresetChange(preset);
     } else {
       onPresetChange(preset);
       setIsOpen(false);
@@ -191,11 +192,11 @@ export function DateRangePicker({
               key={idx}
               onClick={() => handleDayClick(dayObj.date)}
               className={cn(
-                "h-8 w-full text-xs transition-colors flex items-center justify-center relative",
+                "h-8 w-full text-xs transition-colors flex items-center justify-center relative hover:bg-muted",
                 !dayObj.isCurrentMonth && "text-muted-foreground/40",
                 dayObj.isCurrentMonth && "text-foreground",
-                (isStart || isEnd) && "bg-primary text-primary-foreground",
-                inRange && "bg-primary/25",
+                (isStart || isEnd) && "bg-accent text-accent-foreground font-semibold",
+                inRange && "bg-accent/30",
                 isStart && "rounded-l-md",
                 isEnd && "rounded-r-md",
                 !isStart && !isEnd && !inRange && "rounded-md"
