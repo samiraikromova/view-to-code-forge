@@ -288,6 +288,70 @@
     animation: holo-scan 3s linear infinite;
   }
 
+  /* Particle background animations */
+  @keyframes float-particle {
+    0%, 100% {
+      transform: translateY(0) translateX(0);
+    }
+    25% {
+      transform: translateY(-30px) translateX(10px);
+    }
+    50% {
+      transform: translateY(-15px) translateX(-15px);
+    }
+    75% {
+      transform: translateY(-40px) translateX(5px);
+    }
+  }
+
+  @keyframes grid-pulse {
+    0%, 100% {
+      opacity: 0.03;
+    }
+    50% {
+      opacity: 0.08;
+    }
+  }
+
+  @keyframes refresh-glow {
+    0%, 100% {
+      box-shadow: 0 0 8px hsla(var(--primary), 0.4), 0 0 16px hsla(var(--primary), 0.2);
+    }
+    50% {
+      box-shadow: 0 0 16px hsla(var(--primary), 0.6), 0 0 32px hsla(var(--primary), 0.3), 0 0 48px hsla(var(--accent), 0.2);
+    }
+  }
+
+  .particle {
+    position: absolute;
+    border-radius: 50%;
+    background: radial-gradient(circle, hsla(var(--primary), 0.8) 0%, hsla(var(--primary), 0) 70%);
+    animation: float-particle 20s ease-in-out infinite;
+    pointer-events: none;
+  }
+
+  .grid-line-h {
+    position: absolute;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent 0%, hsla(var(--primary), 0.1) 50%, transparent 100%);
+    animation: grid-pulse 4s ease-in-out infinite;
+  }
+
+  .grid-line-v {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: linear-gradient(180deg, transparent 0%, hsla(var(--primary), 0.1) 50%, transparent 100%);
+    animation: grid-pulse 4s ease-in-out infinite;
+  }
+
+  .animate-refresh-glow {
+    animation: refresh-glow 1.5s ease-in-out infinite;
+  }
+
   /* Slide-in animation for panels */
   @keyframes slide-in-left {
     from {
