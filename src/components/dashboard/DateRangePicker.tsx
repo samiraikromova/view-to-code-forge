@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Calendar as CalendarIcon, ChevronDown } from "lucide-react";
-import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { timePresets } from "@/lib/dashboardUtils";
 import { Button } from "@/components/ui/button";
@@ -28,24 +27,43 @@ export function DateRangePicker({
   className,
 }: DateRangePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [showCustom, setShowCustom] = useState(false);
   const [tempRange, setTempRange] = useState<DateRange | undefined>(dateRange);
 
-  const currentPreset = timePresets.find((p) => p.value === selectedPreset) || timePresets[0];
+  const currentPreset = timePresets.find((p) => p.value === selectedPreset) || timePresets[4]; // Default to Last 30 Days
 
   const handlePresetClick = (preset: TimePreset) => {
-    onPresetChange(preset);
-    setIsOpen(false);
+    if (preset.value === "custom") {
+      setShowCustom(true);
+    } else {
+      onPresetChange(preset);
+      setShowCustom(false);
+      setIsOpen(false);
+    }
   };
 
   const handleApply = () => {
     if (tempRange && onDateRangeChange) {
       onDateRangeChange(tempRange);
+      onPresetChange({ label: "Custom", value: "custom" });
     }
     setIsOpen(false);
+    setShowCustom(false);
+  };
+
+  const handleCancel = () => {
+    setShowCustom(false);
+  };
+
+  const handleOpenChange = (open: boolean) => {
+    setIsOpen(open);
+    if (!open) {
+      setShowCustom(false);
+    }
   };
 
   return (
-    <Popover open={isOpen} onOpenChange={setIsOpen}>
+    <Popover open={isOpen} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -62,7 +80,7 @@ export function DateRangePicker({
       <PopoverContent className="w-auto p-0" align="end">
         <div className="flex">
           {/* Preset list */}
-          <div className="border-r border-border p-2 space-y-1">
+          <div className="p-2 space-y-0.5 min-w-[140px]">
             {timePresets.map((preset) => (
               <button
                 key={preset.value}
@@ -79,36 +97,38 @@ export function DateRangePicker({
             ))}
           </div>
 
-          {/* Custom date picker */}
-          <div className="p-3">
-            <div className="text-xs text-muted-foreground mb-2">Custom Range</div>
-            <div className="flex gap-2">
-              <Calendar
-                mode="single"
-                selected={tempRange?.from}
-                onSelect={(date) =>
-                  date && setTempRange((prev) => ({ ...prev, from: date, to: prev?.to || date }))
-                }
-                className="pointer-events-auto"
-              />
-              <Calendar
-                mode="single"
-                selected={tempRange?.to}
-                onSelect={(date) =>
-                  date && setTempRange((prev) => ({ ...prev, from: prev?.from || date, to: date }))
-                }
-                className="pointer-events-auto"
-              />
+          {/* Custom date picker - only shown when Custom is clicked */}
+          {showCustom && (
+            <div className="border-l border-border p-3">
+              <div className="text-xs text-muted-foreground mb-2">Custom Range</div>
+              <div className="flex gap-2">
+                <Calendar
+                  mode="single"
+                  selected={tempRange?.from}
+                  onSelect={(date) =>
+                    date && setTempRange((prev) => ({ ...prev, from: date, to: prev?.to || date }))
+                  }
+                  className="p-3 pointer-events-auto"
+                />
+                <Calendar
+                  mode="single"
+                  selected={tempRange?.to}
+                  onSelect={(date) =>
+                    date && setTempRange((prev) => ({ ...prev, from: prev?.from || date, to: date }))
+                  }
+                  className="p-3 pointer-events-auto"
+                />
+              </div>
+              <div className="flex justify-end gap-2 mt-3">
+                <Button variant="outline" size="sm" onClick={handleCancel}>
+                  Cancel
+                </Button>
+                <Button size="sm" onClick={handleApply}>
+                  Apply
+                </Button>
+              </div>
             </div>
-            <div className="flex justify-end gap-2 mt-3">
-              <Button variant="outline" size="sm" onClick={() => setIsOpen(false)}>
-                Cancel
-              </Button>
-              <Button size="sm" onClick={handleApply}>
-                Apply
-              </Button>
-            </div>
-          </div>
+          )}
         </div>
       </PopoverContent>
     </Popover>
