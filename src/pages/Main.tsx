@@ -423,7 +423,7 @@ const Main = () => {
       {/* Main Content Area */}
       <div className="relative z-10 flex flex-col flex-1 min-w-0">
         {/* Header */}
-        <header className="relative flex items-center justify-between px-6 py-3 border-b border-border/50">
+        <header className="relative flex items-center justify-between px-6 py-3">
           {/* Left section - Dashboard only */}
           <div className="flex items-center gap-3">
             {mode === "dashboard" && (
