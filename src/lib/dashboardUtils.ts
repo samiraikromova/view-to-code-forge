@@ -316,6 +316,7 @@ export const timePresets: TimePreset[] = [
   { label: "Last Month", value: "lastMonth" },
   { label: "This Year", value: "thisYear" },
   { label: "All Time", value: "allTime" },
+  { label: "Custom", value: "custom" },
 ];
 
 // Format functions

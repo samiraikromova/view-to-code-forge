@@ -121,7 +121,7 @@ export function Dashboard() {
 
       {/* Main Content */}
       {currentView === "metrics" ? (
-        <div className="grid grid-cols-4 lg:grid-cols-8 gap-4">
+        <div className="grid grid-cols-4 lg:grid-cols-8 gap-3">
           {/* ROW 1: 2 + 4 + 2 = 8 */}
           {/* Cost | Refunds (2 wide) */}
           <MetricContainer
