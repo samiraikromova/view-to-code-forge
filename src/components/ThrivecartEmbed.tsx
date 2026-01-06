@@ -93,7 +93,6 @@ interface ThrivecartLinkProps {
 export function ThrivecartLink({ productId, children, className }: ThrivecartLinkProps) {
   return (
     <a
-      href="#"
       data-thrivecart-account={THRIVECART_ACCOUNT}
       data-thrivecart-tpl="v2"
       data-thrivecart-product={productId}
@@ -136,7 +135,6 @@ export function ThrivecartButton({
 
   return (
     <a
-      href="#"
       data-thrivecart-account={THRIVECART_ACCOUNT}
       data-thrivecart-tpl="v2"
       data-thrivecart-product={productId}
