@@ -6,8 +6,9 @@ import { AmbientBackground } from "@/components/AmbientBackground";
 import { ChatInterface } from "@/components/chat/ChatInterface";
 import { ChatHistoryPanel } from "@/components/chat/ChatHistoryPanel";
 import { Sidebar } from "@/components/Sidebar";
-import { LearnSidebar, Module, Lesson } from "@/components/learn/LearnSidebar";
+import { Module, Lesson } from "@/components/learn/LearnSidebar";
 import { LearnInterface } from "@/components/learn/LearnInterface";
+import { LearnContentSelector } from "@/components/learn/LearnContentSelector";
 import { Dashboard } from "@/pages/Dashboard";
 import { useAuth } from "@/hooks/useAuth";
 import { fetchUserThreads } from "@/api/chat/chatApi";
@@ -86,7 +87,7 @@ const Main = () => {
   }, [loadThreads]);
 
   // Learn mode state
-  const [learnSidebarCollapsed, setLearnSidebarCollapsed] = useState(false);
+  const [selectedModuleId, setSelectedModuleId] = useState<string | null>(null);
   const [lessonId, setLessonId] = useState<string | null>(null);
   const [contentType, setContentType] = useState<"recordings" | "materials">("materials");
   const [transcriptForNewChat, setTranscriptForNewChat] = useState<File | null>(null);
@@ -271,6 +272,12 @@ const Main = () => {
 
   const handleContentTypeChange = (type: "recordings" | "materials") => {
     setContentType(type);
+    setSelectedModuleId(null);
+    setLessonId(null);
+  };
+
+  const handleModuleSelect = (moduleId: string | null) => {
+    setSelectedModuleId(moduleId);
     setLessonId(null);
   };
 
@@ -408,26 +415,13 @@ const Main = () => {
         />
       )}
       
-      {mode === "learn" && (
-        <LearnSidebar
-          modules={currentData}
-          currentLessonId={lessonId}
-          onLessonSelect={handleSelectLesson}
-          onToggleLessonComplete={handleToggleComplete}
-          isCollapsed={learnSidebarCollapsed}
-          onCollapsedChange={setLearnSidebarCollapsed}
-          contentType={contentType}
-          onContentTypeChange={handleContentTypeChange}
-        />
-      )}
-      
       {/* Main Content Area */}
       <div className="relative z-10 flex flex-col flex-1 min-w-0">
         {/* Header */}
         <header className="relative flex items-center justify-between px-6 py-3 min-h-[56px]">
-          {/* Left section - Dashboard only */}
+          {/* Left section - Dashboard and Learn */}
           <div className="flex items-center gap-3">
-            {mode === "dashboard" && (
+            {(mode === "dashboard" || mode === "learn") && (
               <>
                 {/* Profile Dropdown */}
                 <DropdownMenu>
@@ -477,18 +471,27 @@ const Main = () => {
                   </DropdownMenuContent>
                 </DropdownMenu>
 
-                {/* View Selector */}
-                <ViewSelector currentView={dashboardView} onViewChange={setDashboardView} />
+                {/* Mode-specific selectors */}
+                {mode === "dashboard" && (
+                  <>
+                    <ViewSelector currentView={dashboardView} onViewChange={setDashboardView} />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={handleDashboardRefresh}
+                      className={dashboardLoading ? "animate-spin animate-refresh-glow" : ""}
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                    </Button>
+                  </>
+                )}
 
-                {/* Refresh Button - moved to left side */}
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleDashboardRefresh}
-                  className={dashboardLoading ? "animate-spin animate-refresh-glow" : ""}
-                >
-                  <RefreshCw className="w-4 h-4" />
-                </Button>
+                {mode === "learn" && (
+                  <LearnContentSelector 
+                    contentType={contentType} 
+                    onContentTypeChange={handleContentTypeChange} 
+                  />
+                )}
               </>
             )}
           </div>
@@ -555,9 +558,13 @@ const Main = () => {
           {mode === "learn" && (
             <div className="flex-1 flex flex-col min-w-0">
               <LearnInterface
+                selectedModuleId={selectedModuleId}
                 lessonId={lessonId}
                 modules={currentData}
                 contentType={contentType}
+                isLoading={videosLoading}
+                onModuleSelect={handleModuleSelect}
+                onLessonSelect={handleSelectLesson}
                 onAskAI={handleAskAIAboutVideo}
                 onVideoComplete={handleVideoComplete}
               />

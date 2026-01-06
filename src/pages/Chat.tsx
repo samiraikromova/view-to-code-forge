@@ -55,9 +55,9 @@ const Chat = () => {
 
   // Sidebar collapse states
   const [chatSidebarCollapsed, setChatSidebarCollapsed] = useState(false);
-  const [learnSidebarCollapsed, setLearnSidebarCollapsed] = useState(false);
 
   // Learn mode state
+  const [selectedModuleId, setSelectedModuleId] = useState<string | null>(null);
   const [lessonId, setLessonId] = useState<string | null>(null);
   const [contentType, setContentType] = useState<"recordings" | "materials">("materials");
   const [transcriptForNewChat, setTranscriptForNewChat] = useState<File | null>(null);
@@ -259,6 +259,12 @@ const Chat = () => {
 
   const handleContentTypeChange = (type: "recordings" | "materials") => {
     setContentType(type);
+    setSelectedModuleId(null);
+    setLessonId(null);
+  };
+
+  const handleModuleSelect = (moduleId: string | null) => {
+    setSelectedModuleId(moduleId);
     setLessonId(null);
   };
 
@@ -403,27 +409,19 @@ const Chat = () => {
           </div>
         </>
       ) : (
-        <>
-          <LearnSidebar
+        <div className="flex-1 flex flex-col min-w-0">
+          <LearnInterface
+            selectedModuleId={selectedModuleId}
+            lessonId={lessonId}
             modules={currentData}
-            currentLessonId={lessonId}
-            onLessonSelect={handleSelectLesson}
-            onToggleLessonComplete={handleToggleComplete}
-            isCollapsed={learnSidebarCollapsed}
-            onCollapsedChange={setLearnSidebarCollapsed}
             contentType={contentType}
-            onContentTypeChange={handleContentTypeChange}
+            isLoading={videosLoading}
+            onModuleSelect={handleModuleSelect}
+            onLessonSelect={handleSelectLesson}
+            onAskAI={handleAskAIAboutVideo}
+            onVideoComplete={handleVideoComplete}
           />
-          <div className="flex-1 flex flex-col min-w-0">
-            <LearnInterface
-              lessonId={lessonId}
-              modules={currentData}
-              contentType={contentType}
-              onAskAI={handleAskAIAboutVideo}
-              onVideoComplete={handleVideoComplete}
-            />
-          </div>
-        </>
+        </div>
       )}
     </div>
   );
