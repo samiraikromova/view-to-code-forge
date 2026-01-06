@@ -116,4 +116,5 @@ export function ThrivecartButton({ productId, children, className, variant = "de
     >
       {children}
     </a>
-  )
+  );
+}
