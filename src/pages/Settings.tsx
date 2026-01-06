@@ -1,84 +1,86 @@
-import { useEffect, useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { ArrowLeft, CreditCard, Download, Check, Zap } from "lucide-react"
-import { useNavigate } from "react-router-dom"
-import { PLANS, SubscriptionTier } from "@/types/subscription"
-import { useAuth } from "@/hooks/useAuth"
-import { supabase } from "@/lib/supabase"
-import ThrivecartEmbed, { ThrivecartButton, THRIVECART_PRODUCTS } from "@/components/ThrivecartEmbed"
+import { useEffect, useState } from "react";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ArrowLeft, CreditCard, Download, Check, Zap } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { PLANS, SubscriptionTier } from "@/types/subscription";
+import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/lib/supabase";
+import ThrivecartEmbed, { ThrivecartButton, THRIVECART_PRODUCTS } from "@/components/ThrivecartEmbed";
 
 interface BillingRecord {
-  id: string
-  date: string
-  amount: number
-  status: string
-  type: string
+  id: string;
+  date: string;
+  amount: number;
+  status: string;
+  type: string;
 }
 
 export default function Settings() {
-  const navigate = useNavigate()
-  const { user, profile } = useAuth()
-  const [currentTier, setCurrentTier] = useState<SubscriptionTier>("free")
-  const [billingHistory, setBillingHistory] = useState<BillingRecord[]>([])
-  const [loading, setLoading] = useState(true)
+  const navigate = useNavigate();
+  const { user, profile } = useAuth();
+  const [currentTier, setCurrentTier] = useState<SubscriptionTier>("free");
+  const [billingHistory, setBillingHistory] = useState<BillingRecord[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     if (profile) {
       // Map tier values
       const tierMap: Record<string, SubscriptionTier> = {
-        'free': 'free',
-        'tier1': 'starter',
-        'starter': 'starter',
-        'tier2': 'pro',
-        'pro': 'pro'
-      }
-      setCurrentTier(tierMap[profile.subscription_tier] || 'free')
+        free: "free",
+        tier1: "starter",
+        starter: "starter",
+        tier2: "pro",
+        pro: "pro",
+      };
+      setCurrentTier(tierMap[profile.subscription_tier] || "free");
     }
     if (user) {
-      fetchBillingHistory()
+      fetchBillingHistory();
     }
-  }, [profile, user])
+  }, [profile, user]);
 
   async function fetchBillingHistory() {
-    if (!user) return
-    setLoading(true)
+    if (!user) return;
+    setLoading(true);
     try {
       const { data } = await supabase
-        .from('credit_transactions')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false })
-        .limit(10)
+        .from("credit_transactions")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(10);
 
       if (data) {
-        setBillingHistory(data.map(tx => ({
-          id: tx.id,
-          date: new Date(tx.created_at).toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric'
-          }),
-          amount: Math.abs(tx.amount || 0),
-          status: 'Completed',
-          type: tx.type || 'Credit'
-        })))
+        setBillingHistory(
+          data.map((tx) => ({
+            id: tx.id,
+            date: new Date(tx.created_at).toLocaleDateString("en-US", {
+              month: "short",
+              day: "numeric",
+              year: "numeric",
+            }),
+            amount: Math.abs(tx.amount || 0),
+            status: "Completed",
+            type: tx.type || "Credit",
+          })),
+        );
       }
     } catch (error) {
-      console.error('Error fetching billing history:', error)
+      console.error("Error fetching billing history:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
   const getProductId = (tier: SubscriptionTier): number => {
-    if (tier === 'starter') return THRIVECART_PRODUCTS.starter.productId
-    if (tier === 'pro') return THRIVECART_PRODUCTS.pro.productId
-    return 0
-  }
+    if (tier === "starter") return THRIVECART_PRODUCTS.starter.productId;
+    if (tier === "pro") return THRIVECART_PRODUCTS.pro.productId;
+    return 0;
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -118,8 +120,8 @@ export default function Settings() {
                   <p className="text-sm text-muted-foreground">Current Plan</p>
                   <p className="text-3xl font-bold text-foreground">{PLANS[currentTier].name}</p>
                 </div>
-                {currentTier !== 'pro' && (
-                  <ThrivecartButton productId={THRIVECART_PRODUCTS.pro.productId} userEmail={user?.email} variant="outline" className="gap-2">
+                {currentTier !== "pro" && (
+                  <ThrivecartButton productId={THRIVECART_PRODUCTS.pro.productId} variant="outline" className="gap-2">
                     Upgrade
                   </ThrivecartButton>
                 )}
@@ -157,13 +159,14 @@ export default function Settings() {
                 </div>
                 <div className="flex flex-col gap-2">
                   {currentTier !== "pro" && (
-                    <ThrivecartButton productId={THRIVECART_PRODUCTS.pro.productId} userEmail={user?.email} className="bg-accent hover:bg-accent/90">
+                    <ThrivecartButton
+                      productId={THRIVECART_PRODUCTS.pro.productId}
+                      className="bg-accent hover:bg-accent/90"
+                    >
                       Upgrade to Pro
                     </ThrivecartButton>
                   )}
-                  {currentTier !== "free" && (
-                    <Button variant="outline">Cancel Subscription</Button>
-                  )}
+                  {currentTier !== "free" && <Button variant="outline">Cancel Subscription</Button>}
                 </div>
               </div>
 
@@ -174,8 +177,8 @@ export default function Settings() {
                 <h4 className="text-sm font-medium text-foreground mb-4">Available Plans</h4>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {(Object.keys(PLANS) as SubscriptionTier[]).map((tier) => {
-                    const plan = PLANS[tier]
-                    const isCurrent = tier === currentTier
+                    const plan = PLANS[tier];
+                    const isCurrent = tier === currentTier;
                     return (
                       <div
                         key={tier}
@@ -197,7 +200,6 @@ export default function Settings() {
                         {!isCurrent && tier !== "free" && (
                           <ThrivecartButton
                             productId={getProductId(tier)}
-                            userEmail={user?.email}
                             variant={tier === "pro" ? "default" : "outline"}
                             className="w-full mt-4"
                             size="sm"
@@ -206,7 +208,7 @@ export default function Settings() {
                           </ThrivecartButton>
                         )}
                       </div>
-                    )
+                    );
                   })}
                 </div>
               </div>
@@ -236,9 +238,7 @@ export default function Settings() {
                 <TableBody>
                   {billingHistory.map((record) => (
                     <TableRow key={record.id}>
-                      <TableCell className="font-medium font-mono text-xs">
-                        {record.id.slice(0, 8)}...
-                      </TableCell>
+                      <TableCell className="font-medium font-mono text-xs">{record.id.slice(0, 8)}...</TableCell>
                       <TableCell>{record.date}</TableCell>
                       <TableCell className="capitalize">{record.type}</TableCell>
                       <TableCell>{record.amount.toFixed(2)} credits</TableCell>
@@ -280,7 +280,7 @@ export default function Settings() {
               <p className="text-muted-foreground mb-4">
                 Payment methods are managed through ThriveCart's secure payment system.
               </p>
-              <Button variant="outline" onClick={() => window.open('https://thrivecart.com/account', '_blank')}>
+              <Button variant="outline" onClick={() => window.open("https://thrivecart.com/account", "_blank")}>
                 Manage on ThriveCart
               </Button>
             </div>
@@ -288,5 +288,5 @@ export default function Settings() {
         </Card>
       </div>
     </div>
-  )
+  );
 }

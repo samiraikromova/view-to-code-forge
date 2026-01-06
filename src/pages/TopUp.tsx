@@ -1,9 +1,9 @@
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { ArrowLeft, Zap, Check, CreditCard } from "lucide-react"
-import { useNavigate } from "react-router-dom"
-import { useAuth } from "@/hooks/useAuth"
-import ThrivecartEmbed, { THRIVECART_PRODUCTS, ThrivecartButton } from "@/components/ThrivecartEmbed"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft, Zap, Check, CreditCard } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/hooks/useAuth";
+import ThrivecartEmbed, { THRIVECART_PRODUCTS, ThrivecartButton } from "@/components/ThrivecartEmbed";
 
 const topUpOptions = [
   {
@@ -37,12 +37,12 @@ const topUpOptions = [
     savings: "0%",
     popular: false,
   },
-]
+];
 
 export default function TopUp() {
-  const navigate = useNavigate()
-  const { user, profile } = useAuth()
-  const currentCredits = profile?.credits || 0
+  const navigate = useNavigate();
+  const { user, profile } = useAuth();
+  const currentCredits = profile?.credits || 0;
 
   return (
     <div className="min-h-screen bg-background theme-light-purple">
@@ -54,9 +54,7 @@ export default function TopUp() {
           </Button>
           <div>
             <h1 className="text-3xl font-semibold text-foreground">Top Up Credits</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              Add more credits to your account
-            </p>
+            <p className="text-sm text-muted-foreground mt-1">Add more credits to your account</p>
           </div>
         </div>
 
@@ -78,9 +76,9 @@ export default function TopUp() {
         {/* Top Up Options */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
           {topUpOptions.map((option) => {
-            const product = THRIVECART_PRODUCTS[option.id]
+            const product = THRIVECART_PRODUCTS[option.id];
             return (
-              <Card 
+              <Card
                 key={option.id}
                 className={`relative overflow-hidden transition-all hover:border-primary/50 ${
                   option.popular ? "border-primary" : "border-border"
@@ -98,9 +96,7 @@ export default function TopUp() {
                   </div>
                   <CardDescription>
                     ${option.perCredit.toFixed(2)} per credit
-                    {option.savings && (
-                      <span className="ml-2 text-primary font-medium">Save {option.savings}</span>
-                    )}
+                    {option.savings && <span className="ml-2 text-primary font-medium">Save {option.savings}</span>}
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -121,9 +117,8 @@ export default function TopUp() {
                       Use across all tools
                     </li>
                   </ul>
-                  <ThrivecartButton 
+                  <ThrivecartButton
                     productId={product.productId}
-                    userEmail={user?.email}
                     className="w-full"
                     variant={option.popular ? "default" : "outline"}
                   >
@@ -131,7 +126,7 @@ export default function TopUp() {
                   </ThrivecartButton>
                 </CardContent>
               </Card>
-            )
+            );
           })}
         </div>
 
@@ -139,12 +134,16 @@ export default function TopUp() {
         <Card className="bg-surface/50">
           <CardContent className="py-4">
             <p className="text-sm text-muted-foreground text-center">
-              Credits are added instantly after purchase. All purchases are processed securely through ThriveCart.
-              Need more? <Button variant="link" className="p-0 h-auto" onClick={() => navigate("/settings")}>Upgrade your plan</Button> for monthly credit allowances.
+              Credits are added instantly after purchase. All purchases are processed securely through ThriveCart. Need
+              more?{" "}
+              <Button variant="link" className="p-0 h-auto" onClick={() => navigate("/settings")}>
+                Upgrade your plan
+              </Button>{" "}
+              for monthly credit allowances.
             </p>
           </CardContent>
         </Card>
       </div>
     </div>
-  )
+  );
 }
