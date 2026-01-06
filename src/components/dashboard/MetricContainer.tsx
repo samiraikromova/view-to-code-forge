@@ -85,7 +85,7 @@ export function MetricContainer({
                 
                 {/* Value and trend with separate tooltip */}
                 <div className="flex items-center justify-center gap-1">
-                  <span className="text-base font-bold text-foreground">
+                  <span className="text-base font-bold text-foreground animate-metric-glow">
                     {formatMetricValue(metric.key, metric.data.current)}
                   </span>
                   <DelayedTooltip

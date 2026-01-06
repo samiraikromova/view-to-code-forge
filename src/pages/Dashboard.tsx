@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { MetricContainer } from "@/components/dashboard/MetricContainer";
 import { GoalCard } from "@/components/dashboard/GoalCard";
@@ -29,6 +29,16 @@ export function Dashboard({
   const navigate = useNavigate();
   const [goals, setGoals] = useState<Goal[]>(getMockGoals());
   const [selectedChartMetric, setSelectedChartMetric] = useState<MetricKey>("revenue");
+  const [viewKey, setViewKey] = useState(0);
+  const prevViewRef = useRef(currentView);
+
+  // Trigger animation on view change
+  useEffect(() => {
+    if (prevViewRef.current !== currentView) {
+      setViewKey(k => k + 1);
+      prevViewRef.current = currentView;
+    }
+  }, [currentView]);
 
   // Mock data
   const metricsData = getMockMetricsData();
@@ -90,14 +100,14 @@ export function Dashboard({
 
       {/* Active Goals - Only show in metrics view */}
       {currentView === "metrics" && goals.length > 0 && (
-        <div className="mb-6 animate-fade-in">
-          <h2 className="text-sm font-medium text-muted-foreground mb-3">Active Goals</h2>
+        <div className="mb-6 animate-power-up" style={{ animationDelay: '50ms', animationFillMode: 'backwards' }}>
+          <h2 className="text-sm font-medium text-muted-foreground mb-3 animate-hud-line" style={{ animationDelay: '100ms', animationFillMode: 'backwards' }}>Active Goals</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {goals.map((goal, index) => (
               <div 
                 key={goal.id} 
-                className="animate-scale-in"
-                style={{ animationDelay: `${index * 50}ms`, animationFillMode: 'backwards' }}
+                className="animate-card-reveal"
+                style={{ animationDelay: `${150 + index * 80}ms`, animationFillMode: 'backwards' }}
               >
                 <GoalCard goal={goal} onRemove={handleRemoveGoal} />
               </div>
@@ -108,10 +118,10 @@ export function Dashboard({
 
       {/* Main Content */}
       {currentView === "metrics" ? (
-        <div className="grid grid-cols-4 lg:grid-cols-8 gap-3">
+        <div key={`metrics-${viewKey}`} className="grid grid-cols-4 lg:grid-cols-8 gap-3 animate-view-switch">
           {/* ROW 1: 2 + 4 + 2 = 8 */}
           <MetricContainer
-            className="col-span-2 animate-fade-in"
+            className="col-span-2 animate-card-reveal holo-gradient"
             style={{ animationDelay: '50ms', animationFillMode: 'backwards' }}
             metrics={[
               { key: "adSpend", data: metricsData.adSpend },
@@ -121,7 +131,7 @@ export function Dashboard({
             selectedMetric={selectedChartMetric}
           />
           <MetricContainer
-            className="col-span-4 animate-fade-in"
+            className="col-span-4 animate-card-reveal holo-gradient"
             style={{ animationDelay: '100ms', animationFillMode: 'backwards' }}
             metrics={[
               { key: "profit", data: metricsData.profit },
@@ -133,7 +143,7 @@ export function Dashboard({
             selectedMetric={selectedChartMetric}
           />
           <MetricContainer
-            className="col-span-2 animate-fade-in"
+            className="col-span-2 animate-card-reveal holo-gradient"
             style={{ animationDelay: '150ms', animationFillMode: 'backwards' }}
             metrics={[
               { key: "ctr", data: metricsData.ctr },
@@ -145,7 +155,7 @@ export function Dashboard({
 
           {/* ROW 2: 3 + 3 + 2 = 8 */}
           <MetricContainer
-            className="col-span-3 animate-fade-in"
+            className="col-span-3 animate-card-reveal holo-gradient"
             style={{ animationDelay: '200ms', animationFillMode: 'backwards' }}
             metrics={[
               { key: "revenue", data: metricsData.revenue },
@@ -156,7 +166,7 @@ export function Dashboard({
             selectedMetric={selectedChartMetric}
           />
           <MetricContainer
-            className="col-span-3 animate-fade-in"
+            className="col-span-3 animate-card-reveal holo-gradient"
             style={{ animationDelay: '250ms', animationFillMode: 'backwards' }}
             metrics={[
               { key: "clients", data: metricsData.clients },
@@ -167,7 +177,7 @@ export function Dashboard({
             selectedMetric={selectedChartMetric}
           />
           <MetricContainer
-            className="col-span-2 animate-fade-in"
+            className="col-span-2 animate-card-reveal holo-gradient"
             style={{ animationDelay: '300ms', animationFillMode: 'backwards' }}
             metrics={[
               { key: "aov", data: metricsData.aov },
@@ -179,7 +189,7 @@ export function Dashboard({
 
           {/* ROW 3: 2 + 3 + 3 = 8 */}
           <MetricContainer
-            className="col-span-2 animate-fade-in"
+            className="col-span-2 animate-card-reveal holo-gradient"
             style={{ animationDelay: '350ms', animationFillMode: 'backwards' }}
             metrics={[
               { key: "profileVisits", data: metricsData.profileVisits },
@@ -189,7 +199,7 @@ export function Dashboard({
             selectedMetric={selectedChartMetric}
           />
           <MetricContainer
-            className="col-span-3 animate-fade-in"
+            className="col-span-3 animate-card-reveal holo-gradient"
             style={{ animationDelay: '400ms', animationFillMode: 'backwards' }}
             metrics={[
               { key: "followers", data: metricsData.followers },
@@ -200,7 +210,7 @@ export function Dashboard({
             selectedMetric={selectedChartMetric}
           />
           <MetricContainer
-            className="col-span-3 animate-fade-in"
+            className="col-span-3 animate-card-reveal holo-gradient"
             style={{ animationDelay: '450ms', animationFillMode: 'backwards' }}
             metrics={[
               { key: "outreach", data: metricsData.outreach },
@@ -213,7 +223,7 @@ export function Dashboard({
 
           {/* ROW 4: 4 + chart (4 wide, 3 rows tall) */}
           <MetricContainer
-            className="col-span-4 animate-fade-in"
+            className="col-span-4 animate-card-reveal holo-gradient"
             style={{ animationDelay: '500ms', animationFillMode: 'backwards' }}
             metrics={[
               { key: "responses", data: metricsData.responses },
@@ -227,13 +237,13 @@ export function Dashboard({
           <ComparisonChart
             data={comparisonData}
             metricKey={selectedChartMetric}
-            className="col-span-4 row-span-3 animate-fade-in"
+            className="col-span-4 row-span-3 animate-power-up"
             style={{ animationDelay: '550ms', animationFillMode: 'backwards' }}
           />
 
           {/* ROW 5: 4 (chart continues) */}
           <MetricContainer
-            className="col-span-4 animate-fade-in"
+            className="col-span-4 animate-card-reveal holo-gradient"
             style={{ animationDelay: '600ms', animationFillMode: 'backwards' }}
             metrics={[
               { key: "calls", data: metricsData.calls },
@@ -247,7 +257,7 @@ export function Dashboard({
 
           {/* ROW 6: 4 (chart continues) */}
           <MetricContainer
-            className="col-span-4 animate-fade-in"
+            className="col-span-4 animate-card-reveal holo-gradient"
             style={{ animationDelay: '650ms', animationFillMode: 'backwards' }}
             metrics={[
               { key: "sales", data: metricsData.sales },
@@ -260,7 +270,9 @@ export function Dashboard({
           />
         </div>
       ) : (
-        <LeaderboardTable users={leaderboardUsers} />
+        <div key={`leaderboard-${viewKey}`} className="animate-view-switch">
+          <LeaderboardTable users={leaderboardUsers} />
+        </div>
       )}
     </div>
   );
