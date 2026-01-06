@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PanelLeft, Search, PlayCircle, CheckCircle2, UserIcon, Sparkles, CreditCard, LogOut, ChevronUp, TrendingUp, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { ContentToggle } from "./ContentToggle";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import {
@@ -176,13 +175,6 @@ export const LearnSidebar = ({
           </Button>
         )}
       </div>
-
-      {/* Content Toggle */}
-      <ContentToggle
-        contentType={contentType}
-        onContentTypeChange={onContentTypeChange}
-        isCollapsed={isCollapsed}
-      />
 
       {/* Modules and Lessons */}
       <div className="flex-1 overflow-y-auto">
