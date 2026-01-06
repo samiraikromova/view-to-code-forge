@@ -55,10 +55,11 @@ export function MainNavigation({ currentMode, onModeChange }: MainNavigationProp
         const activeIndex = navItems.findIndex((item) => item.id === currentMode);
         const buttons = navRef.current.querySelectorAll("button");
         if (buttons[activeIndex]) {
-          const button = buttons[activeIndex] as HTMLElement;
+          const navRect = navRef.current.getBoundingClientRect();
+          const buttonRect = buttons[activeIndex].getBoundingClientRect();
           setPillStyle({
-            left: button.offsetLeft,
-            width: button.offsetWidth,
+            left: buttonRect.left - navRect.left,
+            width: buttonRect.width,
           });
         }
       }
