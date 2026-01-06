@@ -25,8 +25,8 @@ export function GoalCard({ goal, onRemove, className }: GoalCardProps) {
   return (
     <div
       className={cn(
-        "group relative rounded-xl p-4 transition-all duration-300",
-        "bg-surface/60 border border-border/40 hover:border-border/60",
+        "group relative rounded-xl p-4 transition-all duration-300 holo-gradient",
+        "bg-surface/60 border border-border/40 hover:border-border/60 hover:shadow-[0_0_20px_hsla(var(--primary),0.15)]",
         className
       )}
     >
@@ -64,7 +64,7 @@ export function GoalCard({ goal, onRemove, className }: GoalCardProps) {
         }
       >
         <div className="flex items-end gap-2 mb-3 cursor-default">
-          <span className="text-xl font-bold text-foreground">
+          <span className="text-xl font-bold text-foreground animate-metric-glow">
             {formatMetricValue(goal.metricKey, goal.currentValue)}
           </span>
           <TrendIndicator
