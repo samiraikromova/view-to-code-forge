@@ -411,8 +411,6 @@ const Chat = () => {
             onToggleLessonComplete={handleToggleComplete}
             isCollapsed={learnSidebarCollapsed}
             onCollapsedChange={setLearnSidebarCollapsed}
-            mode={mode}
-            onModeChange={setMode}
             contentType={contentType}
             onContentTypeChange={handleContentTypeChange}
           />
