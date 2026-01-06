@@ -14,7 +14,7 @@ import {
   getMockLeaderboardUsers,
   getMockGoals,
 } from "@/lib/dashboardUtils";
-import type { ViewType, Goal, TimePreset } from "@/types/dashboard";
+import type { ViewType, Goal, TimePreset, MetricKey } from "@/types/dashboard";
 
 export function Dashboard() {
   const [currentView, setCurrentView] = useState<ViewType>("metrics");
@@ -22,10 +22,11 @@ export function Dashboard() {
   const [goals, setGoals] = useState<Goal[]>(getMockGoals());
   const [selectedPreset, setSelectedPreset] = useState("last30days");
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedChartMetric, setSelectedChartMetric] = useState<MetricKey>("revenue");
 
   // Mock data
   const metricsData = getMockMetricsData();
-  const comparisonData = getMockComparisonData("revenue");
+  const comparisonData = getMockComparisonData(selectedChartMetric);
   const leaderboardUsers = getMockLeaderboardUsers();
 
   const handleRefresh = useCallback(() => {
@@ -55,6 +56,10 @@ export function Dashboard() {
 
   const handlePresetChange = useCallback((preset: TimePreset) => {
     setSelectedPreset(preset.value);
+  }, []);
+
+  const handleMetricClick = useCallback((metricKey: MetricKey) => {
+    setSelectedChartMetric(metricKey);
   }, []);
 
   return (
@@ -123,15 +128,15 @@ export function Dashboard() {
       {currentView === "metrics" ? (
         <div className="grid grid-cols-4 lg:grid-cols-8 gap-3">
           {/* ROW 1: 2 + 4 + 2 = 8 */}
-          {/* Cost | Refunds (2 wide) */}
           <MetricContainer
             className="col-span-2"
             metrics={[
               { key: "adSpend", data: metricsData.adSpend },
               { key: "refunds", data: metricsData.refunds },
             ]}
+            onMetricClick={handleMetricClick}
+            selectedMetric={selectedChartMetric}
           />
-          {/* Profit | ROAS | ROI | Margin (4 wide) */}
           <MetricContainer
             className="col-span-4"
             metrics={[
@@ -140,18 +145,20 @@ export function Dashboard() {
               { key: "roi", data: metricsData.roi },
               { key: "margin", data: metricsData.margin },
             ]}
+            onMetricClick={handleMetricClick}
+            selectedMetric={selectedChartMetric}
           />
-          {/* CTR | CPM (2 wide) */}
           <MetricContainer
             className="col-span-2"
             metrics={[
               { key: "ctr", data: metricsData.ctr },
               { key: "cpm", data: metricsData.cpm },
             ]}
+            onMetricClick={handleMetricClick}
+            selectedMetric={selectedChartMetric}
           />
 
           {/* ROW 2: 3 + 3 + 2 = 8 */}
-          {/* Revenue | Initial | Recurring (3 wide) */}
           <MetricContainer
             className="col-span-3"
             metrics={[
@@ -159,8 +166,9 @@ export function Dashboard() {
               { key: "initialRevenue", data: metricsData.initialRevenue },
               { key: "recurringRevenue", data: metricsData.recurringRevenue },
             ]}
+            onMetricClick={handleMetricClick}
+            selectedMetric={selectedChartMetric}
           />
-          {/* Clients | New | Repeat (3 wide) */}
           <MetricContainer
             className="col-span-3"
             metrics={[
@@ -168,26 +176,29 @@ export function Dashboard() {
               { key: "newClients", data: metricsData.newClients },
               { key: "repeatClients", data: metricsData.repeatClients },
             ]}
+            onMetricClick={handleMetricClick}
+            selectedMetric={selectedChartMetric}
           />
-          {/* AOV | LTV (2 wide) */}
           <MetricContainer
             className="col-span-2"
             metrics={[
               { key: "aov", data: metricsData.aov },
               { key: "ltv", data: metricsData.ltv },
             ]}
+            onMetricClick={handleMetricClick}
+            selectedMetric={selectedChartMetric}
           />
 
           {/* ROW 3: 2 + 3 + 3 = 8 */}
-          {/* Profile Visits | Cost/PV (2 wide) */}
           <MetricContainer
             className="col-span-2"
             metrics={[
               { key: "profileVisits", data: metricsData.profileVisits },
               { key: "costPerPV", data: metricsData.costPerPV },
             ]}
+            onMetricClick={handleMetricClick}
+            selectedMetric={selectedChartMetric}
           />
-          {/* Followers | PV→F % | Cost/F (3 wide) */}
           <MetricContainer
             className="col-span-3"
             metrics={[
@@ -195,8 +206,9 @@ export function Dashboard() {
               { key: "pvToFollower", data: metricsData.pvToFollower },
               { key: "costPerFollower", data: metricsData.costPerFollower },
             ]}
+            onMetricClick={handleMetricClick}
+            selectedMetric={selectedChartMetric}
           />
-          {/* Outreach | F→O % | Cost/O (3 wide) */}
           <MetricContainer
             className="col-span-3"
             metrics={[
@@ -204,10 +216,11 @@ export function Dashboard() {
               { key: "followerToOutreach", data: metricsData.followerToOutreach },
               { key: "costPerOutreach", data: metricsData.costPerOutreach },
             ]}
+            onMetricClick={handleMetricClick}
+            selectedMetric={selectedChartMetric}
           />
 
           {/* ROW 4: 4 + chart (4 wide, 3 rows tall) */}
-          {/* Responses | O→R % | F→R % | Cost/R (4 wide) */}
           <MetricContainer
             className="col-span-4"
             metrics={[
@@ -216,16 +229,16 @@ export function Dashboard() {
               { key: "followerToResponse", data: metricsData.followerToResponse },
               { key: "costPerResponse", data: metricsData.costPerResponse },
             ]}
+            onMetricClick={handleMetricClick}
+            selectedMetric={selectedChartMetric}
           />
-          {/* Chart spans 4 columns and 3 rows */}
           <ComparisonChart
             data={comparisonData}
-            metricKey="revenue"
-            className="col-span-4 row-span-3 min-h-[280px]"
+            metricKey={selectedChartMetric}
+            className="col-span-4 row-span-3"
           />
 
           {/* ROW 5: 4 (chart continues) */}
-          {/* Calls | O→C % | R→C % | Cost/C (4 wide) */}
           <MetricContainer
             className="col-span-4"
             metrics={[
@@ -234,10 +247,11 @@ export function Dashboard() {
               { key: "responseToCall", data: metricsData.responseToCall },
               { key: "costPerCall", data: metricsData.costPerCall },
             ]}
+            onMetricClick={handleMetricClick}
+            selectedMetric={selectedChartMetric}
           />
 
           {/* ROW 6: 4 (chart continues) */}
-          {/* Sales | F→S % | R→S % | CAC (4 wide) */}
           <MetricContainer
             className="col-span-4"
             metrics={[
@@ -246,6 +260,8 @@ export function Dashboard() {
               { key: "responseToSale", data: metricsData.responseToSale },
               { key: "cac", data: metricsData.cac },
             ]}
+            onMetricClick={handleMetricClick}
+            selectedMetric={selectedChartMetric}
           />
         </div>
       ) : (

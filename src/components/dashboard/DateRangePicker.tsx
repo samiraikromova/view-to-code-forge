@@ -30,7 +30,7 @@ export function DateRangePicker({
   const [showCustom, setShowCustom] = useState(false);
   const [tempRange, setTempRange] = useState<DateRange | undefined>(dateRange);
 
-  const currentPreset = timePresets.find((p) => p.value === selectedPreset) || timePresets[4]; // Default to Last 30 Days
+  const currentPreset = timePresets.find((p) => p.value === selectedPreset) || timePresets[4];
 
   const handlePresetClick = (preset: TimePreset) => {
     if (preset.value === "custom") {
@@ -77,16 +77,20 @@ export function DateRangePicker({
           <ChevronDown className="w-4 h-4 text-muted-foreground" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="end">
+      <PopoverContent 
+        className="w-auto p-0 bg-popover border-border z-50" 
+        align="end"
+        sideOffset={4}
+      >
         <div className="flex">
-          {/* Preset list */}
-          <div className="p-2 space-y-0.5 min-w-[140px]">
+          {/* Preset list - compact */}
+          <div className="py-1 min-w-[120px]">
             {timePresets.map((preset) => (
               <button
                 key={preset.value}
                 onClick={() => handlePresetClick(preset)}
                 className={cn(
-                  "w-full px-3 py-1.5 text-sm text-left rounded-md transition-colors",
+                  "w-full px-3 py-1 text-sm text-left transition-colors",
                   selectedPreset === preset.value
                     ? "bg-primary text-primary-foreground"
                     : "text-foreground hover:bg-muted"
@@ -97,18 +101,18 @@ export function DateRangePicker({
             ))}
           </div>
 
-          {/* Custom date picker - only shown when Custom is clicked */}
+          {/* Custom date picker - compact calendars */}
           {showCustom && (
-            <div className="border-l border-border p-3">
-              <div className="text-xs text-muted-foreground mb-2">Custom Range</div>
-              <div className="flex gap-2">
+            <div className="border-l border-border p-2">
+              <div className="text-xs text-muted-foreground mb-1">Custom Range</div>
+              <div className="flex gap-1">
                 <Calendar
                   mode="single"
                   selected={tempRange?.from}
                   onSelect={(date) =>
                     date && setTempRange((prev) => ({ ...prev, from: date, to: prev?.to || date }))
                   }
-                  className="p-3 pointer-events-auto"
+                  className="p-1 pointer-events-auto text-xs [&_td]:p-0 [&_th]:p-0 [&_button]:h-7 [&_button]:w-7 [&_button]:text-xs"
                 />
                 <Calendar
                   mode="single"
@@ -116,14 +120,14 @@ export function DateRangePicker({
                   onSelect={(date) =>
                     date && setTempRange((prev) => ({ ...prev, from: prev?.from || date, to: date }))
                   }
-                  className="p-3 pointer-events-auto"
+                  className="p-1 pointer-events-auto text-xs [&_td]:p-0 [&_th]:p-0 [&_button]:h-7 [&_button]:w-7 [&_button]:text-xs"
                 />
               </div>
-              <div className="flex justify-end gap-2 mt-3">
-                <Button variant="outline" size="sm" onClick={handleCancel}>
+              <div className="flex justify-end gap-1 mt-2">
+                <Button variant="outline" size="sm" className="h-7 text-xs px-2" onClick={handleCancel}>
                   Cancel
                 </Button>
-                <Button size="sm" onClick={handleApply}>
+                <Button size="sm" className="h-7 text-xs px-2" onClick={handleApply}>
                   Apply
                 </Button>
               </div>
