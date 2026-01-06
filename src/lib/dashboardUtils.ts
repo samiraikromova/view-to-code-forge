@@ -180,10 +180,11 @@ export const metricDefinitions: Record<MetricKey, MetricDefinition> = {
   },
   pvToFollower: {
     key: "pvToFollower",
-    label: "PV to Follower",
+    label: "Profile Visit to Follower Rate",
     shortLabel: "PV→F %",
     format: "percent",
     icon: Percent,
+    description: "The percentage of profile visitors who become followers. Higher means your profile is compelling.",
   },
   costPerFollower: {
     key: "costPerFollower",
@@ -194,17 +195,19 @@ export const metricDefinitions: Record<MetricKey, MetricDefinition> = {
   },
   outreachToResponse: {
     key: "outreachToResponse",
-    label: "Outreach to Response",
+    label: "Outreach to Response Rate",
     shortLabel: "O→R %",
     format: "percent",
     icon: Percent,
+    description: "The percentage of outreach messages that get a response. Higher means your messaging resonates.",
   },
   followerToResponse: {
     key: "followerToResponse",
-    label: "Follower to Response",
+    label: "Follower to Response Rate",
     shortLabel: "F→R %",
     format: "percent",
     icon: Percent,
+    description: "The percentage of followers who respond to your outreach. Measures engagement quality.",
   },
   costPerResponse: {
     key: "costPerResponse",
@@ -215,17 +218,19 @@ export const metricDefinitions: Record<MetricKey, MetricDefinition> = {
   },
   outreachToCall: {
     key: "outreachToCall",
-    label: "Outreach to Call",
+    label: "Outreach to Call Rate",
     shortLabel: "O→C %",
     format: "percent",
     icon: Percent,
+    description: "The percentage of outreach that converts to calls. Higher means effective qualification.",
   },
   responseToCall: {
     key: "responseToCall",
-    label: "Response to Call",
+    label: "Response to Call Rate",
     shortLabel: "R→C %",
     format: "percent",
     icon: Percent,
+    description: "The percentage of responses that book calls. Higher means strong follow-up process.",
   },
   costPerCall: {
     key: "costPerCall",
@@ -257,17 +262,19 @@ export const metricDefinitions: Record<MetricKey, MetricDefinition> = {
   },
   followerToSale: {
     key: "followerToSale",
-    label: "Follower to Sale",
+    label: "Follower to Sale Rate",
     shortLabel: "F→S %",
     format: "percent",
     icon: Percent,
+    description: "The percentage of followers who become buyers. Measures overall funnel efficiency.",
   },
   responseToSale: {
     key: "responseToSale",
-    label: "Response to Sale",
+    label: "Response to Sale Rate",
     shortLabel: "R→S %",
     format: "percent",
     icon: Percent,
+    description: "The percentage of responses that convert to sales. Higher means strong closing ability.",
   },
   cac: {
     key: "cac",
@@ -278,10 +285,11 @@ export const metricDefinitions: Record<MetricKey, MetricDefinition> = {
   },
   followerToOutreach: {
     key: "followerToOutreach",
-    label: "Follower to Outreach",
+    label: "Follower to Outreach Rate",
     shortLabel: "F→O %",
     format: "percent",
     icon: Percent,
+    description: "The percentage of followers you actively reach out to. Higher means proactive prospecting.",
   },
   costPerOutreach: {
     key: "costPerOutreach",

@@ -103,16 +103,16 @@ export function DateRangePicker({
 
           {/* Custom date picker - compact calendars */}
           {showCustom && (
-            <div className="border-l border-border p-2">
-              <div className="text-xs text-muted-foreground mb-1">Custom Range</div>
-              <div className="flex gap-1">
+            <div className="border-l border-border p-1.5">
+              <div className="text-[10px] text-muted-foreground mb-1">Custom Range</div>
+              <div className="flex gap-0.5">
                 <Calendar
                   mode="single"
                   selected={tempRange?.from}
                   onSelect={(date) =>
                     date && setTempRange((prev) => ({ ...prev, from: date, to: prev?.to || date }))
                   }
-                  className="p-1 pointer-events-auto text-xs [&_td]:p-0 [&_th]:p-0 [&_button]:h-7 [&_button]:w-7 [&_button]:text-xs"
+                  className="p-0.5 pointer-events-auto scale-[0.85] origin-top-left [&_td]:p-0 [&_th]:p-0 [&_button]:h-6 [&_button]:w-6 [&_button]:text-[10px] [&_.rdp-caption]:text-xs [&_.rdp-head_button]:text-[10px]"
                 />
                 <Calendar
                   mode="single"
@@ -120,14 +120,14 @@ export function DateRangePicker({
                   onSelect={(date) =>
                     date && setTempRange((prev) => ({ ...prev, from: prev?.from || date, to: date }))
                   }
-                  className="p-1 pointer-events-auto text-xs [&_td]:p-0 [&_th]:p-0 [&_button]:h-7 [&_button]:w-7 [&_button]:text-xs"
+                  className="p-0.5 pointer-events-auto scale-[0.85] origin-top-left [&_td]:p-0 [&_th]:p-0 [&_button]:h-6 [&_button]:w-6 [&_button]:text-[10px] [&_.rdp-caption]:text-xs [&_.rdp-head_button]:text-[10px]"
                 />
               </div>
-              <div className="flex justify-end gap-1 mt-2">
-                <Button variant="outline" size="sm" className="h-7 text-xs px-2" onClick={handleCancel}>
+              <div className="flex justify-end gap-1 mt-1">
+                <Button variant="outline" size="sm" className="h-6 text-[10px] px-2" onClick={handleCancel}>
                   Cancel
                 </Button>
-                <Button size="sm" className="h-7 text-xs px-2" onClick={handleApply}>
+                <Button size="sm" className="h-6 text-[10px] px-2" onClick={handleApply}>
                   Apply
                 </Button>
               </div>
