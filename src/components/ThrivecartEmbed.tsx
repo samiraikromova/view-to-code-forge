@@ -97,7 +97,7 @@ export function ThrivecartLink({ productId, children, className }: ThrivecartLin
       data-thrivecart-account={THRIVECART_ACCOUNT}
       data-thrivecart-tpl="v2"
       data-thrivecart-product={productId}
-      className={cn("thrivecart-button cursor-pointer", className)}
+      className={cn("thrivecart-button thrivecart-button-styled thrivecart-button_style-rounded thrivecart-button-custom cursor-pointer", className)}
     >
       {children}
     </a>
@@ -124,7 +124,7 @@ export function ThrivecartButton({
   size,
 }: ThrivecartButtonProps) {
   const buttonClasses = cn(
-    "thrivecart-button inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer",
+    "thrivecart-button thrivecart-button-styled thrivecart-button_style-rounded thrivecart-button-custom inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer",
     variant === "default" && "bg-primary text-primary-foreground shadow hover:bg-primary/90",
     variant === "outline" && "border border-input bg-background shadow-sm hover:bg-accent hover:text-accent-foreground",
     variant === "ghost" && "hover:bg-accent hover:text-accent-foreground",
