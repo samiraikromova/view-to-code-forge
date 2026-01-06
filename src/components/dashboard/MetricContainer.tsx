@@ -1,4 +1,4 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, CSSProperties } from "react";
 import { cn } from "@/lib/utils";
 import { formatMetricValue, metricDefinitions } from "@/lib/dashboardUtils";
 import { TrendIndicator } from "./TrendIndicator";
@@ -11,6 +11,7 @@ interface MetricContainerProps {
     data: MetricValue;
   }>;
   className?: string;
+  style?: CSSProperties;
   onMetricClick?: (metricKey: MetricKey) => void;
   selectedMetric?: MetricKey;
 }
@@ -18,6 +19,7 @@ interface MetricContainerProps {
 export function MetricContainer({ 
   metrics, 
   className, 
+  style,
   onMetricClick,
   selectedMetric 
 }: MetricContainerProps) {
@@ -37,6 +39,7 @@ export function MetricContainer({
   return (
     <div
       ref={containerRef}
+      style={style}
       className={cn(
         "rounded-xl p-3 transition-all duration-300 hover:scale-[1.01]",
         "bg-surface/60 border border-border/40",
