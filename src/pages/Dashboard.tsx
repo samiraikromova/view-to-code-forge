@@ -19,26 +19,35 @@ import type { ViewType, Goal, TimePreset, MetricKey } from "@/types/dashboard";
 
 interface DashboardProps {
   onAskAI?: (csvData: string) => void;
+  currentView: ViewType;
+  onViewChange: (view: ViewType) => void;
+  isGoalBuilderOpen: boolean;
+  onGoalBuilderToggle: (open: boolean) => void;
+  selectedPreset: string;
+  onPresetChange: (preset: { label: string; value: string }) => void;
+  isLoading: boolean;
+  onRefresh: () => void;
 }
 
-export function Dashboard({ onAskAI }: DashboardProps = {}) {
+export function Dashboard({ 
+  onAskAI,
+  currentView,
+  onViewChange,
+  isGoalBuilderOpen,
+  onGoalBuilderToggle,
+  selectedPreset,
+  onPresetChange,
+  isLoading,
+  onRefresh,
+}: DashboardProps) {
   const navigate = useNavigate();
-  const [currentView, setCurrentView] = useState<ViewType>("metrics");
-  const [isGoalBuilderOpen, setIsGoalBuilderOpen] = useState(false);
   const [goals, setGoals] = useState<Goal[]>(getMockGoals());
-  const [selectedPreset, setSelectedPreset] = useState("last30days");
-  const [isLoading, setIsLoading] = useState(false);
   const [selectedChartMetric, setSelectedChartMetric] = useState<MetricKey>("revenue");
 
   // Mock data
   const metricsData = getMockMetricsData();
   const comparisonData = getMockComparisonData(selectedChartMetric);
   const leaderboardUsers = getMockLeaderboardUsers();
-
-  const handleRefresh = useCallback(() => {
-    setIsLoading(true);
-    setTimeout(() => setIsLoading(false), 1000);
-  }, []);
 
   const handleCreateGoal = useCallback(
     (newGoal: Omit<Goal, "id" | "currentValue" | "previousValue">) => {
@@ -58,10 +67,6 @@ export function Dashboard({ onAskAI }: DashboardProps = {}) {
 
   const handleRemoveGoal = useCallback((id: string) => {
     setGoals((prev) => prev.filter((g) => g.id !== id));
-  }, []);
-
-  const handlePresetChange = useCallback((preset: TimePreset) => {
-    setSelectedPreset(preset.value);
   }, []);
 
   const handleMetricClick = useCallback((metricKey: MetricKey) => {
@@ -89,51 +94,10 @@ export function Dashboard({ onAskAI }: DashboardProps = {}) {
 
   return (
     <div className="flex-1 flex flex-col min-h-0 p-6 overflow-auto">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-        <ViewSelector currentView={currentView} onViewChange={setCurrentView} />
-
-        <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => setIsGoalBuilderOpen(!isGoalBuilderOpen)}
-            className="gap-1.5 bg-surface/60 border-border/50"
-          >
-            <Plus className="w-4 h-4" />
-            Add Goal
-          </Button>
-
-          <Button
-            variant="outline"
-            size="sm"
-            className="gap-1.5 bg-surface/60 border-border/50"
-            onClick={handleAskAI}
-          >
-            <Sparkles className="w-4 h-4" />
-            Ask AI
-          </Button>
-
-          <DateRangePicker
-            selectedPreset={selectedPreset}
-            onPresetChange={handlePresetChange}
-          />
-
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleRefresh}
-            className={isLoading ? "animate-spin" : ""}
-          >
-            <RefreshCw className="w-4 h-4" />
-          </Button>
-        </div>
-      </div>
-
       {/* Goal Builder */}
       <GoalBuilder
         isOpen={isGoalBuilderOpen}
-        onClose={() => setIsGoalBuilderOpen(false)}
+        onClose={() => onGoalBuilderToggle(false)}
         onCreateGoal={handleCreateGoal}
         className="mb-6"
       />
