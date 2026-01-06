@@ -1,10 +1,30 @@
+import { useEffect } from "react";
 import { cn } from "@/lib/utils";
 
-// ThriveCart account name - MUST match the account in the data attributes
+// ThriveCart account name
 const THRIVECART_ACCOUNT = "leveraged-creator";
 
-// Component no longer needed since script is in index.html, but kept for compatibility
+// Component that dynamically injects the ThriveCart script
 export default function ThrivecartEmbed() {
+  useEffect(() => {
+    // Check if script already exists
+    const existingScript = document.querySelector('script[src*="thrivecart.js"]');
+    if (existingScript) return;
+
+    // Dynamically inject Thrivecart script on client only
+    const script = document.createElement("script");
+    script.src = "https://tinder.thrivecart.com/embed/v1/thrivecart.js";
+    script.async = true;
+    document.body.appendChild(script);
+
+    return () => {
+      // Only remove if we added it
+      if (script.parentNode) {
+        document.body.removeChild(script);
+      }
+    };
+  }, []);
+
   return null;
 }
 
@@ -61,13 +81,13 @@ export const THRIVECART_PRODUCTS = {
     price: 100,
     type: "topup",
   },
-}
+};
 
 // ThriveCart Link component - pure anchor for popup trigger
 interface ThrivecartLinkProps {
-  productId: number
-  children: React.ReactNode
-  className?: string
+  productId: number;
+  children: React.ReactNode;
+  className?: string;
 }
 
 export function ThrivecartLink({ productId, children, className }: ThrivecartLinkProps) {
@@ -81,22 +101,28 @@ export function ThrivecartLink({ productId, children, className }: ThrivecartLin
     >
       {children}
     </a>
-  )
+  );
 }
 
 // Styled button using ThriveCart popup
 // IMPORTANT: This must be a pure <a> tag with NO onClick handlers
 // The ThriveCart script automatically binds to elements with data-thrivecart-* attributes
 interface ThrivecartButtonProps {
-  productId: number
-  children: React.ReactNode
-  className?: string
-  variant?: "default" | "outline" | "ghost"
-  size?: "sm" | "lg"
-  userEmail?: string
+  productId: number;
+  children: React.ReactNode;
+  className?: string;
+  variant?: "default" | "outline" | "ghost";
+  size?: "sm" | "lg";
+  userEmail?: string;
 }
 
-export function ThrivecartButton({ productId, children, className, variant = "default", size }: ThrivecartButtonProps) {
+export function ThrivecartButton({
+  productId,
+  children,
+  className,
+  variant = "default",
+  size,
+}: ThrivecartButtonProps) {
   const buttonClasses = cn(
     "thrivecart-button inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring cursor-pointer",
     variant === "default" && "bg-primary text-primary-foreground shadow hover:bg-primary/90",
