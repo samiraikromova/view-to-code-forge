@@ -3,6 +3,7 @@ export interface CourseVideo {
   title: string;
   description: string | null;
   vdocipher_id: string | null;
+  fireflies_embed_url: string | null;
   category: 'course' | 'call_recording';
   module: string;
   duration: string | null;

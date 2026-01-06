@@ -162,6 +162,7 @@ const Main = () => {
         completed: progressMap.get(video.id) || false,
         description: video.description || "",
         vdocipherId: video.vdocipher_id || undefined,
+        firefliesEmbedUrl: video.fireflies_embed_url || undefined,
         transcriptUrl: video.transcript_url || undefined,
         overview: video.overview || undefined,
         keywords: video.keywords || undefined,

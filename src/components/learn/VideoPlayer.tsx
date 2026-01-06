@@ -25,9 +25,18 @@ export const VideoPlayer = ({ lesson, contentType, onAskAI, onVideoComplete }: V
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const hasMarkedComplete = useRef(false);
 
-  // Fetch OTP when lesson changes
+  // Fetch OTP when lesson changes (only for VdoCipher videos)
   useEffect(() => {
     hasMarkedComplete.current = false; // Reset on lesson change
+    
+    // If using Fireflies embed, skip VdoCipher OTP fetch
+    if (lesson.firefliesEmbedUrl) {
+      setVideoLoading(false);
+      setVideoError(null);
+      setVideoOtp(null);
+      setPlaybackInfo(null);
+      return;
+    }
     
     const fetchOtp = async () => {
       if (!lesson.vdocipherId) return;
@@ -63,7 +72,7 @@ export const VideoPlayer = ({ lesson, contentType, onAskAI, onVideoComplete }: V
     };
     
     fetchOtp();
-  }, [lesson.vdocipherId, lesson.id]);
+  }, [lesson.vdocipherId, lesson.firefliesEmbedUrl, lesson.id]);
 
   // Listen for VdoCipher video end event via postMessage
   useEffect(() => {
@@ -146,7 +155,16 @@ export const VideoPlayer = ({ lesson, contentType, onAskAI, onVideoComplete }: V
     <div className="space-y-6">
       {/* Video Container */}
       <div className="relative w-full aspect-video bg-surface rounded-2xl overflow-hidden border border-border">
-        {lesson.vdocipherId && videoOtp && playbackInfo ? (
+        {/* Fireflies embed for call recordings */}
+        {lesson.firefliesEmbedUrl ? (
+          <iframe
+            src={lesson.firefliesEmbedUrl}
+            className="w-full h-full"
+            frameBorder="0"
+            allow="autoplay; fullscreen"
+            allowFullScreen
+          />
+        ) : lesson.vdocipherId && videoOtp && playbackInfo ? (
           <iframe
             ref={iframeRef}
             src={`https://player.vdocipher.com/v2/?otp=${videoOtp}&playbackInfo=${playbackInfo}`}
