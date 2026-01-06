@@ -450,7 +450,7 @@ export function ChatInterface({
       const effectiveProjectSlug = effectiveProject?.slug || DEFAULT_PROJECT_SLUG;
 
       if (isImageGeneration && imageSettings) {
-        // Handle image generation
+        // Handle image generation - API handles saving to DB
         const imageResult = await generateImageViaAPI({
           message: content,
           userId: user.id,
@@ -467,17 +467,38 @@ export function ChatInterface({
           throw new Error(imageResult.error);
         }
 
-        // Build response with image URLs
+        // Update thread ID if created by API
+        if (imageResult.threadId && !activeThreadId) {
+          activeThreadId = imageResult.threadId;
+          setCurrentThreadId(activeThreadId);
+        }
+
+        // Build response with image URLs - API already saved to DB
         if (imageResult.imageUrls && imageResult.imageUrls.length > 0) {
           aiReply = imageResult.imageUrls.join('\n');
-        } else if (imageResult.isTextResponse && imageResult.reply) {
-          aiReply = imageResult.reply;
+        } else if (imageResult.isTextResponse && imageResult.message) {
+          aiReply = imageResult.message;
         } else {
           aiReply = 'Image generation completed but no images were returned.';
         }
 
-        // Calculate image cost
-        cost = calculateImageCost(imageSettings.quality, imageSettings.numImages);
+        // Cost already deducted by API - just update UI
+        cost = imageResult.cost || 0;
+        refreshProfile();
+
+        // Add assistant message to UI directly (already saved to DB by API)
+        const aiResponse: Message = {
+          id: `ai-${Date.now()}`,
+          role: "assistant",
+          content: aiReply,
+          timestamp: new Date().toLocaleTimeString("en-US", {
+            hour: "numeric",
+            minute: "2-digit"
+          })
+        };
+        setMessages(prev => [...prev, aiResponse]);
+        setIsStreaming(false);
+        return; // Exit early - don't duplicate DB saves
       } else {
         // Handle regular chat
         const n8nResult = await sendChatMessage({
