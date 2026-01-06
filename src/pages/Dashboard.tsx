@@ -1,44 +1,34 @@
 import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Sparkles, RefreshCw, UserIcon, CreditCard, LogOut, TrendingUp, Settings } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { ViewSelector } from "@/components/dashboard/ViewSelector";
 import { MetricContainer } from "@/components/dashboard/MetricContainer";
 import { GoalCard } from "@/components/dashboard/GoalCard";
 import { GoalBuilder } from "@/components/dashboard/GoalBuilder";
 import { ComparisonChart } from "@/components/dashboard/ComparisonChart";
 import { LeaderboardTable } from "@/components/dashboard/LeaderboardTable";
-import { DateRangePicker } from "@/components/dashboard/DateRangePicker";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Progress } from "@/components/ui/progress";
-import { useAuth } from "@/hooks/useAuth";
 import {
   getMockMetricsData,
   getMockComparisonData,
   getMockLeaderboardUsers,
   getMockGoals,
 } from "@/lib/dashboardUtils";
-import type { ViewType, Goal, TimePreset, MetricKey } from "@/types/dashboard";
+import type { ViewType, Goal, MetricKey } from "@/types/dashboard";
 
 interface DashboardProps {
   onAskAI?: (csvData: string) => void;
+  currentView: ViewType;
+  isGoalBuilderOpen: boolean;
+  onGoalBuilderClose: () => void;
 }
 
 export function Dashboard({ 
   onAskAI,
+  currentView,
+  isGoalBuilderOpen,
+  onGoalBuilderClose,
 }: DashboardProps) {
   const navigate = useNavigate();
-  const { profile, signOut } = useAuth();
-  const [currentView, setCurrentView] = useState<ViewType>("metrics");
-  const [isGoalBuilderOpen, setIsGoalBuilderOpen] = useState(false);
-  const [selectedPreset, setSelectedPreset] = useState("last30days");
-  const [isLoading, setIsLoading] = useState(false);
   const [goals, setGoals] = useState<Goal[]>(getMockGoals());
   const [selectedChartMetric, setSelectedChartMetric] = useState<MetricKey>("revenue");
-
-  const userName = profile?.name || profile?.email?.split("@")[0] || "User";
-  const userInitial = userName.charAt(0).toUpperCase();
-  const userCredits = profile?.credits ?? 0;
 
   // Mock data
   const metricsData = getMockMetricsData();
@@ -88,115 +78,23 @@ export function Dashboard({
     }
   }, [metricsData, onAskAI, navigate]);
 
-  const handleRefresh = useCallback(() => {
-    setIsLoading(true);
-    setTimeout(() => setIsLoading(false), 1000);
-  }, []);
-
-  const handlePresetChange = useCallback((preset: TimePreset) => {
-    setSelectedPreset(preset.value);
-  }, []);
-
   return (
-    <div className="flex-1 flex flex-col min-h-0 overflow-auto">
-      {/* Header Controls Row */}
-      <div className="flex items-center gap-3 px-6 py-3 border-b border-border/50">
-        {/* Profile */}
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="h-8 w-8 rounded-full bg-primary text-primary-foreground text-sm font-medium hover:ring-2 hover:ring-primary/50 transition-all flex items-center justify-center flex-shrink-0">
-              {userInitial}
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start" className="w-56">
-            {/* Credit Usage Gauge */}
-            <div className="px-3 py-3">
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-xs text-muted-foreground">Credits</span>
-                <span className="text-xs font-medium text-foreground">
-                  {userCredits.toFixed(1)} available
-                </span>
-              </div>
-              <Progress value={Math.min(userCredits, 100)} className="h-2" />
-            </div>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => navigate("/profile")} className="text-muted-foreground">
-              <UserIcon className="mr-2 h-4 w-4" />
-              Profile
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate("/analytics")} className="text-muted-foreground">
-              <TrendingUp className="mr-2 h-4 w-4" />
-              Analytics
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate("/settings")} className="text-muted-foreground">
-              <Settings className="mr-2 h-4 w-4" />
-              Settings
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => navigate("/settings")} className="text-muted-foreground">
-              <Sparkles className="mr-2 h-4 w-4" />
-              Upgrade to Pro
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate("/pricing/top-up")} className="text-muted-foreground">
-              <CreditCard className="mr-2 h-4 w-4" />
-              Top up credits
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => signOut()} className="text-destructive focus:text-destructive">
-              <LogOut className="mr-2 h-4 w-4" />
-              Log out
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+    <div className="flex-1 flex flex-col min-h-0 p-6 overflow-auto">
+      {/* Hidden button for Ask AI trigger from header */}
+      <button 
+        data-dashboard-ask-ai 
+        onClick={handleAskAI} 
+        className="hidden" 
+        aria-hidden="true"
+      />
 
-        {/* View Selector */}
-        <ViewSelector currentView={currentView} onViewChange={setCurrentView} />
-
-        {/* Dashboard Controls */}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => setIsGoalBuilderOpen(!isGoalBuilderOpen)}
-          className="gap-1.5"
-        >
-          <Plus className="w-4 h-4" />
-          Add Goal
-        </Button>
-
-        <Button
-          variant="outline"
-          size="sm"
-          className="gap-1.5"
-          onClick={handleAskAI}
-        >
-          <Sparkles className="w-4 h-4" />
-          Ask AI
-        </Button>
-
-        <DateRangePicker
-          selectedPreset={selectedPreset}
-          onPresetChange={handlePresetChange}
-        />
-
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={handleRefresh}
-          className={isLoading ? "animate-spin" : ""}
-        >
-          <RefreshCw className="w-4 h-4" />
-        </Button>
-      </div>
-
-      {/* Content */}
-      <div className="flex-1 flex flex-col min-h-0 p-6 overflow-auto">
-        {/* Goal Builder */}
-        <GoalBuilder
-          isOpen={isGoalBuilderOpen}
-          onClose={() => setIsGoalBuilderOpen(false)}
-          onCreateGoal={handleCreateGoal}
-          className="mb-6"
-        />
+      {/* Goal Builder */}
+      <GoalBuilder
+        isOpen={isGoalBuilderOpen}
+        onClose={onGoalBuilderClose}
+        onCreateGoal={handleCreateGoal}
+        className="mb-6"
+      />
 
       {/* Active Goals - Only show in metrics view */}
       {currentView === "metrics" && goals.length > 0 && (
@@ -353,7 +251,6 @@ export function Dashboard({
       ) : (
         <LeaderboardTable users={leaderboardUsers} />
       )}
-      </div>
     </div>
   );
 }
