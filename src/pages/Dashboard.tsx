@@ -122,129 +122,119 @@ export function Dashboard() {
       {/* Main Content */}
       {currentView === "metrics" ? (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* LEFT COLUMN */}
-          <div className="flex flex-col gap-4">
-            {/* COST | REFUNDS */}
-            <MetricContainer
-              metrics={[
-                { key: "adSpend", data: metricsData.adSpend },
-                { key: "refunds", data: metricsData.refunds },
-              ]}
-            />
-            
-            {/* REVENUE | INITIAL | RECURRING */}
-            <MetricContainer
-              metrics={[
-                { key: "revenue", data: metricsData.revenue },
-                { key: "initialRevenue", data: metricsData.initialRevenue },
-                { key: "recurringRevenue", data: metricsData.recurringRevenue },
-              ]}
-            />
-            
-            {/* PV | COST/PV */}
-            <MetricContainer
-              metrics={[
-                { key: "profileVisits", data: metricsData.profileVisits },
-                { key: "costPerPV", data: metricsData.costPerPV },
-              ]}
-            />
-            
-            {/* RESPONSES | O→R % | F→R % | COST/R */}
-            <MetricContainer
-              metrics={[
-                { key: "responses", data: metricsData.responses },
-                { key: "outreachToResponse", data: metricsData.outreachToResponse },
-                { key: "followerToResponse", data: metricsData.followerToResponse },
-                { key: "costPerResponse", data: metricsData.costPerResponse },
-              ]}
-            />
-            
-            {/* CALLS | O→C % | R→C % | COST/C */}
-            <MetricContainer
-              metrics={[
-                { key: "calls", data: metricsData.calls },
-                { key: "outreachToCall", data: metricsData.outreachToCall },
-                { key: "responseToCall", data: metricsData.responseToCall },
-                { key: "costPerCall", data: metricsData.costPerCall },
-              ]}
-            />
-            
-            {/* SALES | F→S % | R→S % | CAC */}
-            <MetricContainer
-              metrics={[
-                { key: "sales", data: metricsData.sales },
-                { key: "followerToSale", data: metricsData.followerToSale },
-                { key: "responseToSale", data: metricsData.responseToSale },
-                { key: "cac", data: metricsData.cac },
-              ]}
-            />
-          </div>
+          {/* ROW 1 */}
+          {/* Cost | Refunds */}
+          <MetricContainer
+            metrics={[
+              { key: "adSpend", data: metricsData.adSpend },
+              { key: "refunds", data: metricsData.refunds },
+            ]}
+          />
+          {/* Profit | ROAS | ROI | Margin */}
+          <MetricContainer
+            metrics={[
+              { key: "profit", data: metricsData.profit },
+              { key: "roas", data: metricsData.roas },
+              { key: "roi", data: metricsData.roi },
+              { key: "margin", data: metricsData.margin },
+            ]}
+          />
+          {/* CTR | CPM */}
+          <MetricContainer
+            metrics={[
+              { key: "ctr", data: metricsData.ctr },
+              { key: "cpm", data: metricsData.cpm },
+            ]}
+          />
 
-          {/* MIDDLE COLUMN */}
-          <div className="flex flex-col gap-4">
-            {/* PROFIT | ROAS | ROI | MARGIN */}
-            <MetricContainer
-              metrics={[
-                { key: "profit", data: metricsData.profit },
-                { key: "roas", data: metricsData.roas },
-                { key: "roi", data: metricsData.roi },
-                { key: "margin", data: metricsData.margin },
-              ]}
-            />
-            
-            {/* CLIENTS | NEW | REPEAT */}
-            <MetricContainer
-              metrics={[
-                { key: "clients", data: metricsData.clients },
-                { key: "newClients", data: metricsData.newClients },
-                { key: "repeatClients", data: metricsData.repeatClients },
-              ]}
-            />
-            
-            {/* FOLLOWERS | PV→F % | COST/F */}
-            <MetricContainer
-              metrics={[
-                { key: "followers", data: metricsData.followers },
-                { key: "pvToFollower", data: metricsData.pvToFollower },
-                { key: "costPerFollower", data: metricsData.costPerFollower },
-              ]}
-            />
-            
-            {/* Comparison Chart */}
-            <ComparisonChart
-              data={comparisonData}
-              metricKey="revenue"
-              className="flex-1 min-h-[280px]"
-            />
-          </div>
+          {/* ROW 2 */}
+          {/* Revenue | Initial | Recurring */}
+          <MetricContainer
+            metrics={[
+              { key: "revenue", data: metricsData.revenue },
+              { key: "initialRevenue", data: metricsData.initialRevenue },
+              { key: "recurringRevenue", data: metricsData.recurringRevenue },
+            ]}
+          />
+          {/* Clients | New | Repeat */}
+          <MetricContainer
+            metrics={[
+              { key: "clients", data: metricsData.clients },
+              { key: "newClients", data: metricsData.newClients },
+              { key: "repeatClients", data: metricsData.repeatClients },
+            ]}
+          />
+          {/* AOV | LTV */}
+          <MetricContainer
+            metrics={[
+              { key: "aov", data: metricsData.aov },
+              { key: "ltv", data: metricsData.ltv },
+            ]}
+          />
 
-          {/* RIGHT COLUMN */}
-          <div className="flex flex-col gap-4">
-            {/* CTR | CPM */}
-            <MetricContainer
-              metrics={[
-                { key: "ctr", data: metricsData.ctr },
-                { key: "cpm", data: metricsData.cpm },
-              ]}
-            />
-            
-            {/* AOV | LTV */}
-            <MetricContainer
-              metrics={[
-                { key: "aov", data: metricsData.aov },
-                { key: "ltv", data: metricsData.ltv },
-              ]}
-            />
-            
-            {/* OUTREACH | F→O % | COST/O */}
-            <MetricContainer
-              metrics={[
-                { key: "outreach", data: metricsData.outreach },
-                { key: "followerToOutreach", data: metricsData.followerToOutreach },
-                { key: "costPerOutreach", data: metricsData.costPerOutreach },
-              ]}
-            />
-          </div>
+          {/* ROW 3 */}
+          {/* Profile Visits | Cost/PV */}
+          <MetricContainer
+            metrics={[
+              { key: "profileVisits", data: metricsData.profileVisits },
+              { key: "costPerPV", data: metricsData.costPerPV },
+            ]}
+          />
+          {/* Followers | PV→F % | Cost/F */}
+          <MetricContainer
+            metrics={[
+              { key: "followers", data: metricsData.followers },
+              { key: "pvToFollower", data: metricsData.pvToFollower },
+              { key: "costPerFollower", data: metricsData.costPerFollower },
+            ]}
+          />
+          {/* Outreach | F→O % | Cost/O */}
+          <MetricContainer
+            metrics={[
+              { key: "outreach", data: metricsData.outreach },
+              { key: "followerToOutreach", data: metricsData.followerToOutreach },
+              { key: "costPerOutreach", data: metricsData.costPerOutreach },
+            ]}
+          />
+
+          {/* ROW 4 */}
+          {/* Responses | O→R % | F→R % | Cost/R */}
+          <MetricContainer
+            metrics={[
+              { key: "responses", data: metricsData.responses },
+              { key: "outreachToResponse", data: metricsData.outreachToResponse },
+              { key: "followerToResponse", data: metricsData.followerToResponse },
+              { key: "costPerResponse", data: metricsData.costPerResponse },
+            ]}
+          />
+          {/* Chart spans 2 columns and 3 rows */}
+          <ComparisonChart
+            data={comparisonData}
+            metricKey="revenue"
+            className="lg:col-span-2 lg:row-span-3 min-h-[280px]"
+          />
+
+          {/* ROW 5 */}
+          {/* Calls | O→C % | R→C % | Cost/C */}
+          <MetricContainer
+            metrics={[
+              { key: "calls", data: metricsData.calls },
+              { key: "outreachToCall", data: metricsData.outreachToCall },
+              { key: "responseToCall", data: metricsData.responseToCall },
+              { key: "costPerCall", data: metricsData.costPerCall },
+            ]}
+          />
+
+          {/* ROW 6 */}
+          {/* Sales | O→S % | F→S % | CAC */}
+          <MetricContainer
+            metrics={[
+              { key: "sales", data: metricsData.sales },
+              { key: "followerToSale", data: metricsData.followerToSale },
+              { key: "responseToSale", data: metricsData.responseToSale },
+              { key: "cac", data: metricsData.cac },
+            ]}
+          />
         </div>
       ) : (
         <LeaderboardTable users={leaderboardUsers} />
