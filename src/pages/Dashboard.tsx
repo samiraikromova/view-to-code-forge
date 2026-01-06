@@ -127,7 +127,7 @@ export function Dashboard() {
             {/* COST | REFUNDS */}
             <MetricContainer
               metrics={[
-                { key: "cashCollected", data: metricsData.cashCollected },
+                { key: "adSpend", data: metricsData.adSpend },
                 { key: "refunds", data: metricsData.refunds },
               ]}
             />
