@@ -74,18 +74,19 @@ export const THRIVECART_PRODUCTS = {
     price: 100,
     type: "topup",
   },
-};
+}
 
 // ThriveCart Link component - pure anchor for popup trigger
 interface ThrivecartLinkProps {
-  productId: number;
-  children: React.ReactNode;
-  className?: string;
+  productId: number
+  children: React.ReactNode
+  className?: string
 }
 
 export function ThrivecartLink({ productId, children, className }: ThrivecartLinkProps) {
   return (
     <a
+      href="#"
       data-thrivecart-account={THRIVECART_ACCOUNT}
       data-thrivecart-tpl="v2"
       data-thrivecart-product={productId}
@@ -93,17 +94,17 @@ export function ThrivecartLink({ productId, children, className }: ThrivecartLin
     >
       {children}
     </a>
-  );
+  )
 }
 
 // Styled button using ThriveCart popup
 interface ThrivecartButtonProps {
-  productId: number;
-  children: React.ReactNode;
-  className?: string;
-  variant?: "default" | "outline" | "ghost";
-  size?: "sm" | "lg";
-  userEmail?: string;
+  productId: number
+  children: React.ReactNode
+  className?: string
+  variant?: "default" | "outline" | "ghost"
+  size?: "sm" | "lg"
+  userEmail?: string
 }
 
 export function ThrivecartButton({ productId, children, className, variant = "default", size }: ThrivecartButtonProps) {
@@ -115,11 +116,12 @@ export function ThrivecartButton({ productId, children, className, variant = "de
     size === "sm" && "h-8 rounded-md px-3 text-xs",
     size === "lg" && "h-10 rounded-md px-8",
     !size && "h-9 px-4 py-2",
-    className,
+    className
   );
 
   return (
     <a
+      href="#"
       data-thrivecart-account={THRIVECART_ACCOUNT}
       data-thrivecart-tpl="v2"
       data-thrivecart-product={productId}
@@ -127,5 +129,5 @@ export function ThrivecartButton({ productId, children, className, variant = "de
     >
       {children}
     </a>
-  );
+  )
 }
