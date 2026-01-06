@@ -121,39 +121,18 @@ export function Dashboard() {
 
       {/* Main Content */}
       {currentView === "metrics" ? (
-        <div className="space-y-6">
-          {/* Row 1: Cost/Refunds | Chart | CTR/CPM */}
-          <div className="grid grid-cols-1 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* LEFT COLUMN */}
+          <div className="flex flex-col gap-4">
+            {/* COST | REFUNDS */}
             <MetricContainer
               metrics={[
                 { key: "cashCollected", data: metricsData.cashCollected },
                 { key: "refunds", data: metricsData.refunds },
               ]}
-              className="lg:col-span-1"
             />
-            <ComparisonChart
-              data={comparisonData}
-              metricKey="revenue"
-              className="lg:col-span-4"
-            />
-            <MetricContainer
-              metrics={[
-                { key: "ctr", data: metricsData.ctr },
-                { key: "cpm", data: metricsData.cpm },
-              ]}
-              className="lg:col-span-1"
-            />
-          </div>
-
-          {/* Row 2: Profit/ROAS/ROI | Revenue/Initial/Recurring | Clients */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <MetricContainer
-              metrics={[
-                { key: "profit", data: metricsData.profit },
-                { key: "roas", data: metricsData.roas },
-                { key: "roi", data: metricsData.roi },
-              ]}
-            />
+            
+            {/* REVENUE | INITIAL | RECURRING */}
             <MetricContainer
               metrics={[
                 { key: "revenue", data: metricsData.revenue },
@@ -161,33 +140,108 @@ export function Dashboard() {
                 { key: "recurringRevenue", data: metricsData.recurringRevenue },
               ]}
             />
+            
+            {/* PV | COST/PV */}
             <MetricContainer
               metrics={[
-                { key: "clients", data: metricsData.clients },
-                { key: "aov", data: metricsData.aov },
-                { key: "ltv", data: metricsData.ltv },
+                { key: "profileVisits", data: metricsData.profileVisits },
+                { key: "costPerPV", data: metricsData.costPerPV },
+              ]}
+            />
+            
+            {/* RESPONSES | O→R % | F→R % | COST/R */}
+            <MetricContainer
+              metrics={[
+                { key: "responses", data: metricsData.responses },
+                { key: "outreachToResponse", data: metricsData.outreachToResponse },
+                { key: "followerToResponse", data: metricsData.followerToResponse },
+                { key: "costPerResponse", data: metricsData.costPerResponse },
+              ]}
+            />
+            
+            {/* CALLS | O→C % | R→C % | COST/C */}
+            <MetricContainer
+              metrics={[
+                { key: "calls", data: metricsData.calls },
+                { key: "outreachToCall", data: metricsData.outreachToCall },
+                { key: "responseToCall", data: metricsData.responseToCall },
+                { key: "costPerCall", data: metricsData.costPerCall },
+              ]}
+            />
+            
+            {/* SALES | F→S % | R→S % | CAC */}
+            <MetricContainer
+              metrics={[
+                { key: "sales", data: metricsData.sales },
+                { key: "followerToSale", data: metricsData.followerToSale },
+                { key: "responseToSale", data: metricsData.responseToSale },
+                { key: "cac", data: metricsData.cac },
               ]}
             />
           </div>
 
-          {/* Row 3: Profile Visits | Followers/Conversion | Outreach/Responses */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {/* MIDDLE COLUMN */}
+          <div className="flex flex-col gap-4">
+            {/* PROFIT | ROAS | ROI | MARGIN */}
             <MetricContainer
               metrics={[
-                { key: "profileVisits", data: metricsData.profileVisits },
+                { key: "profit", data: metricsData.profit },
+                { key: "roas", data: metricsData.roas },
+                { key: "roi", data: metricsData.roi },
+                { key: "margin", data: metricsData.margin },
               ]}
             />
+            
+            {/* CLIENTS | NEW | REPEAT */}
+            <MetricContainer
+              metrics={[
+                { key: "clients", data: metricsData.clients },
+                { key: "newClients", data: metricsData.newClients },
+                { key: "repeatClients", data: metricsData.repeatClients },
+              ]}
+            />
+            
+            {/* FOLLOWERS | PV→F % | COST/F */}
             <MetricContainer
               metrics={[
                 { key: "followers", data: metricsData.followers },
-                { key: "conversionRate", data: metricsData.conversionRate },
+                { key: "pvToFollower", data: metricsData.pvToFollower },
+                { key: "costPerFollower", data: metricsData.costPerFollower },
               ]}
             />
+            
+            {/* Comparison Chart */}
+            <ComparisonChart
+              data={comparisonData}
+              metricKey="revenue"
+              className="flex-1 min-h-[280px]"
+            />
+          </div>
+
+          {/* RIGHT COLUMN */}
+          <div className="flex flex-col gap-4">
+            {/* CTR | CPM */}
+            <MetricContainer
+              metrics={[
+                { key: "ctr", data: metricsData.ctr },
+                { key: "cpm", data: metricsData.cpm },
+              ]}
+            />
+            
+            {/* AOV | LTV */}
+            <MetricContainer
+              metrics={[
+                { key: "aov", data: metricsData.aov },
+                { key: "ltv", data: metricsData.ltv },
+              ]}
+            />
+            
+            {/* OUTREACH | F→O % | COST/O */}
             <MetricContainer
               metrics={[
                 { key: "outreach", data: metricsData.outreach },
-                { key: "responses", data: metricsData.responses },
-                { key: "calls", data: metricsData.calls },
+                { key: "followerToOutreach", data: metricsData.followerToOutreach },
+                { key: "costPerOutreach", data: metricsData.costPerOutreach },
               ]}
             />
           </div>

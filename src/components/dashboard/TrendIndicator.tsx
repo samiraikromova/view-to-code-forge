@@ -9,6 +9,7 @@ interface TrendIndicatorProps {
   previous: number;
   className?: string;
   showPercentage?: boolean;
+  size?: "sm" | "md";
 }
 
 export function TrendIndicator({
@@ -17,6 +18,7 @@ export function TrendIndicator({
   previous,
   className,
   showPercentage = true,
+  size = "md",
 }: TrendIndicatorProps) {
   const change = calculateChange(current, previous);
   const isPositive = isTrendPositive(metricKey, change);
@@ -24,18 +26,22 @@ export function TrendIndicator({
 
   if (isNeutral) return null;
 
+  const iconSize = size === "sm" ? "w-2.5 h-2.5" : "w-3 h-3";
+  const textSize = size === "sm" ? "text-[10px]" : "text-xs";
+
   return (
     <div
       className={cn(
-        "flex items-center gap-0.5 text-xs font-medium",
+        "flex items-center gap-0.5 font-medium",
+        textSize,
         isPositive ? "text-green-500" : "text-red-500",
         className
       )}
     >
       {change > 0 ? (
-        <ArrowUpRight className="w-3 h-3" />
+        <ArrowUpRight className={iconSize} />
       ) : (
-        <ArrowDownRight className="w-3 h-3" />
+        <ArrowDownRight className={iconSize} />
       )}
       {showPercentage && <span>{Math.abs(change).toFixed(1)}%</span>}
     </div>

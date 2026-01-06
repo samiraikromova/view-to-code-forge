@@ -21,7 +21,24 @@ export type MetricKey =
   | "recurringRevenue"
   | "aov"
   | "ltv"
-  | "conversionRate";
+  | "conversionRate"
+  | "costPerPV"
+  | "pvToFollower"
+  | "costPerFollower"
+  | "outreachToResponse"
+  | "followerToResponse"
+  | "costPerResponse"
+  | "outreachToCall"
+  | "responseToCall"
+  | "costPerCall"
+  | "newClients"
+  | "repeatClients"
+  | "sales"
+  | "followerToSale"
+  | "responseToSale"
+  | "cac"
+  | "followerToOutreach"
+  | "costPerOutreach";
 
 export interface MetricDefinition {
   key: MetricKey;
