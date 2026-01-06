@@ -121,17 +121,19 @@ export function Dashboard() {
 
       {/* Main Content */}
       {currentView === "metrics" ? (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-          {/* ROW 1 */}
-          {/* Cost | Refunds */}
+        <div className="grid grid-cols-4 lg:grid-cols-8 gap-4">
+          {/* ROW 1: 2 + 4 + 2 = 8 */}
+          {/* Cost | Refunds (2 wide) */}
           <MetricContainer
+            className="col-span-2"
             metrics={[
               { key: "adSpend", data: metricsData.adSpend },
               { key: "refunds", data: metricsData.refunds },
             ]}
           />
-          {/* Profit | ROAS | ROI | Margin */}
+          {/* Profit | ROAS | ROI | Margin (4 wide) */}
           <MetricContainer
+            className="col-span-4"
             metrics={[
               { key: "profit", data: metricsData.profit },
               { key: "roas", data: metricsData.roas },
@@ -139,57 +141,64 @@ export function Dashboard() {
               { key: "margin", data: metricsData.margin },
             ]}
           />
-          {/* CTR | CPM */}
+          {/* CTR | CPM (2 wide) */}
           <MetricContainer
+            className="col-span-2"
             metrics={[
               { key: "ctr", data: metricsData.ctr },
               { key: "cpm", data: metricsData.cpm },
             ]}
           />
 
-          {/* ROW 2 */}
-          {/* Revenue | Initial | Recurring */}
+          {/* ROW 2: 3 + 3 + 2 = 8 */}
+          {/* Revenue | Initial | Recurring (3 wide) */}
           <MetricContainer
+            className="col-span-3"
             metrics={[
               { key: "revenue", data: metricsData.revenue },
               { key: "initialRevenue", data: metricsData.initialRevenue },
               { key: "recurringRevenue", data: metricsData.recurringRevenue },
             ]}
           />
-          {/* Clients | New | Repeat */}
+          {/* Clients | New | Repeat (3 wide) */}
           <MetricContainer
+            className="col-span-3"
             metrics={[
               { key: "clients", data: metricsData.clients },
               { key: "newClients", data: metricsData.newClients },
               { key: "repeatClients", data: metricsData.repeatClients },
             ]}
           />
-          {/* AOV | LTV */}
+          {/* AOV | LTV (2 wide) */}
           <MetricContainer
+            className="col-span-2"
             metrics={[
               { key: "aov", data: metricsData.aov },
               { key: "ltv", data: metricsData.ltv },
             ]}
           />
 
-          {/* ROW 3 */}
-          {/* Profile Visits | Cost/PV */}
+          {/* ROW 3: 2 + 3 + 3 = 8 */}
+          {/* Profile Visits | Cost/PV (2 wide) */}
           <MetricContainer
+            className="col-span-2"
             metrics={[
               { key: "profileVisits", data: metricsData.profileVisits },
               { key: "costPerPV", data: metricsData.costPerPV },
             ]}
           />
-          {/* Followers | PV→F % | Cost/F */}
+          {/* Followers | PV→F % | Cost/F (3 wide) */}
           <MetricContainer
+            className="col-span-3"
             metrics={[
               { key: "followers", data: metricsData.followers },
               { key: "pvToFollower", data: metricsData.pvToFollower },
               { key: "costPerFollower", data: metricsData.costPerFollower },
             ]}
           />
-          {/* Outreach | F→O % | Cost/O */}
+          {/* Outreach | F→O % | Cost/O (3 wide) */}
           <MetricContainer
+            className="col-span-3"
             metrics={[
               { key: "outreach", data: metricsData.outreach },
               { key: "followerToOutreach", data: metricsData.followerToOutreach },
@@ -197,9 +206,10 @@ export function Dashboard() {
             ]}
           />
 
-          {/* ROW 4 */}
-          {/* Responses | O→R % | F→R % | Cost/R */}
+          {/* ROW 4: 4 + chart (4 wide, 3 rows tall) */}
+          {/* Responses | O→R % | F→R % | Cost/R (4 wide) */}
           <MetricContainer
+            className="col-span-4"
             metrics={[
               { key: "responses", data: metricsData.responses },
               { key: "outreachToResponse", data: metricsData.outreachToResponse },
@@ -207,16 +217,17 @@ export function Dashboard() {
               { key: "costPerResponse", data: metricsData.costPerResponse },
             ]}
           />
-          {/* Chart spans 2 columns and 3 rows */}
+          {/* Chart spans 4 columns and 3 rows */}
           <ComparisonChart
             data={comparisonData}
             metricKey="revenue"
-            className="lg:col-span-2 lg:row-span-3 min-h-[280px]"
+            className="col-span-4 row-span-3 min-h-[280px]"
           />
 
-          {/* ROW 5 */}
-          {/* Calls | O→C % | R→C % | Cost/C */}
+          {/* ROW 5: 4 (chart continues) */}
+          {/* Calls | O→C % | R→C % | Cost/C (4 wide) */}
           <MetricContainer
+            className="col-span-4"
             metrics={[
               { key: "calls", data: metricsData.calls },
               { key: "outreachToCall", data: metricsData.outreachToCall },
@@ -225,9 +236,10 @@ export function Dashboard() {
             ]}
           />
 
-          {/* ROW 6 */}
-          {/* Sales | O→S % | F→S % | CAC */}
+          {/* ROW 6: 4 (chart continues) */}
+          {/* Sales | F→S % | R→S % | CAC (4 wide) */}
           <MetricContainer
+            className="col-span-4"
             metrics={[
               { key: "sales", data: metricsData.sales },
               { key: "followerToSale", data: metricsData.followerToSale },
