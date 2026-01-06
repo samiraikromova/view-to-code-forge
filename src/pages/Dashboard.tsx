@@ -79,7 +79,7 @@ export function Dashboard({
   }, [metricsData, onAskAI, navigate]);
 
   return (
-    <div className="flex-1 flex flex-col min-h-0 overflow-auto p-6">
+    <div className="flex-1 flex flex-col min-h-0 overflow-auto p-6 animate-fade-in">
       {/* Goal Builder */}
       <GoalBuilder
         isOpen={isGoalBuilderOpen}
