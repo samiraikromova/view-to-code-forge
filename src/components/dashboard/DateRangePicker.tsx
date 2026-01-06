@@ -1,9 +1,8 @@
-import { useState } from "react";
-import { Calendar as CalendarIcon, ChevronDown } from "lucide-react";
+import React, { useState, useRef, useEffect } from "react";
+import { Calendar as CalendarIcon, ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { timePresets } from "@/lib/dashboardUtils";
 import { Button } from "@/components/ui/button";
-import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
   PopoverContent,
@@ -27,43 +26,194 @@ export function DateRangePicker({
   className,
 }: DateRangePickerProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [showCustom, setShowCustom] = useState(false);
-  const [tempRange, setTempRange] = useState<DateRange | undefined>(dateRange);
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [nextMonth, setNextMonth] = useState(
+    new Date(new Date().setMonth(new Date().getMonth() + 1))
+  );
+  const [selectionStart, setSelectionStart] = useState<Date | null>(
+    dateRange?.from || null
+  );
+  const [selectionEnd, setSelectionEnd] = useState<Date | null>(
+    dateRange?.to || null
+  );
+  const [selectingEnd, setSelectingEnd] = useState(false);
 
-  const currentPreset = timePresets.find((p) => p.value === selectedPreset) || timePresets[4];
+  const currentPreset =
+    timePresets.find((p) => p.value === selectedPreset) || timePresets[4];
 
-  const handlePresetClick = (preset: TimePreset) => {
-    if (preset.value === "custom") {
-      setShowCustom(true);
+  useEffect(() => {
+    setSelectionStart(dateRange?.from || null);
+    setSelectionEnd(dateRange?.to || null);
+    setSelectingEnd(false);
+  }, [dateRange?.from, dateRange?.to]);
+
+  const getDaysInMonth = (date: Date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startingDay = firstDay.getDay();
+
+    const days = [];
+    const prevMonthLastDay = new Date(year, month, 0).getDate();
+    for (let i = startingDay - 1; i >= 0; i--) {
+      days.push({
+        day: prevMonthLastDay - i,
+        isCurrentMonth: false,
+        date: new Date(year, month - 1, prevMonthLastDay - i),
+      });
+    }
+    for (let i = 1; i <= daysInMonth; i++) {
+      days.push({
+        day: i,
+        isCurrentMonth: true,
+        date: new Date(year, month, i),
+      });
+    }
+    const remainingDays = 42 - days.length;
+    for (let i = 1; i <= remainingDays; i++) {
+      days.push({
+        day: i,
+        isCurrentMonth: false,
+        date: new Date(year, month + 1, i),
+      });
+    }
+    return days;
+  };
+
+  const navigateMonth = (direction: number) => {
+    const newCurrent = new Date(currentMonth);
+    newCurrent.setMonth(newCurrent.getMonth() + direction);
+    setCurrentMonth(newCurrent);
+
+    const newNext = new Date(nextMonth);
+    newNext.setMonth(newNext.getMonth() + direction);
+    setNextMonth(newNext);
+  };
+
+  const handleDayClick = (date: Date) => {
+    if (!selectingEnd || !selectionStart) {
+      setSelectionStart(date);
+      setSelectionEnd(null);
+      setSelectingEnd(true);
     } else {
-      onPresetChange(preset);
-      setShowCustom(false);
-      setIsOpen(false);
+      if (date < selectionStart) {
+        setSelectionEnd(selectionStart);
+        setSelectionStart(date);
+      } else {
+        setSelectionEnd(date);
+      }
+      setSelectingEnd(false);
     }
   };
 
   const handleApply = () => {
-    if (tempRange && onDateRangeChange) {
-      onDateRangeChange(tempRange);
+    if (selectionStart && selectionEnd && onDateRangeChange) {
+      onDateRangeChange({ from: selectionStart, to: selectionEnd });
       onPresetChange({ label: "Custom", value: "custom" });
     }
     setIsOpen(false);
-    setShowCustom(false);
   };
 
-  const handleCancel = () => {
-    setShowCustom(false);
-  };
-
-  const handleOpenChange = (open: boolean) => {
-    setIsOpen(open);
-    if (!open) {
-      setShowCustom(false);
+  const handlePresetClick = (preset: TimePreset) => {
+    if (preset.value === "custom") {
+      // Stay open to show calendar
+    } else {
+      onPresetChange(preset);
+      setIsOpen(false);
     }
   };
 
+  const isToday = (date: Date) =>
+    date.toDateString() === new Date().toDateString();
+  const isInRange = (date: Date) =>
+    selectionStart &&
+    selectionEnd &&
+    date >= selectionStart &&
+    date <= selectionEnd;
+  const isRangeStart = (date: Date) =>
+    selectionStart &&
+    date.toDateString() === selectionStart.toDateString();
+  const isRangeEnd = (date: Date) =>
+    selectionEnd && date.toDateString() === selectionEnd.toDateString();
+
+  const renderCalendar = (month: Date, showPrevNav: boolean) => (
+    <div className="w-[240px]">
+      <div className="flex items-center justify-between mb-3">
+        {showPrevNav ? (
+          <button
+            onClick={() => navigateMonth(-1)}
+            className="p-1 rounded hover:bg-muted text-muted-foreground"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+        ) : (
+          <div className="w-6" />
+        )}
+        <span className="text-sm font-semibold text-foreground">
+          {month.toLocaleDateString("en-US", {
+            month: "long",
+            year: "numeric",
+          })}
+        </span>
+        {!showPrevNav ? (
+          <button
+            onClick={() => navigateMonth(1)}
+            className="p-1 rounded hover:bg-muted text-muted-foreground"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        ) : (
+          <div className="w-6" />
+        )}
+      </div>
+      <div className="grid grid-cols-7 text-center">
+        {["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"].map((day, i) => (
+          <div
+            key={i}
+            className="text-[10px] font-medium py-1 text-muted-foreground"
+          >
+            {day}
+          </div>
+        ))}
+        {getDaysInMonth(month).map((dayObj, idx) => {
+          const inRange =
+            isInRange(dayObj.date) &&
+            !isRangeStart(dayObj.date) &&
+            !isRangeEnd(dayObj.date);
+          const isStart = isRangeStart(dayObj.date);
+          const isEnd = isRangeEnd(dayObj.date);
+          const today = isToday(dayObj.date);
+
+          return (
+            <button
+              key={idx}
+              onClick={() => handleDayClick(dayObj.date)}
+              className={cn(
+                "h-8 w-full text-xs transition-colors flex items-center justify-center relative",
+                !dayObj.isCurrentMonth && "text-muted-foreground/40",
+                dayObj.isCurrentMonth && "text-foreground",
+                (isStart || isEnd) && "bg-primary text-primary-foreground",
+                inRange && "bg-primary/25",
+                isStart && "rounded-l-md",
+                isEnd && "rounded-r-md",
+                !isStart && !isEnd && !inRange && "rounded-md"
+              )}
+            >
+              {today && !isStart && !isEnd && (
+                <span className="absolute inset-0 border border-primary rounded-md pointer-events-none" />
+              )}
+              {dayObj.day}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+
   return (
-    <Popover open={isOpen} onOpenChange={handleOpenChange}>
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -77,23 +227,23 @@ export function DateRangePicker({
           <ChevronDown className="w-4 h-4 text-muted-foreground" />
         </Button>
       </PopoverTrigger>
-      <PopoverContent 
-        className="!w-auto p-0 bg-popover border-border z-50" 
+      <PopoverContent
+        className="w-auto p-0 bg-popover border-border z-50"
         align="end"
         sideOffset={4}
       >
-        <div className="flex w-fit">
-          {/* Preset list - compact */}
-          <div className="py-1">
+        <div className="flex">
+          {/* Preset list */}
+          <div className="py-2 border-r border-border flex flex-col">
             {timePresets.map((preset) => (
               <button
                 key={preset.value}
                 onClick={() => handlePresetClick(preset)}
                 className={cn(
-                  "block px-3 py-1.5 text-sm text-left transition-colors whitespace-nowrap",
+                  "text-left px-4 py-2 text-xs font-medium transition-colors whitespace-nowrap",
                   selectedPreset === preset.value
-                    ? "bg-primary text-primary-foreground"
-                    : "text-foreground hover:bg-muted"
+                    ? "text-primary bg-primary/10 border-l-[3px] border-primary"
+                    : "text-muted-foreground border-l-[3px] border-transparent hover:bg-muted/50"
                 )}
               >
                 {preset.label}
@@ -101,35 +251,36 @@ export function DateRangePicker({
             ))}
           </div>
 
-          {/* Custom date picker - compact calendars */}
-          {showCustom && (
-            <div className="border-l border-border p-1.5">
-              <div className="text-[10px] text-muted-foreground mb-1">Custom Range</div>
-              <div className="flex gap-0.5">
-                <Calendar
-                  mode="single"
-                  selected={tempRange?.from}
-                  onSelect={(date) =>
-                    date && setTempRange((prev) => ({ ...prev, from: date, to: prev?.to || date }))
-                  }
-                  className="p-0.5 pointer-events-auto scale-[0.85] origin-top-left [&_td]:p-0 [&_th]:p-0 [&_button]:h-6 [&_button]:w-6 [&_button]:text-[10px] [&_.rdp-caption]:text-xs [&_.rdp-head_button]:text-[10px]"
-                />
-                <Calendar
-                  mode="single"
-                  selected={tempRange?.to}
-                  onSelect={(date) =>
-                    date && setTempRange((prev) => ({ ...prev, from: prev?.from || date, to: date }))
-                  }
-                  className="p-0.5 pointer-events-auto scale-[0.85] origin-top-left [&_td]:p-0 [&_th]:p-0 [&_button]:h-6 [&_button]:w-6 [&_button]:text-[10px] [&_.rdp-caption]:text-xs [&_.rdp-head_button]:text-[10px]"
-                />
+          {/* Custom calendar section */}
+          {selectedPreset === "custom" && (
+            <div className="p-4">
+              <div className="flex gap-6">
+                {renderCalendar(currentMonth, true)}
+                {renderCalendar(nextMonth, false)}
               </div>
-              <div className="flex justify-end gap-1 mt-1">
-                <Button variant="outline" size="sm" className="h-6 text-[10px] px-2" onClick={handleCancel}>
-                  Cancel
-                </Button>
-                <Button size="sm" className="h-6 text-[10px] px-2" onClick={handleApply}>
-                  Apply
-                </Button>
+
+              <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
+                <span className="text-xs text-muted-foreground">
+                  {selectionStart?.toLocaleDateString() || "Select start"} -{" "}
+                  {selectionEnd?.toLocaleDateString() || "Select end"}
+                </span>
+                <div className="flex gap-3">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={handleApply}
+                  >
+                    Apply
+                  </Button>
+                </div>
               </div>
             </div>
           )}
