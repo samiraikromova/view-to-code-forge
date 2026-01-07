@@ -73,7 +73,7 @@ export const LearnInterface = ({
   }
 
   return (
-    <div className="flex-1 flex min-h-0 bg-background">
+    <div className="flex-1 flex min-h-0">
       {/* Lesson List Panel */}
       <LessonListPanel
         module={selectedModule}
@@ -83,7 +83,7 @@ export const LearnInterface = ({
       />
       
       {/* Video Player Area */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto border-l border-border/30">
         {selectedLesson ? (
           <div className="max-w-[1000px] mx-auto px-8 py-8">
             <VideoPlayer 
