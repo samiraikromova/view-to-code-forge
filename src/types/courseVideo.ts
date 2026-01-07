@@ -11,6 +11,7 @@ export interface CourseVideo {
   thumbnail_url: string | null;
   transcript_url: string | null;
   transcript_id: string | null;
+  transcript_text: string | null;
   overview: string | null;
   keywords: string[] | null;
   call_date: string | null;
@@ -18,6 +19,21 @@ export interface CourseVideo {
   conversation_turns: number | null;
   file_size_kb: number | null;
   order_index: number;
+  access_type: 'free' | 'tier_required' | 'purchase_required' | 'unlock_required';
+  required_tier: string | null;
+  product_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface LessonFile {
+  id: string;
+  lesson_id: string;
+  file_name: string;
+  file_type: string;
+  file_size: number | null;
+  storage_path: string;
+  display_order: number;
   created_at: string;
   updated_at: string;
 }

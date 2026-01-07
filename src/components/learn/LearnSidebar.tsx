@@ -29,6 +29,7 @@ export interface Lesson {
   description?: string;
   embedUrl?: string;
   transcript?: string;
+  transcriptText?: string;
   summary?: string;
   transcriptUrl?: string;
   vdocipherId?: string;
@@ -38,6 +39,19 @@ export interface Lesson {
   callDate?: string;
   speakerCount?: number;
   durationFormatted?: string;
+  accessType?: 'free' | 'tier_required' | 'purchase_required' | 'unlock_required';
+  requiredTier?: string;
+  productId?: string;
+  files?: LessonFile[];
+}
+
+export interface LessonFile {
+  id: string;
+  fileName: string;
+  fileType: string;
+  fileSize: number | null;
+  storagePath: string;
+  displayOrder: number;
 }
 
 interface LearnSidebarProps {

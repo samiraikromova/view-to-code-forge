@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { Play, ExternalLink, MessageSquare, Calendar, Clock, Users } from "lucide-react";
-import { Lesson } from "./LearnSidebar";
+import { Play, ExternalLink, MessageSquare, Calendar, Clock, Users, Download, FileText, File } from "lucide-react";
+import { Lesson, LessonFile } from "./LearnSidebar";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Button } from "@/components/ui/button";
@@ -8,7 +8,6 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
-
 interface VideoPlayerProps {
   lesson: Lesson;
   contentType: "recordings" | "materials";
@@ -124,11 +123,44 @@ export const VideoPlayer = ({ lesson, contentType, onAskAI, onVideoComplete }: V
     }
   };
 
-  const handleOpenTranscript = () => {
-    if (lesson.transcriptUrl) {
+  const handleDownloadTranscript = () => {
+    // Try transcriptText first, then transcriptUrl
+    if (lesson.transcriptText) {
+      const blob = new Blob([lesson.transcriptText], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${lesson.title.replace(/[^a-z0-9]/gi, '_')}_transcript.txt`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      toast.success('Transcript downloaded');
+    } else if (lesson.transcriptUrl) {
       window.open(lesson.transcriptUrl, '_blank');
       toast.success('Opening transcript');
+    } else {
+      toast.error('No transcript available');
     }
+  };
+
+  const handleAskAI = () => {
+    if (onAskAI) {
+      onAskAI(lesson.id);
+      toast.success('Opening AI chat with lesson context');
+    }
+  };
+
+  const getFileIcon = (fileType: string) => {
+    if (fileType.includes('pdf')) return <FileText className="h-4 w-4" />;
+    return <File className="h-4 w-4" />;
+  };
+
+  const formatFileSize = (bytes: number | null) => {
+    if (!bytes) return '';
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
   // Parse date from title or callDate
@@ -239,6 +271,64 @@ export const VideoPlayer = ({ lesson, contentType, onAskAI, onVideoComplete }: V
           </div>
         </div>
 
+        {/* Action Buttons - Download Transcript & Ask AI */}
+        {(lesson.transcriptText || lesson.transcriptUrl || onAskAI) && (
+          <div className="flex items-center gap-3">
+            {(lesson.transcriptText || lesson.transcriptUrl) && (
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleDownloadTranscript}
+                className="gap-2"
+              >
+                <Download className="h-4 w-4" />
+                Download Transcript
+              </Button>
+            )}
+            {onAskAI && (lesson.transcriptText || lesson.transcriptUrl) && (
+              <Button 
+                variant="default" 
+                size="sm" 
+                onClick={handleAskAI}
+                className="gap-2"
+              >
+                <MessageSquare className="h-4 w-4" />
+                Ask AI
+              </Button>
+            )}
+          </div>
+        )}
+
+        {/* Downloadable Files */}
+        {lesson.files && lesson.files.length > 0 && (
+          <div className="rounded-xl border border-border bg-surface/50 p-4">
+            <h3 className="text-sm font-semibold text-foreground mb-3">Resources</h3>
+            <div className="space-y-2">
+              {lesson.files.map((file) => (
+                <a
+                  key={file.id}
+                  href={file.storagePath}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-surface transition-colors group"
+                >
+                  <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-accent/10 text-accent">
+                    {getFileIcon(file.fileType)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium text-foreground truncate group-hover:text-accent transition-colors">
+                      {file.fileName}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {formatFileSize(file.fileSize)}
+                    </p>
+                  </div>
+                  <Download className="h-4 w-4 text-muted-foreground group-hover:text-accent transition-colors" />
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Keywords */}
         {lesson.keywords && lesson.keywords.length > 0 && (

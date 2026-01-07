@@ -16,7 +16,8 @@ import {
   MessageSquare,
   Video,
   PanelLeftClose,
-  PanelLeft
+  PanelLeft,
+  BookOpen
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -35,7 +36,8 @@ const navItems = [
   { id: "coupons", label: "Coupons", icon: Ticket, path: "/admin/coupons" },
   { id: "projects", label: "Projects", icon: FolderKanban, path: "/admin/projects" },
   { id: "prompts", label: "System Prompts", icon: MessageSquare, path: "/admin/prompts" },
-  { id: "videos", label: "Videos", icon: Video, path: "/admin/videos" },
+  { id: "lessons", label: "Lessons", icon: BookOpen, path: "/admin/lessons" },
+  { id: "videos", label: "Videos (Legacy)", icon: Video, path: "/admin/videos" },
   { id: "settings", label: "Settings", icon: Settings, path: "/admin/settings" },
 ]
 
