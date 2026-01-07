@@ -168,7 +168,7 @@ export default function AdminVideos() {
           <h1 className="text-2xl font-bold text-foreground">Video Management</h1>
           <Button onClick={() => setShowModal(true)}>
             <Plus className="h-4 w-4 mr-2" />
-            Add New Video
+            Add Lesson
           </Button>
         </div>
 
@@ -313,11 +313,11 @@ export default function AdminVideos() {
           </div>
         )}
 
-        {/* Add Video Modal */}
+        {/* Add Lesson Modal */}
         <Dialog open={showModal} onOpenChange={setShowModal}>
           <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Add New Video</DialogTitle>
+              <DialogTitle>Add New Lesson</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
@@ -423,8 +423,21 @@ export default function AdminVideos() {
                 />
               </div>
 
+              <div>
+                <Label>Lesson Files (optional)</Label>
+                <Input
+                  type="file"
+                  multiple
+                  className="mt-1"
+                  accept=".pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx,.txt,.png,.jpg,.jpeg,.gif"
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  PDFs, documents, images, etc.
+                </p>
+              </div>
+
               <div className="flex gap-3 pt-2">
-                <Button type="submit" className="flex-1">Add Video</Button>
+                <Button type="submit" className="flex-1">Add Lesson</Button>
                 <Button type="button" variant="outline" onClick={() => setShowModal(false)}>Cancel</Button>
               </div>
             </form>
