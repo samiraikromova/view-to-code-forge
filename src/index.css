@@ -56,6 +56,7 @@
     --text-primary: 0 0% 100%;
     --text-secondary: 290 5% 65%;
     --text-muted: 290 5% 45%;
+    --text-accent: 290 30% 44%;
 
     /* Sidebar colors */
     --sidebar-background: 300 8% 12%;
@@ -117,6 +118,7 @@
     --text-primary: 0 0% 100%;
     --text-secondary: 290 5% 65%;
     --text-muted: 290 5% 45%;
+    --text-accent: 290 30% 44%;
 
     /* Sidebar colors */
     --sidebar-background: 300 8% 12%;
