@@ -45,21 +45,18 @@ interface Lesson {
   required_tier?: string
   product_id?: string
   order_index: number
+  files?: LessonFileItem[]
 }
 
-interface LessonFile {
-  id: string
-  lesson_id: string
-  file_name: string
-  file_type: string
-  file_size: number
-  storage_path: string
-  display_order: number
+interface LessonFileItem {
+  name: string
+  url: string
+  type: string
+  size?: number
 }
 
 export default function AdminLessons() {
   const [lessons, setLessons] = useState<Lesson[]>([])
-  const [lessonFiles, setLessonFiles] = useState<{ [lessonId: string]: LessonFile[] }>({})
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [showModuleModal, setShowModuleModal] = useState(false)
@@ -101,31 +98,44 @@ export default function AdminLessons() {
       toast.error('Failed to load lessons')
     } else {
       setLessons(data || [])
-      // Load files for each lesson
-      if (data && data.length > 0) {
-        const { data: filesData } = await supabase
-          .from('lesson_files')
-          .select('*')
-          .in('lesson_id', data.map(l => l.id))
-          .order('display_order', { ascending: true })
-        
-        if (filesData) {
-          const filesByLesson: { [key: string]: LessonFile[] } = {}
-          filesData.forEach(file => {
-            if (!filesByLesson[file.lesson_id]) {
-              filesByLesson[file.lesson_id] = []
-            }
-            filesByLesson[file.lesson_id].push(file)
-          })
-          setLessonFiles(filesByLesson)
-        }
-      }
     }
     setLoading(false)
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    // Upload pending files first and collect their URLs
+    const uploadedFiles: LessonFileItem[] = []
+    
+    if (pendingFiles.length > 0) {
+      setUploadingFiles(true)
+      for (const file of pendingFiles) {
+        const filePath = `${Date.now()}_${file.name}`
+        
+        const { error: uploadError } = await supabase.storage
+          .from('lesson-files')
+          .upload(filePath, file)
+
+        if (uploadError) {
+          toast.error(`Failed to upload ${file.name}: ${uploadError.message}`)
+          setUploadingFiles(false)
+          return
+        }
+
+        const { data: urlData } = supabase.storage
+          .from('lesson-files')
+          .getPublicUrl(filePath)
+
+        uploadedFiles.push({
+          name: file.name,
+          url: urlData.publicUrl,
+          type: file.type,
+          size: file.size
+        })
+      }
+      setUploadingFiles(false)
+    }
 
     const payload = {
       title: formData.title,
@@ -139,50 +149,17 @@ export default function AdminLessons() {
       access_type: formData.access_type,
       required_tier: formData.access_type === 'tier_required' ? formData.required_tier : null,
       product_id: formData.access_type === 'purchase_required' ? formData.product_id : null,
-      order_index: Number(formData.order_index)
+      order_index: Number(formData.order_index),
+      files: uploadedFiles.length > 0 ? uploadedFiles : null
     }
 
-    const { data: lessonData, error } = await supabase
+    const { error } = await supabase
       .from('course_videos')
       .insert([payload])
-      .select()
-      .single()
 
     if (error) {
       toast.error('Error: ' + error.message)
       return
-    }
-
-    // Upload pending files
-    if (pendingFiles.length > 0 && lessonData) {
-      setUploadingFiles(true)
-      for (let i = 0; i < pendingFiles.length; i++) {
-        const file = pendingFiles[i]
-        const filePath = `${lessonData.id}/${Date.now()}_${file.name}`
-        
-        const { error: uploadError } = await supabase.storage
-          .from('lesson-files')
-          .upload(filePath, file)
-
-        if (uploadError) {
-          toast.error(`Failed to upload ${file.name}`)
-          continue
-        }
-
-        const { data: urlData } = supabase.storage
-          .from('lesson-files')
-          .getPublicUrl(filePath)
-
-        await supabase.from('lesson_files').insert({
-          lesson_id: lessonData.id,
-          file_name: file.name,
-          file_type: file.type,
-          file_size: file.size,
-          storage_path: urlData.publicUrl,
-          display_order: i
-        })
-      }
-      setUploadingFiles(false)
     }
 
     toast.success('Lesson added')
@@ -212,12 +189,14 @@ export default function AdminLessons() {
   const deleteLesson = async (id: string) => {
     if (!confirm('Delete this lesson and all its files?')) return
 
-    // Delete files from storage first
-    const files = lessonFiles[id] || []
-    for (const file of files) {
-      const pathParts = file.storage_path.split('/lesson-files/')
-      if (pathParts[1]) {
-        await supabase.storage.from('lesson-files').remove([pathParts[1]])
+    // Find the lesson and delete its files from storage
+    const lesson = lessons.find(l => l.id === id)
+    if (lesson?.files) {
+      for (const file of lesson.files) {
+        const pathParts = file.url.split('/lesson-files/')
+        if (pathParts[1]) {
+          await supabase.storage.from('lesson-files').remove([pathParts[1]])
+        }
       }
     }
 
@@ -366,9 +345,9 @@ export default function AdminLessons() {
                                 )}
                               </TableCell>
                               <TableCell>
-                                {lessonFiles[lesson.id]?.length ? (
+                                {lesson.files?.length ? (
                                   <Badge variant="secondary" className="text-xs">
-                                    {lessonFiles[lesson.id].length} file{lessonFiles[lesson.id].length !== 1 ? 's' : ''}
+                                    {lesson.files.length} file{lesson.files.length !== 1 ? 's' : ''}
                                   </Badge>
                                 ) : (
                                   <span className="text-muted-foreground text-xs">-</span>
@@ -453,9 +432,9 @@ export default function AdminLessons() {
                                 )}
                               </TableCell>
                               <TableCell>
-                                {lessonFiles[lesson.id]?.length ? (
+                                {lesson.files?.length ? (
                                   <Badge variant="secondary" className="text-xs">
-                                    {lessonFiles[lesson.id].length} file{lessonFiles[lesson.id].length !== 1 ? 's' : ''}
+                                    {lesson.files.length} file{lesson.files.length !== 1 ? 's' : ''}
                                   </Badge>
                                 ) : (
                                   <span className="text-muted-foreground text-xs">-</span>
