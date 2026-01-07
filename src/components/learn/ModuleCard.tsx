@@ -71,7 +71,7 @@ export function ModuleCard({ module, onClick }: ModuleCardProps) {
       
       {/* Content */}
       <div className="p-4 space-y-3">
-        <h3 className="font-semibold text-foreground line-clamp-1 group-hover:text-primary transition-colors">
+        <h3 className="font-semibold text-foreground line-clamp-1 group-hover:text-text-accent transition-colors">
           {module.title}
         </h3>
         
