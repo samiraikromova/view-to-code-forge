@@ -1,0 +1,145 @@
+import { useState } from 'react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Zap, Check, Loader2 } from 'lucide-react';
+import { startSubscription } from '@/api/fanbases/fanbasesApi';
+import { toast } from 'sonner';
+
+interface SubscriptionModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess?: () => void;
+  currentTier?: string | null;
+}
+
+const PLANS = {
+  starter: {
+    name: 'Starter',
+    price: 29,
+    credits: 10000,
+    features: [
+      '10,000 monthly credits',
+      'AI Chat access',
+      'Ask AI on lessons',
+      'Priority support',
+    ],
+  },
+  pro: {
+    name: 'Pro',
+    price: 99,
+    credits: 40000,
+    features: [
+      '40,000 monthly credits',
+      'AI Chat access',
+      'Ask AI on lessons',
+      'Priority support',
+      'Advanced AI models',
+    ],
+  },
+};
+
+export function SubscriptionModal({
+  isOpen,
+  onClose,
+  onSuccess,
+  currentTier,
+}: SubscriptionModalProps) {
+  const [loading, setLoading] = useState<'starter' | 'pro' | null>(null);
+
+  const handleSubscribe = async (tier: 'starter' | 'pro') => {
+    setLoading(tier);
+    try {
+      const result = await startSubscription(tier);
+
+      if (result.success) {
+        toast.success(`${PLANS[tier].name} plan activated!`);
+        onSuccess?.();
+        onClose();
+      } else {
+        toast.error(result.error || 'Subscription failed');
+      }
+    } catch (error) {
+      console.error('Subscription error:', error);
+      toast.error('Something went wrong. Please try again.');
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-2xl">
+        <DialogHeader>
+          <div className="flex items-center gap-3 mb-2">
+            <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center">
+              <Zap className="h-5 w-5 text-primary" />
+            </div>
+            <DialogTitle className="text-xl">Subscribe to Unlock AI Features</DialogTitle>
+          </div>
+          <DialogDescription className="text-base">
+            Get access to AI Chat and Ask AI on all your lessons.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
+          {(Object.entries(PLANS) as [('starter' | 'pro'), typeof PLANS.starter][]).map(([tier, plan]) => {
+            const isCurrent = currentTier === tier || currentTier === (tier === 'starter' ? 'tier1' : 'tier2');
+            
+            return (
+              <div
+                key={tier}
+                className={`p-4 rounded-lg border ${
+                  tier === 'pro' 
+                    ? 'border-primary bg-primary/5' 
+                    : 'border-border bg-surface/30'
+                }`}
+              >
+                {tier === 'pro' && (
+                  <div className="text-xs font-medium text-primary mb-2">MOST POPULAR</div>
+                )}
+                <h3 className="text-lg font-semibold text-foreground">{plan.name}</h3>
+                <div className="mt-2">
+                  <span className="text-3xl font-bold text-foreground">${plan.price}</span>
+                  <span className="text-muted-foreground">/month</span>
+                </div>
+
+                <ul className="mt-4 space-y-2">
+                  {plan.features.map((feature, i) => (
+                    <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
+                      <Check className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+
+                <Button
+                  className="w-full mt-4"
+                  variant={tier === 'pro' ? 'default' : 'outline'}
+                  onClick={() => handleSubscribe(tier)}
+                  disabled={loading !== null || isCurrent}
+                >
+                  {loading === tier ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Processing...
+                    </>
+                  ) : isCurrent ? (
+                    'Current Plan'
+                  ) : (
+                    `Subscribe to ${plan.name}`
+                  )}
+                </Button>
+              </div>
+            );
+          })}
+        </div>
+
+        <DialogFooter>
+          <Button variant="ghost" onClick={onClose}>
+            Maybe Later
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
