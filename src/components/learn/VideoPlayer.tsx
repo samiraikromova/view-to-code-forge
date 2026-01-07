@@ -239,32 +239,6 @@ export const VideoPlayer = ({ lesson, contentType, onAskAI, onVideoComplete }: V
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="flex items-center gap-3">
-        {lesson.transcriptUrl && (
-            <>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={handleOpenTranscript}
-              >
-                <ExternalLink className="h-4 w-4 mr-2" />
-                Open Transcript
-              </Button>
-              {onAskAI && (
-                <Button 
-                  variant="default"
-                  size="sm"
-                  onClick={() => onAskAI(lesson.id)}
-                  className="bg-accent hover:bg-accent/90"
-                >
-                  <MessageSquare className="h-4 w-4 mr-2" />
-                  Ask AI About This Video
-                </Button>
-              )}
-            </>
-          )}
-        </div>
 
         {/* Keywords */}
         {lesson.keywords && lesson.keywords.length > 0 && (

@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Sparkles, RefreshCw, UserIcon, CreditCard, LogOut, TrendingUp, Settings } from "lucide-react";
+import { Plus, Sparkles, RefreshCw, UserIcon, CreditCard, LogOut, TrendingUp, Settings, FileText } from "lucide-react";
 import { MainNavigation, NavigationMode } from "@/components/MainNavigation";
 import { AmbientBackground } from "@/components/AmbientBackground";
 import { ChatInterface } from "@/components/chat/ChatInterface";
@@ -501,7 +501,7 @@ const Main = () => {
             <MainNavigation currentMode={mode} onModeChange={handleModeChange} />
           </div>
 
-          {/* Right section - Dashboard only */}
+          {/* Right section - Dashboard and Learn (lesson view) */}
           <div className="flex items-center gap-2">
             {mode === "dashboard" && (
               <>
@@ -531,6 +531,36 @@ const Main = () => {
                 />
               </>
             )}
+
+            {mode === "learn" && selectedModuleId && (() => {
+              const module = currentData.find(m => m.id === selectedModuleId);
+              const selectedLesson = module?.lessons.find(l => l.id === lessonId) || module?.lessons[0];
+              if (!selectedLesson) return null;
+              return (
+                <>
+                  {selectedLesson.transcriptUrl && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5"
+                      onClick={() => window.open(selectedLesson.transcriptUrl, '_blank')}
+                    >
+                      <FileText className="w-4 h-4" />
+                      Download Transcript
+                    </Button>
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => handleAskAIAboutVideo(selectedLesson.id)}
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    Ask AI
+                  </Button>
+                </>
+              );
+            })()}
           </div>
         </header>
 
