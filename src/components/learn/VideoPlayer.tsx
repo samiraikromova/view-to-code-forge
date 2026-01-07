@@ -44,9 +44,13 @@ export const VideoPlayer = ({ lesson, contentType, onAskAI, onVideoComplete }: V
       setVideoError(null);
       
       try {
+        console.log('Fetching OTP for video:', lesson.vdocipherId);
+        
         const { data, error } = await supabase.functions.invoke('vdocipher-otp', {
           body: { videoId: lesson.vdocipherId }
         });
+        
+        console.log('Edge function response:', { data, error });
         
         if (error) {
           console.error('Error fetching OTP:', error);
@@ -61,7 +65,10 @@ export const VideoPlayer = ({ lesson, contentType, onAskAI, onVideoComplete }: V
         }
         
         setVideoOtp(data.otp);
-        setPlaybackInfo(data.playbackInfo);
+        // Generate playbackInfo client-side as base64-encoded JSON
+        const playbackInfoObj = { videoId: lesson.vdocipherId };
+        const generatedPlaybackInfo = btoa(JSON.stringify(playbackInfoObj));
+        setPlaybackInfo(data.playbackInfo || generatedPlaybackInfo);
       } catch (err) {
         console.error('Error fetching video OTP:', err);
         setVideoError('Failed to load video');
