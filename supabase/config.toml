@@ -18,7 +18,10 @@ port = 54323
 api_url = "http://localhost"
 
 [functions.vdocipher-otp]
+enabled = true
 verify_jwt = false
+import_map = "./functions/vdocipher-otp/deno.json"
+entrypoint = "./functions/vdocipher-otp/index.ts"
 
 [functions.fanbases-customer]
 enabled = true
