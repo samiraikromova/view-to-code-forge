@@ -58,12 +58,12 @@ export function ModuleGrid({ modules, onModuleSelect, isLoading, contentType }: 
       <div className="max-w-6xl mx-auto">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-foreground mb-2">
-            {contentType === "recordings" ? "Call Recordings" : "Course Library"}
+            {contentType === "recordings" ? "Call Recordings" : "Classroom"}
           </h1>
           <p className="text-muted-foreground">
             {contentType === "recordings" 
               ? "Access all recorded sessions and calls"
-              : "Browse and learn from our curated course content"
+              : "Your complete training library"
             }
           </p>
         </div>
