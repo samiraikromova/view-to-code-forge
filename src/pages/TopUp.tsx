@@ -1,52 +1,45 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Zap, Check, CreditCard } from "lucide-react";
+import { ArrowLeft, Zap, Check, CreditCard, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import ThrivecartEmbed, { THRIVECART_PRODUCTS, ThrivecartButton } from "@/components/ThrivecartEmbed";
+import { purchaseCredits } from "@/api/fanbases/fanbasesApi";
+import { useState } from "react";
+import { toast } from "sonner";
 
 const topUpOptions = [
-  {
-    id: "topUp1000" as const,
-    credits: 1000,
-    price: 10,
-    perCredit: 0.01,
-    popular: false,
-  },
-  {
-    id: "topUp2500" as const,
-    credits: 2500,
-    price: 25,
-    perCredit: 0.01,
-    savings: "0%",
-    popular: false,
-  },
-  {
-    id: "topUp5000" as const,
-    credits: 5000,
-    price: 50,
-    perCredit: 0.01,
-    savings: "0%",
-    popular: true,
-  },
-  {
-    id: "topUp10000" as const,
-    credits: 10000,
-    price: 100,
-    perCredit: 0.01,
-    savings: "0%",
-    popular: false,
-  },
+  { credits: 1000, price: 10, perCredit: 0.01, popular: false },
+  { credits: 2500, price: 25, perCredit: 0.01, popular: false },
+  { credits: 5000, price: 50, perCredit: 0.01, popular: true },
+  { credits: 10000, price: 100, perCredit: 0.01, popular: false },
 ];
 
 export default function TopUp() {
   const navigate = useNavigate();
-  const { user, profile } = useAuth();
+  const { profile, refreshProfile } = useAuth();
   const currentCredits = profile?.credits || 0;
+  const [loading, setLoading] = useState<number | null>(null);
+
+  const handlePurchase = async (credits: number, priceCents: number) => {
+    setLoading(credits);
+    try {
+      const result = await purchaseCredits(credits, priceCents);
+      if (result.success) {
+        toast.success(`${credits.toLocaleString()} credits added!`);
+        refreshProfile?.();
+      } else {
+        toast.error(result.error || 'Purchase failed');
+      }
+    } catch (error) {
+      console.error('Top-up error:', error);
+      toast.error('Something went wrong. Please try again.');
+    } finally {
+      setLoading(null);
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-background theme-light-purple">
-      <ThrivecartEmbed />
+    <div className="min-h-screen bg-background">
       <div className="max-w-4xl mx-auto p-6">
         <div className="flex items-center gap-4 mb-6">
           <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
@@ -75,67 +68,70 @@ export default function TopUp() {
 
         {/* Top Up Options */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-          {topUpOptions.map((option) => {
-            const product = THRIVECART_PRODUCTS[option.id];
-            return (
-              <Card
-                key={option.id}
-                className={`relative overflow-hidden transition-all hover:border-primary/50 ${
-                  option.popular ? "border-primary" : "border-border"
-                }`}
-              >
-                {option.popular && (
-                  <div className="absolute top-0 right-0 bg-primary text-primary-foreground text-xs font-medium px-3 py-1 rounded-bl-lg">
-                    Most Popular
-                  </div>
-                )}
-                <CardHeader>
-                  <div className="flex items-center gap-2">
-                    <Zap className="h-5 w-5 text-primary" />
-                    <CardTitle>{option.credits.toLocaleString()} Credits</CardTitle>
-                  </div>
-                  <CardDescription>
-                    ${option.perCredit.toFixed(2)} per credit
-                    {option.savings && <span className="ml-2 text-primary font-medium">Save {option.savings}</span>}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex items-center justify-between mb-4">
-                    <span className="text-3xl font-bold text-foreground">${option.price}</span>
-                  </div>
-                  <ul className="space-y-2 mb-4">
-                    <li className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Check className="h-4 w-4 text-primary" />
-                      Instant credit delivery
-                    </li>
-                    <li className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Check className="h-4 w-4 text-primary" />
-                      No expiration
-                    </li>
-                    <li className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Check className="h-4 w-4 text-primary" />
-                      Use across all tools
-                    </li>
-                  </ul>
-                  <ThrivecartButton
-                    productId={product.productId}
-                    className="w-full"
-                    variant={option.popular ? "default" : "outline"}
-                  >
-                    Purchase
-                  </ThrivecartButton>
-                </CardContent>
-              </Card>
-            );
-          })}
+          {topUpOptions.map((option) => (
+            <Card
+              key={option.credits}
+              className={`relative overflow-hidden transition-all hover:border-primary/50 ${
+                option.popular ? "border-primary" : "border-border"
+              }`}
+            >
+              {option.popular && (
+                <div className="absolute top-0 right-0 bg-primary text-primary-foreground text-xs font-medium px-3 py-1 rounded-bl-lg">
+                  Most Popular
+                </div>
+              )}
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Zap className="h-5 w-5 text-primary" />
+                  <CardTitle>{option.credits.toLocaleString()} Credits</CardTitle>
+                </div>
+                <CardDescription>
+                  ${option.perCredit.toFixed(2)} per credit
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-3xl font-bold text-foreground">${option.price}</span>
+                </div>
+                <ul className="space-y-2 mb-4">
+                  <li className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Check className="h-4 w-4 text-primary" />
+                    Instant credit delivery
+                  </li>
+                  <li className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Check className="h-4 w-4 text-primary" />
+                    No expiration
+                  </li>
+                  <li className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Check className="h-4 w-4 text-primary" />
+                    Use across all tools
+                  </li>
+                </ul>
+                <Button
+                  className="w-full"
+                  variant={option.popular ? "default" : "outline"}
+                  onClick={() => handlePurchase(option.credits, option.price * 100)}
+                  disabled={loading !== null}
+                >
+                  {loading === option.credits ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Processing...
+                    </>
+                  ) : (
+                    'Purchase'
+                  )}
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
         </div>
 
         {/* Info */}
         <Card className="bg-surface/50">
           <CardContent className="py-4">
             <p className="text-sm text-muted-foreground text-center">
-              Credits are added instantly after purchase. All purchases are processed securely through ThriveCart. Need
-              more?{" "}
+              Credits are added instantly after purchase. All purchases are charged to your card on file.{" "}
               <Button variant="link" className="p-0 h-auto" onClick={() => navigate("/settings")}>
                 Upgrade your plan
               </Button>{" "}

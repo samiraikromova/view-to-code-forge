@@ -17,14 +17,17 @@ enabled = true
 port = 54323
 api_url = "http://localhost"
 
-[functions.thrivecart-webhook]
-enabled = true
-verify_jwt = false
-import_map = "./functions/thrivecart-webhook/deno.json"
-entrypoint = "./functions/thrivecart-webhook/index.ts"
-
-[functions.thrivecart-topup]
-verify_jwt = false
-
 [functions.vdocipher-otp]
 verify_jwt = false
+
+[functions.fanbases-customer]
+enabled = true
+verify_jwt = false
+import_map = "./functions/fanbases-customer/deno.json"
+entrypoint = "./functions/fanbases-customer/index.ts"
+
+[functions.fanbases-charge]
+enabled = true
+verify_jwt = false
+import_map = "./functions/fanbases-charge/deno.json"
+entrypoint = "./functions/fanbases-charge/index.ts"

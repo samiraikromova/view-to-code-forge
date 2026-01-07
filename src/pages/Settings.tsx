@@ -9,7 +9,7 @@ import { useNavigate } from "react-router-dom";
 import { PLANS, SubscriptionTier } from "@/types/subscription";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
-import ThrivecartEmbed, { ThrivecartButton, THRIVECART_PRODUCTS } from "@/components/ThrivecartEmbed";
+import { SubscriptionModal, TopUpModal } from "@/components/payments";
 
 interface BillingRecord {
   id: string;
@@ -21,14 +21,15 @@ interface BillingRecord {
 
 export default function Settings() {
   const navigate = useNavigate();
-  const { user, profile } = useAuth();
+  const { user, profile, refreshProfile } = useAuth();
   const [currentTier, setCurrentTier] = useState<SubscriptionTier>("free");
   const [billingHistory, setBillingHistory] = useState<BillingRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const [showTopUpModal, setShowTopUpModal] = useState(false);
 
   useEffect(() => {
     if (profile) {
-      // Map tier values
       const tierMap: Record<string, SubscriptionTier> = {
         free: "free",
         tier1: "starter",
@@ -76,15 +77,21 @@ export default function Settings() {
     }
   }
 
-  const getProductId = (tier: SubscriptionTier): number => {
-    if (tier === "starter") return THRIVECART_PRODUCTS.starter.productId;
-    if (tier === "pro") return THRIVECART_PRODUCTS.pro.productId;
-    return 0;
-  };
-
   return (
     <div className="min-h-screen bg-background">
-      <ThrivecartEmbed />
+      <SubscriptionModal
+        isOpen={showSubscriptionModal}
+        onClose={() => setShowSubscriptionModal(false)}
+        onSuccess={() => refreshProfile?.()}
+        currentTier={currentTier}
+      />
+      <TopUpModal
+        isOpen={showTopUpModal}
+        onClose={() => setShowTopUpModal(false)}
+        onSuccess={() => refreshProfile?.()}
+        currentCredits={profile?.credits || 0}
+      />
+
       <div className="max-w-5xl mx-auto p-6">
         <div className="flex items-center gap-4 mb-6">
           <Button variant="ghost" size="icon" onClick={() => navigate("/chat")}>
@@ -105,7 +112,7 @@ export default function Settings() {
                   <p className="text-sm text-muted-foreground">Current Balance</p>
                   <p className="text-3xl font-bold text-foreground">{(profile?.credits || 0).toFixed(2)} credits</p>
                 </div>
-                <Button onClick={() => navigate("/pricing/top-up")} className="gap-2">
+                <Button onClick={() => setShowTopUpModal(true)} className="gap-2">
                   <Zap className="h-4 w-4" />
                   Top Up
                 </Button>
@@ -121,9 +128,9 @@ export default function Settings() {
                   <p className="text-3xl font-bold text-foreground">{PLANS[currentTier].name}</p>
                 </div>
                 {currentTier !== "pro" && (
-                  <ThrivecartButton productId={THRIVECART_PRODUCTS.pro.productId} variant="outline" className="gap-2">
+                  <Button variant="outline" className="gap-2" onClick={() => setShowSubscriptionModal(true)}>
                     Upgrade
-                  </ThrivecartButton>
+                  </Button>
                 )}
               </div>
             </CardContent>
@@ -138,7 +145,6 @@ export default function Settings() {
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
-              {/* Current Plan */}
               <div className="flex items-center justify-between p-4 border border-border rounded-lg bg-surface/50">
                 <div>
                   <div className="flex items-center gap-3">
@@ -159,20 +165,15 @@ export default function Settings() {
                 </div>
                 <div className="flex flex-col gap-2">
                   {currentTier !== "pro" && (
-                    <ThrivecartButton
-                      productId={THRIVECART_PRODUCTS.pro.productId}
-                      className="bg-accent hover:bg-accent/90"
-                    >
+                    <Button onClick={() => setShowSubscriptionModal(true)}>
                       Upgrade to Pro
-                    </ThrivecartButton>
+                    </Button>
                   )}
-                  {currentTier !== "free" && <Button variant="outline">Cancel Subscription</Button>}
                 </div>
               </div>
 
               <Separator />
 
-              {/* Available Plans */}
               <div>
                 <h4 className="text-sm font-medium text-foreground mb-4">Available Plans</h4>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -198,14 +199,14 @@ export default function Settings() {
                           ))}
                         </ul>
                         {!isCurrent && tier !== "free" && (
-                          <ThrivecartButton
-                            productId={getProductId(tier)}
+                          <Button
                             variant={tier === "pro" ? "default" : "outline"}
                             className="w-full mt-4"
                             size="sm"
+                            onClick={() => setShowSubscriptionModal(true)}
                           >
                             {tier === "pro" ? "Upgrade" : "Switch"}
-                          </ThrivecartButton>
+                          </Button>
                         )}
                       </div>
                     );
@@ -267,22 +268,15 @@ export default function Settings() {
         {/* Payment Methods */}
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Payment Methods</CardTitle>
-                <CardDescription>Manage your payment options via ThriveCart</CardDescription>
-              </div>
-            </div>
+            <CardTitle>Payment Methods</CardTitle>
+            <CardDescription>Your card on file for one-click purchases</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="text-center py-6">
               <CreditCard className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <p className="text-muted-foreground mb-4">
-                Payment methods are managed through ThriveCart's secure payment system.
+                Payment methods are securely stored via Fanbases.
               </p>
-              <Button variant="outline" onClick={() => window.open("https://thrivecart.com/account", "_blank")}>
-                Manage on ThriveCart
-              </Button>
             </div>
           </CardContent>
         </Card>
