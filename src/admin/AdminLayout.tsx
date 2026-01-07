@@ -14,7 +14,6 @@ import {
   Ticket,
   FolderKanban,
   MessageSquare,
-  Video,
   PanelLeftClose,
   PanelLeft,
   BookOpen
@@ -37,7 +36,6 @@ const navItems = [
   { id: "projects", label: "Projects", icon: FolderKanban, path: "/admin/projects" },
   { id: "prompts", label: "System Prompts", icon: MessageSquare, path: "/admin/prompts" },
   { id: "lessons", label: "Lessons", icon: BookOpen, path: "/admin/lessons" },
-  { id: "videos", label: "Videos (Legacy)", icon: Video, path: "/admin/videos" },
   { id: "settings", label: "Settings", icon: Settings, path: "/admin/settings" },
 ]
 

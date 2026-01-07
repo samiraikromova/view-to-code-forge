@@ -23,7 +23,7 @@ import ConfirmCallback from "./auth/ConfirmCallback";
 import SignoutCallback from "./auth/SignoutCallback";
 
 // Admin pages
-import { AdminDashboard, AdminUsers, AdminCredits, AdminUsage, AdminSettings, AdminCoupons, AdminProjects, AdminPrompts, AdminVideos, AdminLessons } from "./admin";
+import { AdminDashboard, AdminUsers, AdminCredits, AdminUsage, AdminSettings, AdminCoupons, AdminProjects, AdminPrompts, AdminLessons } from "./admin";
 
 const queryClient = new QueryClient();
 
@@ -70,7 +70,6 @@ const App = () => {
             <Route path="/admin/coupons" element={<ProtectedRoute><AdminCoupons /></ProtectedRoute>} />
             <Route path="/admin/projects" element={<ProtectedRoute><AdminProjects /></ProtectedRoute>} />
             <Route path="/admin/prompts" element={<ProtectedRoute><AdminPrompts /></ProtectedRoute>} />
-            <Route path="/admin/videos" element={<ProtectedRoute><AdminVideos /></ProtectedRoute>} />
             <Route path="/admin/lessons" element={<ProtectedRoute><AdminLessons /></ProtectedRoute>} />
             <Route path="/admin/settings" element={<ProtectedRoute><AdminSettings /></ProtectedRoute>} />
             
