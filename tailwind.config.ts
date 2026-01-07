@@ -58,6 +58,7 @@ export default {
           primary: "hsl(var(--text-primary))",
           secondary: "hsl(var(--text-secondary))",
           muted: "hsl(var(--text-muted))",
+          accent: "hsl(var(--text-accent))",
         },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
