@@ -191,7 +191,8 @@ export default function AdminCredits() {
                       <TableCell>
                         <Button
                           variant="link"
-                          className="text-primary hover:text-primary/80 p-0 h-auto"
+                          className="p-0 h-auto hover:opacity-80"
+                          style={{ color: '#874893' }}
                           onClick={() => {
                             setSelectedUser(user)
                             setShowModal(true)
