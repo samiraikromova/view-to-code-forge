@@ -17,7 +17,7 @@ export function LearnContentSelector({ contentType, onContentTypeChange }: Learn
             : "text-muted-foreground hover:text-foreground hover:bg-surface/80"
         )}
       >
-        Call Recordings
+        Recordings
       </button>
       <button
         onClick={() => onContentTypeChange("materials")}
@@ -28,7 +28,7 @@ export function LearnContentSelector({ contentType, onContentTypeChange }: Learn
             : "text-muted-foreground hover:text-foreground hover:bg-surface/80"
         )}
       >
-        Course Material
+        Classroom
       </button>
     </div>
   );
