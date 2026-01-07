@@ -11,10 +11,10 @@ export function LearnContentSelector({ contentType, onContentTypeChange }: Learn
       <button
         onClick={() => onContentTypeChange("recordings")}
         className={cn(
-          "px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-200",
+          "px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-200 hover:scale-105",
           contentType === "recordings"
             ? "bg-primary text-primary-foreground shadow-sm"
-            : "text-muted-foreground hover:text-foreground"
+            : "text-muted-foreground hover:text-foreground hover:bg-surface/80"
         )}
       >
         Call Recordings
@@ -22,10 +22,10 @@ export function LearnContentSelector({ contentType, onContentTypeChange }: Learn
       <button
         onClick={() => onContentTypeChange("materials")}
         className={cn(
-          "px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-200",
+          "px-3 py-1.5 text-sm font-medium rounded-md transition-all duration-200 hover:scale-105",
           contentType === "materials"
             ? "bg-primary text-primary-foreground shadow-sm"
-            : "text-muted-foreground hover:text-foreground"
+            : "text-muted-foreground hover:text-foreground hover:bg-surface/80"
         )}
       >
         Course Material
