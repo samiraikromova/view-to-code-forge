@@ -543,10 +543,12 @@ const Main = () => {
                       variant="outline"
                       size="sm"
                       className="gap-1.5"
-                      onClick={() => window.open(selectedLesson.transcriptUrl, '_blank')}
+                      asChild
                     >
-                      <FileText className="w-4 h-4" />
-                      Download Transcript
+                      <a href={selectedLesson.transcriptUrl} download>
+                        <FileText className="w-4 h-4" />
+                        Download Transcript
+                      </a>
                     </Button>
                   )}
                   <Button
