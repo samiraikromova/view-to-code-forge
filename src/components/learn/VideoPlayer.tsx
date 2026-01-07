@@ -276,33 +276,6 @@ export const VideoPlayer = ({ lesson, contentType, onAskAI, onVideoComplete }: V
           </div>
         </div>
 
-        {/* Action Buttons - Download Transcript & Ask AI */}
-        {(lesson.transcriptText || lesson.transcriptUrl || onAskAI) && (
-          <div className="flex items-center gap-3">
-            {(lesson.transcriptText || lesson.transcriptUrl) && (
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleDownloadTranscript}
-                className="gap-2"
-              >
-                <Download className="h-4 w-4" />
-                Download Transcript
-              </Button>
-            )}
-            {onAskAI && (lesson.transcriptText || lesson.transcriptUrl) && (
-              <Button 
-                variant="default" 
-                size="sm" 
-                onClick={handleAskAI}
-                className="gap-2"
-              >
-                <MessageSquare className="h-4 w-4" />
-                Ask AI
-              </Button>
-            )}
-          </div>
-        )}
 
         {/* Downloadable Files */}
         {lesson.files && lesson.files.length > 0 && (

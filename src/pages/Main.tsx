@@ -541,19 +541,28 @@ const Main = () => {
               const module = currentData.find(m => m.id === selectedModuleId);
               const selectedLesson = module?.lessons.find(l => l.id === lessonId) || module?.lessons[0];
               if (!selectedLesson) return null;
+              
+              // Get transcript file from files array (Google Drive link)
+              const transcriptFile = selectedLesson.files?.find(f => 
+                f.name.toLowerCase().includes('transcript') || 
+                f.type.toLowerCase().includes('doc') ||
+                f.type.toLowerCase().includes('pdf') ||
+                f.type.toLowerCase().includes('text')
+              ) || selectedLesson.files?.[0];
+              
+              const hasTranscript = transcriptFile || selectedLesson.transcriptUrl;
+              
               return (
                 <>
                   <Button
                     variant="outline"
                     size="sm"
                     className="gap-1.5"
-                    disabled={!selectedLesson.transcriptUrl}
+                    disabled={!hasTranscript}
                     onClick={() => {
-                      if (selectedLesson.transcriptUrl) {
-                        const link = document.createElement('a');
-                        link.href = selectedLesson.transcriptUrl;
-                        link.download = '';
-                        link.click();
+                      const url = transcriptFile?.url || selectedLesson.transcriptUrl;
+                      if (url) {
+                        window.open(url, '_blank');
                       }
                     }}
                   >
