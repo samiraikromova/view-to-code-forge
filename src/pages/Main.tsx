@@ -538,19 +538,23 @@ const Main = () => {
               if (!selectedLesson) return null;
               return (
                 <>
-                  {selectedLesson.transcriptUrl && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="gap-1.5"
-                      asChild
-                    >
-                      <a href={selectedLesson.transcriptUrl} download>
-                        <FileText className="w-4 h-4" />
-                        Download Transcript
-                      </a>
-                    </Button>
-                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-1.5"
+                    disabled={!selectedLesson.transcriptUrl}
+                    onClick={() => {
+                      if (selectedLesson.transcriptUrl) {
+                        const link = document.createElement('a');
+                        link.href = selectedLesson.transcriptUrl;
+                        link.download = '';
+                        link.click();
+                      }
+                    }}
+                  >
+                    <FileText className="w-4 h-4" />
+                    Download Transcript
+                  </Button>
                   <Button
                     variant="outline"
                     size="sm"
