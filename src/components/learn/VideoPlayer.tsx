@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { Play, ExternalLink, MessageSquare, Calendar, Clock, Users, Download, FileText, File } from "lucide-react";
-import { Lesson, LessonFile } from "./LearnSidebar";
+import { Play, ExternalLink, MessageSquare, Calendar, Clock, Users, Download, FileText, File, Image, FileSpreadsheet, Presentation } from "lucide-react";
+import { Lesson, LessonFileItem } from "./LearnSidebar";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Button } from "@/components/ui/button";
@@ -152,11 +152,16 @@ export const VideoPlayer = ({ lesson, contentType, onAskAI, onVideoComplete }: V
   };
 
   const getFileIcon = (fileType: string) => {
-    if (fileType.includes('pdf')) return <FileText className="h-4 w-4" />;
+    const type = fileType.toLowerCase();
+    if (type.includes('pdf')) return <FileText className="h-4 w-4" />;
+    if (type.includes('image') || type.includes('png') || type.includes('jpg') || type.includes('jpeg') || type.includes('gif')) return <Image className="h-4 w-4" />;
+    if (type.includes('spreadsheet') || type.includes('excel') || type.includes('xls')) return <FileSpreadsheet className="h-4 w-4" />;
+    if (type.includes('presentation') || type.includes('ppt')) return <Presentation className="h-4 w-4" />;
+    if (type.includes('doc') || type.includes('word')) return <FileText className="h-4 w-4" />;
     return <File className="h-4 w-4" />;
   };
 
-  const formatFileSize = (bytes: number | null) => {
+  const formatFileSize = (bytes: number | null | undefined) => {
     if (!bytes) return '';
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -304,23 +309,23 @@ export const VideoPlayer = ({ lesson, contentType, onAskAI, onVideoComplete }: V
           <div className="rounded-xl border border-border bg-surface/50 p-4">
             <h3 className="text-sm font-semibold text-foreground mb-3">Resources</h3>
             <div className="space-y-2">
-              {lesson.files.map((file) => (
+              {lesson.files.map((file, index) => (
                 <a
-                  key={file.id}
-                  href={file.storagePath}
+                  key={index}
+                  href={file.url}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-3 p-2 rounded-lg hover:bg-surface transition-colors group"
                 >
                   <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-accent/10 text-accent">
-                    {getFileIcon(file.fileType)}
+                    {getFileIcon(file.type)}
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium text-foreground truncate group-hover:text-accent transition-colors">
-                      {file.fileName}
+                      {file.name}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {formatFileSize(file.fileSize)}
+                      {formatFileSize(file.size)}
                     </p>
                   </div>
                   <Download className="h-4 w-4 text-muted-foreground group-hover:text-accent transition-colors" />

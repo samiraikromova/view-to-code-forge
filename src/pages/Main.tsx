@@ -165,15 +165,16 @@ const Main = () => {
         vdocipherId: video.vdocipher_id || undefined,
         firefliesEmbedUrl: video.fireflies_embed_url || undefined,
         transcriptUrl: video.transcript_url || undefined,
-        transcriptText: (video as any).transcript_text || undefined,
+        transcriptText: video.transcript_text || undefined,
         overview: video.overview || undefined,
         keywords: video.keywords || undefined,
         callDate: video.call_date || undefined,
         speakerCount: video.speaker_count || undefined,
         durationFormatted: video.duration_formatted || undefined,
-        accessType: (video as any).access_type || 'free',
-        requiredTier: (video as any).required_tier || undefined,
-        productId: (video as any).product_id || undefined,
+        accessType: video.access_type || 'free',
+        requiredTier: video.required_tier || undefined,
+        productId: video.product_id || undefined,
+        files: video.files || undefined,
       };
       
       moduleMap.get(moduleTitle)!.push(lesson);

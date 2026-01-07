@@ -1,3 +1,10 @@
+export interface LessonFileItem {
+  name: string;
+  url: string;
+  type: string;
+  size?: number;
+}
+
 export interface CourseVideo {
   id: string;
   title: string;
@@ -22,6 +29,7 @@ export interface CourseVideo {
   access_type: 'free' | 'tier_required' | 'purchase_required' | 'unlock_required';
   required_tier: string | null;
   product_id: string | null;
+  files: LessonFileItem[] | null;
   created_at: string;
   updated_at: string;
 }

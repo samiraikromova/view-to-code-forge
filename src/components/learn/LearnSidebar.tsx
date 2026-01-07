@@ -20,6 +20,13 @@ export interface Module {
   lessons: Lesson[];
 }
 
+export interface LessonFileItem {
+  name: string;
+  url: string;
+  type: string;
+  size?: number;
+}
+
 export interface Lesson {
   id: string;
   moduleId: string;
@@ -42,16 +49,7 @@ export interface Lesson {
   accessType?: 'free' | 'tier_required' | 'purchase_required' | 'unlock_required';
   requiredTier?: string;
   productId?: string;
-  files?: LessonFile[];
-}
-
-export interface LessonFile {
-  id: string;
-  fileName: string;
-  fileType: string;
-  fileSize: number | null;
-  storagePath: string;
-  displayOrder: number;
+  files?: LessonFileItem[];
 }
 
 interface LearnSidebarProps {
