@@ -1,4 +1,4 @@
-import { ArrowLeft, Play, Check, Circle } from "lucide-react";
+import { ArrowLeft, Check } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
@@ -18,33 +18,33 @@ export function LessonListPanel({ module, currentLessonId, onLessonSelect, onBac
     : 0;
 
   return (
-    <div className="w-80 flex-shrink-0 border-r border-border/50 bg-card/50 backdrop-blur-sm flex flex-col">
+    <div className="w-72 flex-shrink-0 flex flex-col">
       {/* Header */}
-      <div className="p-4 border-b border-border/50">
+      <div className="px-6 pt-6 pb-4">
         <button
           onClick={onBack}
-          className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
+          className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mb-4"
         >
-          <ArrowLeft className="w-4 h-4" />
-          Back to all modules
+          <ArrowLeft className="w-3.5 h-3.5" />
+          All modules
         </button>
         
-        <h2 className="font-semibold text-foreground text-lg line-clamp-2 mb-3">
+        <h2 className="font-semibold text-foreground text-base leading-tight mb-4">
           {module.title}
         </h2>
         
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>{completedCount} of {module.lessons.length} complete</span>
+            <span>{completedCount}/{module.lessons.length} complete</span>
             <span>{progress}%</span>
           </div>
-          <Progress value={progress} className="h-2" />
+          <Progress value={progress} className="h-1" />
         </div>
       </div>
       
       {/* Lesson List */}
       <ScrollArea className="flex-1">
-        <div className="p-2">
+        <div className="px-3 pb-6">
           {module.lessons.map((lesson, index) => (
             <LessonItem
               key={lesson.id}
@@ -72,46 +72,29 @@ function LessonItem({ lesson, index, isActive, onClick }: LessonItemProps) {
     <button
       onClick={onClick}
       className={cn(
-        "w-full text-left p-3 rounded-lg transition-all duration-200 group",
+        "w-full text-left px-3 py-2.5 transition-all duration-150 flex items-center gap-3",
         isActive 
-          ? "bg-primary/10 border border-primary/30" 
-          : "hover:bg-muted/50"
+          ? "bg-primary/10 border-l-2 border-primary" 
+          : "hover:bg-muted/30 border-l-2 border-transparent"
       )}
     >
-      <div className="flex items-start gap-3">
-        {/* Status Icon */}
-        <div className={cn(
-          "flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center mt-0.5",
-          lesson.completed 
-            ? "bg-primary text-primary-foreground" 
-            : isActive 
-              ? "bg-primary/20 text-primary"
-              : "bg-muted text-muted-foreground"
+      {/* Completion indicator */}
+      <div className="flex-shrink-0 w-4 h-4 flex items-center justify-center">
+        {lesson.completed ? (
+          <Check className="w-3.5 h-3.5 text-primary" />
+        ) : (
+          <span className="text-xs text-muted-foreground">{index}</span>
+        )}
+      </div>
+      
+      {/* Content */}
+      <div className="flex-1 min-w-0">
+        <span className={cn(
+          "text-sm leading-snug line-clamp-2",
+          isActive ? "text-foreground font-medium" : "text-muted-foreground"
         )}>
-          {lesson.completed ? (
-            <Check className="w-3.5 h-3.5" />
-          ) : isActive ? (
-            <Play className="w-3 h-3" />
-          ) : (
-            <span className="text-xs font-medium">{index}</span>
-          )}
-        </div>
-        
-        {/* Content */}
-        <div className="flex-1 min-w-0">
-          <h4 className={cn(
-            "text-sm font-medium line-clamp-2 transition-colors",
-            isActive ? "text-primary" : "text-foreground group-hover:text-primary"
-          )}>
-            {lesson.title}
-          </h4>
-          
-          {lesson.duration && (
-            <span className="text-xs text-muted-foreground mt-1 block">
-              {lesson.duration}
-            </span>
-          )}
-        </div>
+          {lesson.title}
+        </span>
       </div>
     </button>
   );
