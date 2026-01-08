@@ -144,8 +144,8 @@ export function Sidebar({
       </div>
 
       {/* Chat List - Only show when expanded */}
-      {!isCollapsed && <ScrollArea className="flex-1">
-          <div className="space-y-1 p-2">
+      {!isCollapsed && <ScrollArea className="flex-1 overflow-hidden">
+          <div className="space-y-1 p-2 w-full overflow-hidden">
           {/* Favorites Chats */}
           {getStarredChats().length > 0 && <div className="space-y-0.5">
               {!isCollapsed && <div className="flex items-center justify-between px-2 py-1.5">
