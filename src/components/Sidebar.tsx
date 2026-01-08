@@ -171,7 +171,7 @@ export function Sidebar({
                       <button 
                         onClick={() => onChatSelect(chat.id)} 
                         className={cn(
-                          "flex-1 flex items-center text-xs text-left px-2 py-1.5 min-w-0",
+                          "flex-1 flex items-center text-xs text-left px-2 py-1.5 min-w-0 max-w-0",
                           currentChatId === chat.id ? "text-accent font-medium" : "text-muted-foreground"
                         )}
                       >
@@ -234,7 +234,7 @@ export function Sidebar({
                     <button 
                       onClick={() => onChatSelect(chat.id)} 
                       className={cn(
-                        "flex-1 text-xs text-left px-2 py-1.5 min-w-0",
+                        "flex-1 text-xs text-left px-2 py-1.5 min-w-0 max-w-0",
                         currentChatId === chat.id ? "text-accent font-medium" : "text-muted-foreground"
                       )}
                     >
