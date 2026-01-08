@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Zap, Check, Loader2 } from 'lucide-react';
-import { startSubscription } from '@/api/fanbases/fanbasesApi';
+import { Zap, Check, Loader2, CreditCard, AlertCircle } from 'lucide-react';
+import { startSubscription, getOrCreateCustomer, setupPaymentMethod } from '@/api/fanbases/fanbasesApi';
 import { toast } from 'sonner';
 
 interface SubscriptionModalProps {
@@ -45,6 +45,46 @@ export function SubscriptionModal({
   currentTier,
 }: SubscriptionModalProps) {
   const [loading, setLoading] = useState<'starter' | 'pro' | null>(null);
+  const [hasPaymentMethod, setHasPaymentMethod] = useState<boolean | null>(null);
+  const [checkingPayment, setCheckingPayment] = useState(false);
+  const [settingUpCard, setSettingUpCard] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      checkPaymentMethod();
+    }
+  }, [isOpen]);
+
+  const checkPaymentMethod = async () => {
+    setCheckingPayment(true);
+    try {
+      const result = await getOrCreateCustomer();
+      setHasPaymentMethod(result.has_payment_method);
+    } catch (error) {
+      console.error('Error checking payment method:', error);
+      setHasPaymentMethod(false);
+    } finally {
+      setCheckingPayment(false);
+    }
+  };
+
+  const handleAddCard = async () => {
+    setSettingUpCard(true);
+    try {
+      const result = await setupPaymentMethod();
+      if (result.success && result.checkout_url) {
+        window.open(result.checkout_url, '_blank');
+        toast.info('Complete the payment in the new tab, then return here');
+      } else {
+        toast.error(result.error || 'Failed to set up payment method');
+      }
+    } catch (error) {
+      console.error('Error setting up card:', error);
+      toast.error('Failed to set up payment method');
+    } finally {
+      setSettingUpCard(false);
+    }
+  };
 
   const handleSubscribe = async (tier: 'starter' | 'pro') => {
     setLoading(tier);
@@ -56,7 +96,13 @@ export function SubscriptionModal({
         onSuccess?.();
         onClose();
       } else {
-        toast.error(result.error || 'Subscription failed');
+        // Check if it's a payment method error
+        if (result.error?.toLowerCase().includes('no payment method')) {
+          setHasPaymentMethod(false);
+          toast.error('Please add a payment method first');
+        } else {
+          toast.error(result.error || 'Subscription failed');
+        }
       }
     } catch (error) {
       console.error('Subscription error:', error);
@@ -81,9 +127,39 @@ export function SubscriptionModal({
           </DialogDescription>
         </DialogHeader>
 
+        {/* Payment Method Warning */}
+        {checkingPayment ? (
+          <div className="flex items-center justify-center py-4">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            <span className="ml-2 text-muted-foreground">Checking payment method...</span>
+          </div>
+        ) : hasPaymentMethod === false ? (
+          <div className="flex items-center gap-3 p-4 rounded-lg border border-destructive/50 bg-destructive/10">
+            <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-foreground">Payment method required</p>
+              <p className="text-sm text-muted-foreground">Please add a card to subscribe</p>
+            </div>
+            <Button
+              size="sm"
+              onClick={handleAddCard}
+              disabled={settingUpCard}
+              className="gap-2 bg-accent hover:bg-accent-hover text-accent-foreground"
+            >
+              {settingUpCard ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <CreditCard className="h-4 w-4" />
+              )}
+              Add Card
+            </Button>
+          </div>
+        ) : null}
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
           {(Object.entries(PLANS) as [('starter' | 'pro'), typeof PLANS.starter][]).map(([tier, plan]) => {
             const isCurrent = currentTier === tier || currentTier === (tier === 'starter' ? 'tier1' : 'tier2');
+            const isDisabled = loading !== null || isCurrent || hasPaymentMethod === false;
             
             return (
               <div
@@ -116,7 +192,7 @@ export function SubscriptionModal({
                   className={`w-full mt-4 ${tier === 'pro' ? 'bg-accent hover:bg-accent-hover text-accent-foreground' : ''}`}
                   variant={tier === 'pro' ? 'default' : 'outline'}
                   onClick={() => handleSubscribe(tier)}
-                  disabled={loading !== null || isCurrent}
+                  disabled={isDisabled}
                 >
                   {loading === tier ? (
                     <>

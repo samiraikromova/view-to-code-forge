@@ -4,12 +4,14 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, CreditCard, Download, Check, Zap } from "lucide-react";
+import { ArrowLeft, CreditCard, Download, Check, Zap, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { PLANS, SubscriptionTier } from "@/types/subscription";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
 import { SubscriptionModal, TopUpModal } from "@/components/payments";
+import { setupPaymentMethod } from "@/api/fanbases/fanbasesApi";
+import { toast } from "sonner";
 
 interface BillingRecord {
   id: string;
@@ -27,6 +29,25 @@ export default function Settings() {
   const [loading, setLoading] = useState(true);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [showTopUpModal, setShowTopUpModal] = useState(false);
+  const [settingUpCard, setSettingUpCard] = useState(false);
+
+  const handleAddCard = async () => {
+    setSettingUpCard(true);
+    try {
+      const result = await setupPaymentMethod();
+      if (result.success && result.checkout_url) {
+        window.open(result.checkout_url, '_blank');
+        toast.info('Complete the payment in the new tab, then return here');
+      } else {
+        toast.error(result.error || 'Failed to set up payment method');
+      }
+    } catch (error) {
+      console.error('Error setting up card:', error);
+      toast.error('Failed to set up payment method');
+    } finally {
+      setSettingUpCard(false);
+    }
+  };
 
   useEffect(() => {
     if (profile) {
@@ -277,7 +298,16 @@ export default function Settings() {
               <p className="text-muted-foreground mb-4">
                 Payment methods are securely stored via Fanbases.
               </p>
-              <Button className="bg-accent hover:bg-accent-hover text-accent-foreground" onClick={() => navigate("/pricing/top-up")}>
+              <Button 
+                className="bg-accent hover:bg-accent-hover text-accent-foreground gap-2" 
+                onClick={handleAddCard}
+                disabled={settingUpCard}
+              >
+                {settingUpCard ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <CreditCard className="h-4 w-4" />
+                )}
                 Add Card
               </Button>
             </div>
