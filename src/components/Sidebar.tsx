@@ -169,7 +169,7 @@ export function Sidebar({
                   ) : (
                     <div 
                       className={cn(
-                        "flex-1 flex items-center text-xs text-left px-2 py-1.5 min-w-0",
+                        "flex-1 flex items-center text-xs text-left px-2 py-1.5 min-w-0 max-w-[calc(100%-8px)]",
                         currentChatId === chat.id ? "text-accent font-medium" : "text-muted-foreground"
                       )}
                     >
@@ -232,7 +232,7 @@ export function Sidebar({
                 ) : (
                   <div 
                     className={cn(
-                      "flex-1 flex items-center text-xs text-left px-2 py-1.5 min-w-0 cursor-pointer",
+                      "flex-1 flex items-center text-xs text-left px-2 py-1.5 min-w-0 max-w-[calc(100%-8px)] cursor-pointer",
                       currentChatId === chat.id ? "text-accent font-medium" : "text-muted-foreground"
                     )}
                   >
