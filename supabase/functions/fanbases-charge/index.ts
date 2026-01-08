@@ -58,17 +58,62 @@ Deno.serve(async (req) => {
       .from('fanbases_customers')
       .select('*')
       .eq('user_id', user.id)
-      .single();
+      .maybeSingle();
 
-    if (customerError || !customer) {
-      console.error('Customer not found:', customerError);
+    if (customerError) {
+      console.error('Error fetching customer:', customerError);
       return new Response(
-        JSON.stringify({ error: 'No payment method on file. Please add a card first.' }),
+        JSON.stringify({ error: 'Failed to fetch customer data' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!customer || !customer.fanbases_customer_id) {
+      console.log('No Fanbases customer found for user:', user.id);
+      return new Response(
+        JSON.stringify({ error: 'No payment method on file. Please add a card first.', needs_payment_method: true }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    if (!customer.payment_method_id) {
+    // Try to fetch payment methods from Fanbases if we don't have one stored
+    let paymentMethodId = customer.payment_method_id;
+    
+    if (!paymentMethodId) {
+      console.log('[Fanbases Charge] No stored payment method, fetching from Fanbases...');
+      try {
+        const pmResponse = await fetch(
+          `${FANBASES_API_URL}/customers/${customer.fanbases_customer_id}/payment-methods`,
+          {
+            method: 'GET',
+            headers: {
+              'Accept': 'application/json',
+              'x-api-key': FANBASES_API_KEY,
+            },
+          }
+        );
+        
+        if (pmResponse.ok) {
+          const pmData = await pmResponse.json();
+          const paymentMethods = pmData.data?.payment_methods || [];
+          
+          if (paymentMethods.length > 0) {
+            paymentMethodId = paymentMethods[0].id;
+            console.log('[Fanbases Charge] Found payment method:', paymentMethodId);
+            
+            // Update our database
+            await supabase
+              .from('fanbases_customers')
+              .update({ payment_method_id: paymentMethodId, updated_at: new Date().toISOString() })
+              .eq('user_id', user.id);
+          }
+        }
+      } catch (pmError) {
+        console.error('[Fanbases Charge] Error fetching payment methods:', pmError);
+      }
+    }
+
+    if (!paymentMethodId) {
       return new Response(
         JSON.stringify({ error: 'No payment method on file. Please add a card first.', needs_payment_method: true }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -76,10 +121,10 @@ Deno.serve(async (req) => {
     }
 
     // Charge customer via Fanbases API
-    console.log(`[Fanbases Charge] Charging customer ${customer.fanbases_customer_id}`);
+    console.log(`[Fanbases Charge] Charging customer ${customer.fanbases_customer_id} with payment method ${paymentMethodId}`);
 
     const chargePayload = {
-      payment_method_id: customer.payment_method_id,
+      payment_method_id: paymentMethodId,
       amount_cents,
       description,
       metadata: {
