@@ -35,7 +35,9 @@ export default function TopUp() {
     try {
       const result = await setupPaymentMethod();
       if (result.success && result.checkout_url) {
-        window.location.href = result.checkout_url;
+        // Open in new tab - Fanbases doesn't allow iframe embedding
+        window.open(result.checkout_url, '_blank');
+        toast.info('Complete the payment in the new tab, then return here');
       } else {
         toast.error(result.error || 'Failed to set up payment method');
       }
