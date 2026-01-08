@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { action } = body;
 
-    console.log(`[Fanbases Customer] v2.1 - Action: ${action}, User: ${user.id}`);
+    console.log(`[Fanbases Customer] v3.0 - Action: ${action}, User: ${user.id}`);
 
     if (action === 'get_or_create') {
       // Check if customer already exists in our database
