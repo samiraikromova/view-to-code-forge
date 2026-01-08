@@ -164,6 +164,9 @@ const Main = () => {
         description: video.description || "",
         vdocipherId: video.vdocipher_id || undefined,
         firefliesEmbedUrl: video.fireflies_embed_url || undefined,
+        // Detect if fireflies_embed_url is a direct mp4 video URL
+        firefliesVideoUrl: video.fireflies_video_url || 
+          (video.fireflies_embed_url?.includes('.mp4') ? video.fireflies_embed_url : undefined),
         transcriptUrl: video.transcript_url || undefined,
         transcriptText: video.transcript_text || undefined,
         overview: video.overview || undefined,

@@ -28,8 +28,8 @@ export const VideoPlayer = ({ lesson, contentType, onAskAI, onVideoComplete }: V
   useEffect(() => {
     hasMarkedComplete.current = false; // Reset on lesson change
     
-    // If using Fireflies embed, skip VdoCipher OTP fetch
-    if (lesson.firefliesEmbedUrl) {
+    // If using Fireflies video (mp4) or embed, skip VdoCipher OTP fetch
+    if (lesson.firefliesEmbedUrl || lesson.firefliesVideoUrl) {
       setVideoLoading(false);
       setVideoError(null);
       setVideoOtp(null);
@@ -198,8 +198,31 @@ export const VideoPlayer = ({ lesson, contentType, onAskAI, onVideoComplete }: V
     <div className="space-y-6">
       {/* Video Container */}
       <div className="relative w-full aspect-video bg-surface rounded-2xl overflow-hidden border border-border">
-        {/* Fireflies embed for call recordings */}
-        {lesson.firefliesEmbedUrl ? (
+        {/* Fireflies direct mp4 video */}
+        {lesson.firefliesVideoUrl ? (
+          <video
+            controls
+            className="w-full h-full"
+            src={lesson.firefliesVideoUrl}
+            playsInline
+            onEnded={() => {
+              if (!hasMarkedComplete.current && !lesson.completed) {
+                hasMarkedComplete.current = true;
+                markVideoComplete();
+              }
+            }}
+            onTimeUpdate={(e) => {
+              const video = e.currentTarget;
+              const progress = (video.currentTime / video.duration) * 100;
+              if (progress >= 95 && !hasMarkedComplete.current && !lesson.completed) {
+                hasMarkedComplete.current = true;
+                markVideoComplete();
+              }
+            }}
+          >
+            Your browser does not support the video tag.
+          </video>
+        ) : lesson.firefliesEmbedUrl ? (
           <iframe
             src={lesson.firefliesEmbedUrl}
             className="w-full h-full"

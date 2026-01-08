@@ -41,6 +41,7 @@ export interface Lesson {
   transcriptUrl?: string;
   vdocipherId?: string;
   firefliesEmbedUrl?: string;
+  firefliesVideoUrl?: string; // Direct mp4 URL from Fireflies CDN
   overview?: string;
   keywords?: string[];
   callDate?: string;

@@ -91,27 +91,40 @@ Deno.serve(async (req) => {
       // Create customer in Fanbases
       console.log(`[Fanbases Customer] Creating new customer for ${email}`);
       
+      const customerPayload = {
+        email,
+        name,
+        metadata: { user_id: user.id },
+      };
+      console.log('[Fanbases Customer] Request payload:', JSON.stringify(customerPayload));
+      
       const createResponse = await fetch(`${FANBASES_API_URL}/customers`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
           'x-api-key': FANBASES_API_KEY,
         },
-        body: JSON.stringify({
-          email,
-          name,
-          metadata: { user_id: user.id },
-        }),
+        body: JSON.stringify(customerPayload),
       });
 
+      const responseText = await createResponse.text();
+      console.log('[Fanbases Customer] Raw response:', responseText, 'Status:', createResponse.status);
+
       if (!createResponse.ok) {
-        const errorText = await createResponse.text();
-        console.error('Fanbases customer creation failed:', errorText);
-        throw new Error('Failed to create customer in Fanbases');
+        console.error('Fanbases customer creation failed:', responseText);
+        throw new Error(`Failed to create customer in Fanbases: ${responseText}`);
       }
 
-      const createData = await createResponse.json();
-      const fanbasesCustomerId = createData.data?.id || createData.id;
+      let createData;
+      try {
+        createData = JSON.parse(responseText);
+      } catch {
+        console.error('Failed to parse response as JSON:', responseText);
+        throw new Error('Invalid response from Fanbases API');
+      }
+      
+      const fanbasesCustomerId = createData.data?.id || createData.data?.customer_id || createData.id || createData.customer_id;
 
       console.log(`[Fanbases Customer] Customer created: ${fanbasesCustomerId}`);
 

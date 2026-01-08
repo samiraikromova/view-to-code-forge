@@ -78,38 +78,54 @@ Deno.serve(async (req) => {
     // Charge customer via Fanbases API
     console.log(`[Fanbases Charge] Charging customer ${customer.fanbases_customer_id}`);
 
+    const chargePayload = {
+      payment_method_id: customer.payment_method_id,
+      amount_cents,
+      description,
+      metadata: {
+        user_id: user.id,
+        product_type,
+        product_id,
+      },
+    };
+    console.log('[Fanbases Charge] Request payload:', JSON.stringify(chargePayload));
+
     const chargeResponse = await fetch(
       `${FANBASES_API_URL}/customers/${customer.fanbases_customer_id}/charge`,
       {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json',
           'x-api-key': FANBASES_API_KEY,
         },
-        body: JSON.stringify({
-          payment_method_id: customer.payment_method_id,
-          amount_cents,
-          description,
-          metadata: {
-            user_id: user.id,
-            product_type,
-            product_id,
-          },
-        }),
+        body: JSON.stringify(chargePayload),
       }
     );
 
-    const chargeData = await chargeResponse.json();
+    const responseText = await chargeResponse.text();
+    console.log('[Fanbases Charge] Raw response:', responseText, 'Status:', chargeResponse.status);
 
-    if (!chargeResponse.ok || chargeData.status !== 'success') {
+    let chargeData;
+    try {
+      chargeData = JSON.parse(responseText);
+    } catch {
+      console.error('Failed to parse charge response as JSON:', responseText);
+      return new Response(
+        JSON.stringify({ error: 'Invalid response from payment provider' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
+    if (!chargeResponse.ok || (chargeData.status && chargeData.status !== 'success')) {
       console.error('Charge failed:', chargeData);
       return new Response(
-        JSON.stringify({ error: chargeData.message || 'Payment failed' }),
+        JSON.stringify({ error: chargeData.message || chargeData.error || 'Payment failed' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const chargeId = chargeData.data?.charge_id;
+    const chargeId = chargeData.data?.charge_id || chargeData.charge_id || chargeData.id;
     console.log(`[Fanbases Charge] Charge successful: ${chargeId}`);
 
     // Process based on product type
