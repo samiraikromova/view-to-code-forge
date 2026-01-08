@@ -112,7 +112,7 @@ export default function Settings() {
                   <p className="text-sm text-muted-foreground">Current Balance</p>
                   <p className="text-3xl font-bold text-foreground">{(profile?.credits || 0).toFixed(2)} credits</p>
                 </div>
-                <Button onClick={() => setShowTopUpModal(true)} className="gap-2">
+                <Button onClick={() => setShowTopUpModal(true)} className="gap-2 bg-accent hover:bg-accent-hover text-accent-foreground">
                   <Zap className="h-4 w-4" />
                   Top Up
                 </Button>
@@ -128,7 +128,7 @@ export default function Settings() {
                   <p className="text-3xl font-bold text-foreground">{PLANS[currentTier].name}</p>
                 </div>
                 {currentTier !== "pro" && (
-                  <Button variant="outline" className="gap-2" onClick={() => setShowSubscriptionModal(true)}>
+                  <Button variant="outline" className="gap-2 border-accent text-accent hover:bg-accent/10" onClick={() => setShowSubscriptionModal(true)}>
                     Upgrade
                   </Button>
                 )}
@@ -157,15 +157,15 @@ export default function Settings() {
                   <ul className="mt-3 space-y-2">
                     {PLANS[currentTier].features.map((feature, i) => (
                       <li key={i} className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <Check className="h-4 w-4 text-primary" />
+                      <Check className="h-4 w-4 text-accent" />
                         {feature}
                       </li>
                     ))}
                   </ul>
                 </div>
                 <div className="flex flex-col gap-2">
-                  {currentTier !== "pro" && (
-                    <Button onClick={() => setShowSubscriptionModal(true)}>
+                {currentTier !== "pro" && (
+                    <Button onClick={() => setShowSubscriptionModal(true)} className="bg-accent hover:bg-accent-hover text-accent-foreground">
                       Upgrade to Pro
                     </Button>
                   )}
@@ -193,7 +193,7 @@ export default function Settings() {
                         <ul className="mt-4 space-y-2">
                           {plan.features.map((feature, i) => (
                             <li key={i} className="flex items-start gap-2 text-xs text-muted-foreground">
-                              <Check className="h-3 w-3 text-primary mt-0.5 flex-shrink-0" />
+                              <Check className="h-3 w-3 text-accent mt-0.5 flex-shrink-0" />
                               {feature}
                             </li>
                           ))}
@@ -201,7 +201,7 @@ export default function Settings() {
                         {!isCurrent && tier !== "free" && (
                           <Button
                             variant={tier === "pro" ? "default" : "outline"}
-                            className="w-full mt-4"
+                            className={`w-full mt-4 ${tier === "pro" ? "bg-accent hover:bg-accent-hover text-accent-foreground" : "border-accent text-accent hover:bg-accent/10"}`}
                             size="sm"
                             onClick={() => setShowSubscriptionModal(true)}
                           >
@@ -273,10 +273,13 @@ export default function Settings() {
           </CardHeader>
           <CardContent>
             <div className="text-center py-6">
-              <CreditCard className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <CreditCard className="h-12 w-12 text-accent mx-auto mb-4" />
               <p className="text-muted-foreground mb-4">
                 Payment methods are securely stored via Fanbases.
               </p>
+              <Button className="bg-accent hover:bg-accent-hover text-accent-foreground" onClick={() => navigate("/pricing/top-up")}>
+                Add Card
+              </Button>
             </div>
           </CardContent>
         </Card>

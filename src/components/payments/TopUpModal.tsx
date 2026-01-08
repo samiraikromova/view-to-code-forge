@@ -52,10 +52,10 @@ export function TopUpModal({
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <div className="flex items-center gap-3 mb-2">
-            <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center">
-              <Zap className="h-5 w-5 text-primary" />
+            <div className="h-10 w-10 rounded-full bg-accent/20 flex items-center justify-center">
+              <Zap className="h-5 w-5 text-accent" />
             </div>
-            <DialogTitle className="text-xl">Top Up Credits</DialogTitle>
+            <DialogTitle className="text-xl text-accent">Top Up Credits</DialogTitle>
           </div>
           <DialogDescription className="text-base">
             Current balance: <strong>{currentCredits.toFixed(2)} credits</strong>
@@ -73,13 +73,13 @@ export function TopUpModal({
               }`}
             >
               {option.popular && (
-                <div className="absolute -top-2 right-2 bg-primary text-primary-foreground text-xs font-medium px-2 py-0.5 rounded">
+                <div className="absolute -top-2 right-2 bg-accent text-accent-foreground text-xs font-medium px-2 py-0.5 rounded">
                   Popular
                 </div>
               )}
               
               <div className="flex items-center gap-2 mb-2">
-                <Zap className="h-4 w-4 text-primary" />
+                <Zap className="h-4 w-4 text-accent" />
                 <span className="font-semibold text-foreground">
                   {option.credits.toLocaleString()} Credits
                 </span>
@@ -90,7 +90,7 @@ export function TopUpModal({
               </div>
 
               <Button
-                className="w-full"
+                className={`w-full ${option.popular ? 'bg-accent hover:bg-accent-hover text-accent-foreground' : ''}`}
                 variant={option.popular ? 'default' : 'outline'}
                 size="sm"
                 onClick={() => handlePurchase(option.credits, option.price * 100)}

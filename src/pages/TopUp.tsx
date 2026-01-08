@@ -94,7 +94,7 @@ export default function TopUp() {
                     <p className="text-sm text-muted-foreground">Add a card to purchase credits</p>
                   </div>
                 </div>
-                <Button onClick={handleAddCard} disabled={settingUpCard}>
+                <Button onClick={handleAddCard} disabled={settingUpCard} className="bg-accent hover:bg-accent-hover text-accent-foreground">
                   {settingUpCard ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -134,13 +134,13 @@ export default function TopUp() {
               }`}
             >
               {option.popular && (
-                <div className="absolute top-0 right-0 bg-primary text-primary-foreground text-xs font-medium px-3 py-1 rounded-bl-lg">
+                <div className="absolute top-0 right-0 bg-accent text-accent-foreground text-xs font-medium px-3 py-1 rounded-bl-lg">
                   Most Popular
                 </div>
               )}
               <CardHeader>
                 <div className="flex items-center gap-2">
-                  <Zap className="h-5 w-5 text-primary" />
+                  <Zap className="h-5 w-5 text-accent" />
                   <CardTitle>{option.credits.toLocaleString()} Credits</CardTitle>
                 </div>
                 <CardDescription>
@@ -153,15 +153,15 @@ export default function TopUp() {
                 </div>
                 <ul className="space-y-2 mb-4">
                   <li className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Check className="h-4 w-4 text-primary" />
+                    <Check className="h-4 w-4 text-accent" />
                     Instant credit delivery
                   </li>
                   <li className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Check className="h-4 w-4 text-primary" />
+                    <Check className="h-4 w-4 text-accent" />
                     No expiration
                   </li>
                   <li className="flex items-center gap-2 text-sm text-muted-foreground">
-                    <Check className="h-4 w-4 text-primary" />
+                    <Check className="h-4 w-4 text-accent" />
                     Use across all tools
                   </li>
                 </ul>
@@ -189,8 +189,8 @@ export default function TopUp() {
         <Card className="bg-surface/50">
           <CardContent className="py-4">
             <p className="text-sm text-muted-foreground text-center">
-              Credits are added instantly after purchase. All purchases are charged to your card on file.{" "}
-              <Button variant="link" className="p-0 h-auto" onClick={() => navigate("/settings")}>
+            Credits are added instantly after purchase. All purchases are charged to your card on file.{" "}
+              <Button variant="link" className="p-0 h-auto text-accent hover:text-accent-hover" onClick={() => navigate("/settings")}>
                 Upgrade your plan
               </Button>{" "}
               for monthly credit allowances.
