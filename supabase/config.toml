@@ -34,3 +34,15 @@ enabled = true
 verify_jwt = false
 import_map = "./functions/fanbases-charge/deno.json"
 entrypoint = "./functions/fanbases-charge/index.ts"
+
+[functions.fanbases-webhook]
+enabled = true
+verify_jwt = false
+import_map = "./functions/fanbases-webhook/deno.json"
+entrypoint = "./functions/fanbases-webhook/index.ts"
+
+[functions.fanbases-checkout]
+enabled = true
+verify_jwt = false
+import_map = "./functions/fanbases-checkout/deno.json"
+entrypoint = "./functions/fanbases-checkout/index.ts"
