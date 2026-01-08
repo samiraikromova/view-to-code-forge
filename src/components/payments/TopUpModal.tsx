@@ -139,7 +139,7 @@ export function TopUpModal({
 
         <div className="grid grid-cols-2 gap-3 py-4">
           {TOPUP_OPTIONS.map((option) => {
-            const isDisabled = loading !== null || hasPaymentMethod === false;
+            const isDisabled = loading !== null || hasPaymentMethod !== true;
             
             return (
               <div
