@@ -3,8 +3,8 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Zap, Check, CreditCard, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { purchaseCredits } from "@/api/fanbases/fanbasesApi";
-import { useState } from "react";
+import { purchaseCredits, getOrCreateCustomer, setupPaymentMethod } from "@/api/fanbases/fanbasesApi";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 
 const topUpOptions = [
@@ -19,8 +19,39 @@ export default function TopUp() {
   const { profile, refreshProfile } = useAuth();
   const currentCredits = profile?.credits || 0;
   const [loading, setLoading] = useState<number | null>(null);
+  const [hasPaymentMethod, setHasPaymentMethod] = useState<boolean | null>(null);
+  const [settingUpCard, setSettingUpCard] = useState(false);
+
+  useEffect(() => {
+    const checkPaymentMethod = async () => {
+      const result = await getOrCreateCustomer();
+      setHasPaymentMethod(result.has_payment_method);
+    };
+    checkPaymentMethod();
+  }, []);
+
+  const handleAddCard = async () => {
+    setSettingUpCard(true);
+    try {
+      const result = await setupPaymentMethod();
+      if (result.success && result.checkout_url) {
+        window.location.href = result.checkout_url;
+      } else {
+        toast.error(result.error || 'Failed to set up payment method');
+      }
+    } catch (error) {
+      console.error('Setup error:', error);
+      toast.error('Something went wrong. Please try again.');
+    } finally {
+      setSettingUpCard(false);
+    }
+  };
 
   const handlePurchase = async (credits: number, priceCents: number) => {
+    if (!hasPaymentMethod) {
+      toast.error('Please add a payment method first');
+      return;
+    }
     setLoading(credits);
     try {
       const result = await purchaseCredits(credits, priceCents);
@@ -50,6 +81,33 @@ export default function TopUp() {
             <p className="text-sm text-muted-foreground mt-1">Add more credits to your account</p>
           </div>
         </div>
+
+        {/* Payment Method Status */}
+        {hasPaymentMethod === false && (
+          <Card className="mb-6 border-warning bg-warning/10">
+            <CardContent className="py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <CreditCard className="h-5 w-5 text-warning" />
+                  <div>
+                    <p className="font-medium text-foreground">No payment method on file</p>
+                    <p className="text-sm text-muted-foreground">Add a card to purchase credits</p>
+                  </div>
+                </div>
+                <Button onClick={handleAddCard} disabled={settingUpCard}>
+                  {settingUpCard ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      Setting up...
+                    </>
+                  ) : (
+                    'Add Card'
+                  )}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Current Balance */}
         <Card className="mb-8">
