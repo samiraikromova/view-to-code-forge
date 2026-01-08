@@ -159,7 +159,7 @@ export function SubscriptionModal({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
           {(Object.entries(PLANS) as [('starter' | 'pro'), typeof PLANS.starter][]).map(([tier, plan]) => {
             const isCurrent = currentTier === tier || currentTier === (tier === 'starter' ? 'tier1' : 'tier2');
-            const isDisabled = loading !== null || isCurrent || hasPaymentMethod === false;
+            const isDisabled = loading !== null || isCurrent || hasPaymentMethod !== true;
             
             return (
               <div
