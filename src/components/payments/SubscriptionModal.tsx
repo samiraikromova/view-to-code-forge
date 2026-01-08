@@ -71,10 +71,10 @@ export function SubscriptionModal({
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <div className="flex items-center gap-3 mb-2">
-            <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center">
-              <Zap className="h-5 w-5 text-primary" />
+            <div className="h-10 w-10 rounded-full bg-accent/20 flex items-center justify-center">
+              <Zap className="h-5 w-5 text-accent" />
             </div>
-            <DialogTitle className="text-xl">Subscribe to Unlock AI Features</DialogTitle>
+            <DialogTitle className="text-xl text-accent">Subscribe to Unlock AI Features</DialogTitle>
           </div>
           <DialogDescription className="text-base">
             Get access to AI Chat and Ask AI on all your lessons.
@@ -94,8 +94,8 @@ export function SubscriptionModal({
                     : 'border-border bg-surface/30'
                 }`}
               >
-                {tier === 'pro' && (
-                  <div className="text-xs font-medium text-primary mb-2">MOST POPULAR</div>
+              {tier === 'pro' && (
+                  <div className="text-xs font-medium text-accent mb-2">MOST POPULAR</div>
                 )}
                 <h3 className="text-lg font-semibold text-foreground">{plan.name}</h3>
                 <div className="mt-2">
@@ -106,14 +106,14 @@ export function SubscriptionModal({
                 <ul className="mt-4 space-y-2">
                   {plan.features.map((feature, i) => (
                     <li key={i} className="flex items-start gap-2 text-sm text-muted-foreground">
-                      <Check className="h-4 w-4 text-primary mt-0.5 flex-shrink-0" />
+                      <Check className="h-4 w-4 text-accent mt-0.5 flex-shrink-0" />
                       {feature}
                     </li>
                   ))}
                 </ul>
 
                 <Button
-                  className="w-full mt-4"
+                  className={`w-full mt-4 ${tier === 'pro' ? 'bg-accent hover:bg-accent-hover text-accent-foreground' : ''}`}
                   variant={tier === 'pro' ? 'default' : 'outline'}
                   onClick={() => handleSubscribe(tier)}
                   disabled={loading !== null || isCurrent}
