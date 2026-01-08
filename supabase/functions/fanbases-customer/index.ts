@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { action } = body;
 
-    console.log(`[Fanbases Customer] v3.0 - Action: ${action}, User: ${user.id}`);
+    console.log(`[Fanbases Customer] v4.0 - Action: ${action}, User: ${user.id}`);
 
     if (action === 'get_or_create') {
       // Check if customer already exists in our database
@@ -167,12 +167,13 @@ Deno.serve(async (req) => {
       const webhookUrl = `${supabaseUrl}/functions/v1/fanbases-webhook`;
 
       // Create a checkout session for saving a card
+      // Fanbases requires minimum 100 cents ($1) - this is a one-time setup fee
       const setupPayload = {
         product: {
-          title: 'Save Payment Method',
-          description: 'Securely save your card for future purchases',
+          title: 'Card Setup Fee',
+          description: 'One-time $1 fee to securely save your card for future purchases',
         },
-        amount_cents: 0,
+        amount_cents: 100, // Minimum $1 required by Fanbases API
         type: 'onetime_reusable',
         metadata: {
           user_id: user.id,
