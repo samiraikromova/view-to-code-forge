@@ -147,6 +147,7 @@ Deno.serve(async (req) => {
       );
 
     } else if (action === 'setup_payment_method') {
+      // Use the fanbases-checkout function for card setup
       // Get user profile for email
       const { data: userProfile } = await supabase
         .from('users')
@@ -155,61 +156,65 @@ Deno.serve(async (req) => {
         .single();
 
       const email = userProfile?.email || user.email;
-      const name = userProfile?.name || '';
 
       // Get current origin for redirect
       const origin = req.headers.get('origin') || 'https://app.example.com';
       const returnUrl = `${origin}/pricing/top-up?setup=complete`;
 
-      // Use Fanbases checkout to set up a payment method with $0 
-      // This creates the customer and saves their card
-      const checkoutPayload = {
+      // Get base URL for webhooks
+      const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+      const webhookUrl = `${supabaseUrl}/functions/v1/fanbases-webhook`;
+
+      // Create a checkout session for saving a card
+      const setupPayload = {
+        product: {
+          title: 'Save Payment Method',
+          description: 'Securely save your card for future purchases',
+        },
         amount_cents: 0,
-        currency: 'USD',
-        customer_email: email,
-        customer_name: name,
-        description: 'Save payment method',
-        success_url: returnUrl,
-        cancel_url: `${origin}/pricing/top-up?setup=cancelled`,
+        type: 'onetime_reusable',
         metadata: {
           user_id: user.id,
-          action: 'save_card',
+          action: 'setup_card',
+          email,
         },
-        save_payment_method: true,
+        success_url: returnUrl,
+        cancel_url: `${origin}/pricing/top-up?setup=cancelled`,
+        webhook_url: webhookUrl,
       };
 
-      console.log('[Fanbases Customer] Creating checkout for card setup:', JSON.stringify(checkoutPayload));
+      console.log('[Fanbases Customer] Creating card setup session:', JSON.stringify(setupPayload));
 
-      const checkoutResponse = await fetch(`${FANBASES_API_URL}/checkout/sessions`, {
+      const response = await fetch(`${FANBASES_API_URL}/checkout-sessions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
           'x-api-key': FANBASES_API_KEY,
         },
-        body: JSON.stringify(checkoutPayload),
+        body: JSON.stringify(setupPayload),
       });
 
-      const responseText = await checkoutResponse.text();
-      console.log('[Fanbases Customer] Checkout response:', responseText, 'Status:', checkoutResponse.status);
+      const responseText = await response.text();
+      console.log('[Fanbases Customer] Checkout response:', responseText, 'Status:', response.status);
 
-      if (!checkoutResponse.ok) {
-        console.error('Fanbases checkout creation failed:', responseText);
+      if (!response.ok) {
+        console.error('Failed to create card setup session:', responseText);
         throw new Error(`Failed to create checkout session: ${responseText}`);
       }
 
-      let checkoutData;
+      let data;
       try {
-        checkoutData = JSON.parse(responseText);
+        data = JSON.parse(responseText);
       } catch {
-        console.error('Failed to parse checkout response:', responseText);
-        throw new Error('Invalid response from Fanbases API');
+        console.error('Failed to parse response:', responseText);
+        throw new Error('Invalid response from payment provider');
       }
 
-      const checkoutUrl = checkoutData.data?.url || checkoutData.data?.payment_link || checkoutData.url || checkoutData.payment_link;
+      const checkoutUrl = data.data?.payment_link || data.data?.url || data.payment_link || data.url;
 
       if (!checkoutUrl) {
-        console.error('No checkout URL in response:', checkoutData);
+        console.error('No checkout URL in response:', data);
         throw new Error('No checkout URL returned from Fanbases');
       }
 
