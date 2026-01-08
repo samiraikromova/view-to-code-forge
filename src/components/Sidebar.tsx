@@ -167,26 +167,26 @@ export function Sidebar({
                       autoFocus 
                     />
                   ) : (
-                    <>
-                      <button 
+                    <div 
+                      className={cn(
+                        "flex-1 flex items-center text-xs text-left px-2 py-1.5 min-w-0",
+                        currentChatId === chat.id ? "text-accent font-medium" : "text-muted-foreground"
+                      )}
+                    >
+                      <Star className="mr-1 h-3 w-3 fill-accent text-accent flex-shrink-0" />
+                      <span 
                         onClick={() => onChatSelect(chat.id)} 
-                        className={cn(
-                          "flex-1 flex items-center text-xs text-left px-2 py-1.5 min-w-0 overflow-hidden",
-                          currentChatId === chat.id ? "text-accent font-medium" : "text-muted-foreground"
-                        )}
+                        className="truncate flex-1 min-w-0 cursor-pointer"
                       >
-                        <Star className="mr-1 h-3 w-3 fill-accent text-accent flex-shrink-0" />
-                        <span className="truncate">{chat.title}</span>
-                      </button>
+                        {chat.title}
+                      </span>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-6 w-6 flex-shrink-0 opacity-0 group-hover:opacity-100 hover:bg-surface-hover text-muted-foreground"
+                          <button 
+                            className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:text-accent-foreground h-6 w-6 flex-shrink-0 opacity-0 group-hover:opacity-100 hover:bg-surface-hover text-muted-foreground"
                           >
                             <MoreVertical className="h-3 w-3" />
-                          </Button>
+                          </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="start" side="right" sideOffset={4}>
                           <DropdownMenuItem onClick={() => handleStarChat(chat.id)}>
@@ -203,7 +203,7 @@ export function Sidebar({
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
-                    </>
+                    </div>
                   )}
                 </div>
               ))}
@@ -230,25 +230,25 @@ export function Sidebar({
                     autoFocus 
                   />
                 ) : (
-                  <>
-                    <button 
+                  <div 
+                    className={cn(
+                      "flex-1 flex items-center text-xs text-left px-2 py-1.5 min-w-0 cursor-pointer",
+                      currentChatId === chat.id ? "text-accent font-medium" : "text-muted-foreground"
+                    )}
+                  >
+                    <span 
                       onClick={() => onChatSelect(chat.id)} 
-                      className={cn(
-                        "flex-1 text-xs text-left px-2 py-1.5 min-w-0 overflow-hidden",
-                        currentChatId === chat.id ? "text-accent font-medium" : "text-muted-foreground"
-                      )}
+                      className="truncate block flex-1 min-w-0"
                     >
-                      <span className="truncate block">{chat.title}</span>
-                    </button>
+                      {chat.title}
+                    </span>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-6 w-6 flex-shrink-0 opacity-0 group-hover:opacity-100 hover:bg-surface-hover text-muted-foreground"
+                        <button 
+                          className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 hover:text-accent-foreground h-6 w-6 flex-shrink-0 opacity-0 group-hover:opacity-100 hover:bg-surface-hover text-muted-foreground"
                         >
                           <MoreVertical className="h-3 w-3" />
-                        </Button>
+                        </button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="start" side="right" sideOffset={4}>
                         <DropdownMenuItem onClick={() => handleStarChat(chat.id)}>
@@ -265,7 +265,7 @@ export function Sidebar({
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
-                  </>
+                  </div>
                 )}
               </div>
             ))}
