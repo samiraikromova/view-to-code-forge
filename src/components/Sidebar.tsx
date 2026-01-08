@@ -152,7 +152,7 @@ export function Sidebar({
                   <div className="text-xs font-medium text-muted-foreground">Favorites</div>
                 </div>}
               {filterChats(getStarredChats()).map(chat => (
-                <div key={chat.id} className="group flex items-center rounded-lg hover:bg-surface-hover transition-colors px-1 overflow-hidden">
+                <div key={chat.id} className="group flex items-center rounded-lg hover:bg-surface-hover transition-colors pr-1 overflow-hidden">
                   {editingChatId === chat.id ? (
                     <input 
                       type="text" 
@@ -215,7 +215,7 @@ export function Sidebar({
                 <div className="text-xs font-medium text-muted-foreground">Recent</div>
               </div>}
             {filterChats(getRecentChats()).map(chat => (
-              <div key={chat.id} className="group flex items-center rounded-lg hover:bg-surface-hover transition-colors px-1 overflow-hidden">
+              <div key={chat.id} className="group flex items-center rounded-lg hover:bg-surface-hover transition-colors pr-1 overflow-hidden">
                 {editingChatId === chat.id ? (
                   <input 
                     type="text" 
