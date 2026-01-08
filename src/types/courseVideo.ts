@@ -11,6 +11,7 @@ export interface CourseVideo {
   description: string | null;
   vdocipher_id: string | null;
   fireflies_embed_url: string | null;
+  fireflies_video_url: string | null; // Direct mp4 URL from Fireflies CDN
   category: 'course' | 'call_recording';
   module: string;
   duration: string | null;
