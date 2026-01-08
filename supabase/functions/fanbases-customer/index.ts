@@ -54,7 +54,7 @@ Deno.serve(async (req) => {
     console.log(`[Fanbases Customer] Action: ${action}, User: ${user.id}`);
 
     if (action === 'get_or_create') {
-      // Check if customer already exists
+      // Check if customer already exists in our database
       const { data: existingCustomer, error: fetchError } = await supabase
         .from('fanbases_customers')
         .select('*')
@@ -66,19 +66,88 @@ Deno.serve(async (req) => {
         throw new Error('Failed to fetch customer data');
       }
 
-      if (existingCustomer) {
+      if (existingCustomer?.fanbases_customer_id) {
         console.log(`[Fanbases Customer] Existing customer found: ${existingCustomer.fanbases_customer_id}`);
+        
+        // Check if they have payment methods via Fanbases API
+        let hasPaymentMethod = !!existingCustomer.payment_method_id;
+        
+        try {
+          const pmResponse = await fetch(
+            `${FANBASES_API_URL}/customers/${existingCustomer.fanbases_customer_id}/payment-methods`,
+            {
+              method: 'GET',
+              headers: {
+                'Accept': 'application/json',
+                'x-api-key': FANBASES_API_KEY,
+              },
+            }
+          );
+          
+          if (pmResponse.ok) {
+            const pmData = await pmResponse.json();
+            const paymentMethods = pmData.data?.payment_methods || [];
+            hasPaymentMethod = paymentMethods.length > 0;
+            
+            // Update our database with the first payment method if we don't have one stored
+            if (hasPaymentMethod && !existingCustomer.payment_method_id) {
+              await supabase
+                .from('fanbases_customers')
+                .update({ 
+                  payment_method_id: paymentMethods[0].id,
+                  updated_at: new Date().toISOString()
+                })
+                .eq('user_id', user.id);
+            }
+          }
+        } catch (pmError) {
+          console.log('[Fanbases Customer] Could not fetch payment methods:', pmError);
+        }
+        
         return new Response(
           JSON.stringify({
             success: true,
             customer_id: existingCustomer.fanbases_customer_id,
-            has_payment_method: !!existingCustomer.payment_method_id,
+            has_payment_method: hasPaymentMethod,
           }),
           { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
 
-      // Get user email
+      // No customer record yet - they need to go through checkout to create one
+      // Create a placeholder record so we can track them
+      const { data: userProfile } = await supabase
+        .from('users')
+        .select('email, name')
+        .eq('id', user.id)
+        .single();
+
+      const email = userProfile?.email || user.email;
+
+      // Check if we have a placeholder record already
+      if (!existingCustomer) {
+        await supabase
+          .from('fanbases_customers')
+          .upsert({
+            user_id: user.id,
+            email,
+            fanbases_customer_id: null, // Will be populated after checkout
+          }, { onConflict: 'user_id' });
+      }
+
+      console.log(`[Fanbases Customer] No Fanbases customer yet for ${email}`);
+      
+      return new Response(
+        JSON.stringify({
+          success: true,
+          customer_id: null,
+          has_payment_method: false,
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+
+    } else if (action === 'setup_payment_method') {
+      // Get user profile for email
       const { data: userProfile } = await supabase
         .from('users')
         .select('email, name')
@@ -88,87 +157,61 @@ Deno.serve(async (req) => {
       const email = userProfile?.email || user.email;
       const name = userProfile?.name || '';
 
-      // Create customer in Fanbases
-      console.log(`[Fanbases Customer] Creating new customer for ${email}`);
-      
-      const customerPayload = {
-        email,
-        name,
-        metadata: { user_id: user.id },
+      // Get current origin for redirect
+      const origin = req.headers.get('origin') || 'https://app.example.com';
+      const returnUrl = `${origin}/pricing/top-up?setup=complete`;
+
+      // Use Fanbases checkout to set up a payment method with $0 
+      // This creates the customer and saves their card
+      const checkoutPayload = {
+        amount_cents: 0,
+        currency: 'USD',
+        customer_email: email,
+        customer_name: name,
+        description: 'Save payment method',
+        success_url: returnUrl,
+        cancel_url: `${origin}/pricing/top-up?setup=cancelled`,
+        metadata: {
+          user_id: user.id,
+          action: 'save_card',
+        },
+        save_payment_method: true,
       };
-      console.log('[Fanbases Customer] Request payload:', JSON.stringify(customerPayload));
-      
-      const createResponse = await fetch(`${FANBASES_API_URL}/customers`, {
+
+      console.log('[Fanbases Customer] Creating checkout for card setup:', JSON.stringify(checkoutPayload));
+
+      const checkoutResponse = await fetch(`${FANBASES_API_URL}/checkout/sessions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
           'x-api-key': FANBASES_API_KEY,
         },
-        body: JSON.stringify(customerPayload),
+        body: JSON.stringify(checkoutPayload),
       });
 
-      const responseText = await createResponse.text();
-      console.log('[Fanbases Customer] Raw response:', responseText, 'Status:', createResponse.status);
+      const responseText = await checkoutResponse.text();
+      console.log('[Fanbases Customer] Checkout response:', responseText, 'Status:', checkoutResponse.status);
 
-      if (!createResponse.ok) {
-        console.error('Fanbases customer creation failed:', responseText);
-        throw new Error(`Failed to create customer in Fanbases: ${responseText}`);
+      if (!checkoutResponse.ok) {
+        console.error('Fanbases checkout creation failed:', responseText);
+        throw new Error(`Failed to create checkout session: ${responseText}`);
       }
 
-      let createData;
+      let checkoutData;
       try {
-        createData = JSON.parse(responseText);
+        checkoutData = JSON.parse(responseText);
       } catch {
-        console.error('Failed to parse response as JSON:', responseText);
+        console.error('Failed to parse checkout response:', responseText);
         throw new Error('Invalid response from Fanbases API');
       }
-      
-      const fanbasesCustomerId = createData.data?.id || createData.data?.customer_id || createData.id || createData.customer_id;
 
-      console.log(`[Fanbases Customer] Customer created: ${fanbasesCustomerId}`);
+      const checkoutUrl = checkoutData.data?.url || checkoutData.data?.payment_link || checkoutData.url || checkoutData.payment_link;
 
-      // Store in our database
-      const { error: insertError } = await supabase
-        .from('fanbases_customers')
-        .insert({
-          user_id: user.id,
-          fanbases_customer_id: fanbasesCustomerId,
-          email,
-        });
-
-      if (insertError) {
-        console.error('Error storing customer:', insertError);
-        throw new Error('Failed to store customer data');
+      if (!checkoutUrl) {
+        console.error('No checkout URL in response:', checkoutData);
+        throw new Error('No checkout URL returned from Fanbases');
       }
-
-      return new Response(
-        JSON.stringify({
-          success: true,
-          customer_id: fanbasesCustomerId,
-          has_payment_method: false,
-        }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-
-    } else if (action === 'setup_payment_method') {
-      // Get customer
-      const { data: customer } = await supabase
-        .from('fanbases_customers')
-        .select('fanbases_customer_id')
-        .eq('user_id', user.id)
-        .single();
-
-      if (!customer) {
-        return new Response(
-          JSON.stringify({ error: 'Customer not found. Please try again.' }),
-          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-
-      // Generate setup URL for Fanbases
-      // Note: This depends on Fanbases API - may need adjustment based on their docs
-      const checkoutUrl = `https://www.fanbasis.com/checkout/setup?customer_id=${customer.fanbases_customer_id}`;
 
       return new Response(
         JSON.stringify({
@@ -178,17 +221,22 @@ Deno.serve(async (req) => {
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
 
-    } else if (action === 'update_payment_method') {
-      const { payment_method_id } = body;
+    } else if (action === 'update_customer') {
+      // Called by webhook when customer completes checkout
+      const { fanbases_customer_id, payment_method_id } = body;
 
       const { error: updateError } = await supabase
         .from('fanbases_customers')
-        .update({ payment_method_id, updated_at: new Date().toISOString() })
+        .update({ 
+          fanbases_customer_id,
+          payment_method_id, 
+          updated_at: new Date().toISOString() 
+        })
         .eq('user_id', user.id);
 
       if (updateError) {
-        console.error('Error updating payment method:', updateError);
-        throw new Error('Failed to update payment method');
+        console.error('Error updating customer:', updateError);
+        throw new Error('Failed to update customer');
       }
 
       return new Response(
