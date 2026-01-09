@@ -136,6 +136,15 @@ export default function Analytics() {
         cost: data.cost
       })).sort((a, b) => b.cost - a.cost)
 
+      // Get user's created_at date to start monthly data from there
+      const { data: userData } = await supabase
+        .from('users')
+        .select('created_at')
+        .eq('id', user.id)
+        .single()
+
+      const userCreatedAt = userData?.created_at ? new Date(userData.created_at) : new Date()
+
       // Generate real monthly data from usage_logs using estimated_cost
       const { data: allUsageLogs } = await supabase
         .from('usage_logs')
@@ -143,25 +152,35 @@ export default function Analytics() {
         .eq('user_id', user.id)
         .order('created_at', { ascending: true })
 
-      // Group by month
+      // Group by month and sum costs properly
       const monthlyMap: Record<string, number> = {}
       allUsageLogs?.forEach(log => {
         const date = new Date(log.created_at)
-        const monthKey = date.toLocaleDateString('en-US', { year: 'numeric', month: 'short' })
+        // Create a consistent month key format: "Dec 2024"
+        const monthKey = `${date.toLocaleDateString('en-US', { month: 'short' })} ${date.getFullYear()}`
         // Use estimated_cost first, fallback to cost
         const logCost = Number(log.estimated_cost) || Number(log.cost) || 0
         monthlyMap[monthKey] = (monthlyMap[monthKey] || 0) + logCost
       })
 
-      // Convert to array, show last 6 months with data
-      const monthlyCreditsData = Object.entries(monthlyMap)
-        .map(([month, credits]) => ({ month, credits }))
-        .slice(-6)
-
-      // If no data, show current month with 0
-      if (monthlyCreditsData.length === 0) {
-        monthlyCreditsData.push({ month: new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }), credits: 0 })
+      // Generate months from user's created_at to now
+      const monthlyCreditsData: Array<{ month: string; credits: number }> = []
+      const startMonth = new Date(userCreatedAt.getFullYear(), userCreatedAt.getMonth(), 1)
+      const now = new Date()
+      const currentMonth = new Date(now.getFullYear(), now.getMonth(), 1)
+      
+      let iterMonth = new Date(startMonth)
+      while (iterMonth <= currentMonth) {
+        const monthKey = `${iterMonth.toLocaleDateString('en-US', { month: 'short' })} ${iterMonth.getFullYear()}`
+        monthlyCreditsData.push({
+          month: monthKey,
+          credits: monthlyMap[monthKey] || 0
+        })
+        iterMonth.setMonth(iterMonth.getMonth() + 1)
       }
+
+      // Limit to last 6 months if more
+      const finalMonthlyData = monthlyCreditsData.slice(-6)
 
       setStats({
         totalCreditsUsed: totalCost,
@@ -170,7 +189,7 @@ export default function Analytics() {
         avgDailyCredits: totalCost / days
       })
       setProjectUsage(projectUsageData)
-      setMonthlyData(monthlyCreditsData)
+      setMonthlyData(finalMonthlyData)
     } catch (error) {
       console.error('Error fetching analytics:', error)
     } finally {
@@ -285,7 +304,7 @@ export default function Analytics() {
           <Card>
             <CardHeader>
               <CardTitle>Usage by Project</CardTitle>
-              <CardDescription>Activity breakdown by AI tool</CardDescription>
+              <CardDescription>Number of requests (messages + images) per project</CardDescription>
             </CardHeader>
             <CardContent>
               {projectUsage.length > 0 ? (
