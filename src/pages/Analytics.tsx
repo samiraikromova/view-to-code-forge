@@ -25,13 +25,6 @@ interface ProjectUsage {
 // Lighter, more visible colors for pie chart
 const COLORS = ['#a78bfa', '#60a5fa', '#4ade80', '#f472b6', '#facc15', '#fb923c', '#c084fc']
 
-interface LifetimeStats {
-  totalCreditsUsed: number
-  chatMessages: number
-  imagesGenerated: number
-  avgDailyCredits: number
-  daysSinceCreation: number
-}
 
 export default function Analytics() {
   const navigate = useNavigate()
@@ -43,13 +36,6 @@ export default function Analytics() {
     chatMessages: 0,
     imagesGenerated: 0,
     avgDailyCredits: 0
-  })
-  const [lifetimeStats, setLifetimeStats] = useState<LifetimeStats>({
-    totalCreditsUsed: 0,
-    chatMessages: 0,
-    imagesGenerated: 0,
-    avgDailyCredits: 0,
-    daysSinceCreation: 0
   })
   const [projectUsage, setProjectUsage] = useState<ProjectUsage[]>([])
   const [monthlyData, setMonthlyData] = useState<Array<{ month: string; credits: number }>>([])
@@ -181,22 +167,6 @@ export default function Analytics() {
         cost: data.cost
       })).sort((a, b) => b.cost - a.cost)
 
-      // Calculate lifetime stats from all usage logs
-      let lifetimeTotalCost = 0
-      let lifetimeChatMessages = 0
-      let lifetimeImagesGenerated = 0
-
-      allTimeLogs?.forEach(log => {
-        const cost = Number(log.estimated_cost) || Number(log.cost) || 0
-        lifetimeTotalCost += cost
-        
-        const isImage = log.model?.toLowerCase().includes('ideogram') || log.model?.toLowerCase().includes('image')
-        if (isImage) {
-          lifetimeImagesGenerated += 1
-        } else {
-          lifetimeChatMessages += 1
-        }
-      })
 
       // Generate real monthly data from usage_logs using estimated_cost
       const { data: allUsageLogs } = await supabase
@@ -247,13 +217,6 @@ export default function Analytics() {
         avgDailyCredits: totalCost / displayDays
       })
       
-      setLifetimeStats({
-        totalCreditsUsed: lifetimeTotalCost,
-        chatMessages: lifetimeChatMessages,
-        imagesGenerated: lifetimeImagesGenerated,
-        avgDailyCredits: lifetimeTotalCost / daysSinceCreation,
-        daysSinceCreation
-      })
 
       setProjectUsage(projectUsageData)
       setMonthlyData(finalMonthlyData)
@@ -291,33 +254,6 @@ export default function Analytics() {
           </Select>
         </div>
 
-        {/* Lifetime Stats Card */}
-        <Card className="mb-6 border-primary/20 bg-primary/5">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-lg">Lifetime Statistics</CardTitle>
-            <CardDescription>Your total usage since joining ({lifetimeStats.daysSinceCreation} days ago)</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Credits Used</p>
-                <p className="text-xl font-bold text-primary">${lifetimeStats.totalCreditsUsed.toFixed(2)}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Chat Messages</p>
-                <p className="text-xl font-bold">{lifetimeStats.chatMessages}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Images Generated</p>
-                <p className="text-xl font-bold">{lifetimeStats.imagesGenerated}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Daily Average</p>
-                <p className="text-xl font-bold">${lifetimeStats.avgDailyCredits.toFixed(4)}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
