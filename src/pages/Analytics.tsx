@@ -25,16 +25,31 @@ interface ProjectUsage {
 // Lighter, more visible colors for pie chart
 const COLORS = ['#a78bfa', '#60a5fa', '#4ade80', '#f472b6', '#facc15', '#fb923c', '#c084fc']
 
+interface LifetimeStats {
+  totalCreditsUsed: number
+  chatMessages: number
+  imagesGenerated: number
+  avgDailyCredits: number
+  daysSinceCreation: number
+}
+
 export default function Analytics() {
   const navigate = useNavigate()
   const { user, profile } = useAuth()
-  const [timeRange, setTimeRange] = useState("7d")
+  const [timeRange, setTimeRange] = useState("all")
   const [loading, setLoading] = useState(true)
   const [stats, setStats] = useState<UsageStats>({
     totalCreditsUsed: 0,
     chatMessages: 0,
     imagesGenerated: 0,
     avgDailyCredits: 0
+  })
+  const [lifetimeStats, setLifetimeStats] = useState<LifetimeStats>({
+    totalCreditsUsed: 0,
+    chatMessages: 0,
+    imagesGenerated: 0,
+    avgDailyCredits: 0,
+    daysSinceCreation: 0
   })
   const [projectUsage, setProjectUsage] = useState<ProjectUsage[]>([])
   const [monthlyData, setMonthlyData] = useState<Array<{ month: string; credits: number }>>([])
@@ -49,26 +64,56 @@ export default function Analytics() {
     if (!user) return
     setLoading(true)
 
-    const daysMap: Record<string, number> = {
-      '24h': 1,
-      '7d': 7,
-      '30d': 30,
-      '90d': 90
+    // Get user's created_at date first for lifetime calculations
+    const { data: userData } = await supabase
+      .from('users')
+      .select('created_at')
+      .eq('id', user.id)
+      .single()
+
+    const userCreatedAt = userData?.created_at ? new Date(userData.created_at) : new Date()
+    const daysSinceCreation = Math.max(1, Math.ceil((Date.now() - userCreatedAt.getTime()) / (1000 * 60 * 60 * 24)))
+
+    // Determine date range based on selection
+    let startDate: Date | null = null
+    if (timeRange !== 'all') {
+      const daysMap: Record<string, number> = {
+        '24h': 1,
+        '7d': 7,
+        '30d': 30,
+        '90d': 90
+      }
+      const days = daysMap[timeRange] || 7
+      startDate = new Date()
+      startDate.setDate(startDate.getDate() - days)
     }
-    const days = daysMap[timeRange] || 7
-    const startDate = new Date()
-    startDate.setDate(startDate.getDate() - days)
 
     try {
-      // Fetch usage logs for this user in the time range
-      const { data: usageLogs, error: logsError } = await supabase
+      // Fetch ALL usage logs for this user (for lifetime stats)
+      let query = supabase
         .from('usage_logs')
         .select('id, thread_id, model, tokens, tokens_input, tokens_output, cost, estimated_cost, created_at')
         .eq('user_id', user.id)
-        .gte('created_at', startDate.toISOString())
+      
+      // Apply date filter only if not "all time"
+      if (startDate) {
+        query = query.gte('created_at', startDate.toISOString())
+      }
+
+      const { data: usageLogs, error: logsError } = await query
 
       if (logsError) {
         console.error('Error fetching usage logs:', logsError)
+      }
+
+      // Also fetch ALL logs for lifetime stats (separate query if filtered)
+      let allTimeLogs = usageLogs
+      if (startDate) {
+        const { data: allLogs } = await supabase
+          .from('usage_logs')
+          .select('id, thread_id, model, tokens, tokens_input, tokens_output, cost, estimated_cost, created_at')
+          .eq('user_id', user.id)
+        allTimeLogs = allLogs
       }
 
       // Get thread -> project mapping
@@ -136,14 +181,22 @@ export default function Analytics() {
         cost: data.cost
       })).sort((a, b) => b.cost - a.cost)
 
-      // Get user's created_at date to start monthly data from there
-      const { data: userData } = await supabase
-        .from('users')
-        .select('created_at')
-        .eq('id', user.id)
-        .single()
+      // Calculate lifetime stats from all usage logs
+      let lifetimeTotalCost = 0
+      let lifetimeChatMessages = 0
+      let lifetimeImagesGenerated = 0
 
-      const userCreatedAt = userData?.created_at ? new Date(userData.created_at) : new Date()
+      allTimeLogs?.forEach(log => {
+        const cost = Number(log.estimated_cost) || Number(log.cost) || 0
+        lifetimeTotalCost += cost
+        
+        const isImage = log.model?.toLowerCase().includes('ideogram') || log.model?.toLowerCase().includes('image')
+        if (isImage) {
+          lifetimeImagesGenerated += 1
+        } else {
+          lifetimeChatMessages += 1
+        }
+      })
 
       // Generate real monthly data from usage_logs using estimated_cost
       const { data: allUsageLogs } = await supabase
@@ -182,12 +235,26 @@ export default function Analytics() {
       // Limit to last 6 months if more
       const finalMonthlyData = monthlyCreditsData.slice(-6)
 
+      // For stats, use lifetime values for avgDailyCredits calculation
+      const displayDays = startDate 
+        ? Math.max(1, Math.ceil((Date.now() - startDate.getTime()) / (1000 * 60 * 60 * 24)))
+        : daysSinceCreation
+
       setStats({
         totalCreditsUsed: totalCost,
         chatMessages,
         imagesGenerated,
-        avgDailyCredits: totalCost / days
+        avgDailyCredits: totalCost / displayDays
       })
+      
+      setLifetimeStats({
+        totalCreditsUsed: lifetimeTotalCost,
+        chatMessages: lifetimeChatMessages,
+        imagesGenerated: lifetimeImagesGenerated,
+        avgDailyCredits: lifetimeTotalCost / daysSinceCreation,
+        daysSinceCreation
+      })
+
       setProjectUsage(projectUsageData)
       setMonthlyData(finalMonthlyData)
     } catch (error) {
@@ -215,6 +282,7 @@ export default function Analytics() {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="all">All Time</SelectItem>
               <SelectItem value="24h">Last 24 hours</SelectItem>
               <SelectItem value="7d">Last 7 days</SelectItem>
               <SelectItem value="30d">Last 30 days</SelectItem>
@@ -222,6 +290,34 @@ export default function Analytics() {
             </SelectContent>
           </Select>
         </div>
+
+        {/* Lifetime Stats Card */}
+        <Card className="mb-6 border-primary/20 bg-primary/5">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-lg">Lifetime Statistics</CardTitle>
+            <CardDescription>Your total usage since joining ({lifetimeStats.daysSinceCreation} days ago)</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
+                <p className="text-sm text-muted-foreground">Total Credits Used</p>
+                <p className="text-xl font-bold text-primary">${lifetimeStats.totalCreditsUsed.toFixed(2)}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Chat Messages</p>
+                <p className="text-xl font-bold">{lifetimeStats.chatMessages}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Images Generated</p>
+                <p className="text-xl font-bold">{lifetimeStats.imagesGenerated}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Daily Average</p>
+                <p className="text-xl font-bold">${lifetimeStats.avgDailyCredits.toFixed(4)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Summary Cards */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
@@ -231,7 +327,7 @@ export default function Analytics() {
               <TrendingUp className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.totalCreditsUsed.toFixed(2)}</div>
+              <div className="text-2xl font-bold">${stats.totalCreditsUsed.toFixed(2)}</div>
               <p className="text-xs text-muted-foreground">This period</p>
             </CardContent>
           </Card>
@@ -264,7 +360,7 @@ export default function Analytics() {
               <Zap className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.avgDailyCredits.toFixed(2)}</div>
+              <div className="text-2xl font-bold">${stats.avgDailyCredits.toFixed(4)}</div>
               <p className="text-xs text-muted-foreground">credits per day</p>
             </CardContent>
           </Card>
