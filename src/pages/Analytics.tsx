@@ -22,7 +22,8 @@ interface ProjectUsage {
   cost: number
 }
 
-const COLORS = ['hsl(var(--primary))', 'hsl(var(--accent))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))']
+// Lighter, more visible colors for pie chart
+const COLORS = ['#a78bfa', '#60a5fa', '#4ade80', '#f472b6', '#facc15', '#fb923c', '#c084fc']
 
 export default function Analytics() {
   const navigate = useNavigate()
@@ -59,77 +60,116 @@ export default function Analytics() {
     startDate.setDate(startDate.getDate() - days)
 
     try {
-      // Fetch user's threads
-      const { data: userThreads } = await supabase
-        .from('chat_threads')
-        .select('id, project_id')
-        .eq('user_id', user.id)
-
-      const threadIds = userThreads?.map(t => t.id) || []
-
-      // Fetch messages count for user's threads
-      let messageCount = 0
-      if (threadIds.length > 0) {
-        const { count } = await supabase
-          .from('messages')
-          .select('id', { count: 'exact', head: true })
-          .eq('role', 'user')
-          .gte('created_at', startDate.toISOString())
-          .in('thread_id', threadIds)
-        
-        messageCount = count || 0
-      }
-
-      // Fetch threads with projects for breakdown
-      const { data: threads } = await supabase
-        .from('chat_threads')
-        .select('id, project_id')
+      // Fetch usage logs for this user in the time range
+      const { data: usageLogs } = await supabase
+        .from('usage_logs')
+        .select('*, thread_id, model, tokens, cost, created_at')
         .eq('user_id', user.id)
         .gte('created_at', startDate.toISOString())
 
-      // Get project names
-      const projectIds = [...new Set(threads?.map(t => t.project_id).filter(Boolean) || [])]
+      // Get thread -> project mapping
+      const threadIds = [...new Set(usageLogs?.map(l => l.thread_id).filter(Boolean) || [])]
+      let threadProjectMap: Record<string, string> = {}
       let projectNames: Record<string, string> = {}
-      
-      if (projectIds.length > 0) {
-        const { data: projects } = await supabase
-          .from('projects')
-          .select('id, name')
-          .in('id', projectIds)
+
+      if (threadIds.length > 0) {
+        const { data: threads } = await supabase
+          .from('chat_threads')
+          .select('id, project_id, image_generations')
+          .in('id', threadIds)
+
+        const projectIds = [...new Set(threads?.map(t => t.project_id).filter(Boolean) || [])]
         
-        projects?.forEach(p => {
-          projectNames[p.id] = p.name
+        if (projectIds.length > 0) {
+          const { data: projects } = await supabase
+            .from('projects')
+            .select('id, name')
+            .in('id', projectIds)
+          
+          projects?.forEach(p => {
+            projectNames[p.id] = p.name
+          })
+        }
+
+        threads?.forEach(t => {
+          threadProjectMap[t.id] = projectNames[t.project_id] || 'Unknown'
         })
       }
 
-      // Count by project
-      const projectCounts: Record<string, number> = {}
-      threads?.forEach((thread) => {
-        const projectName = projectNames[thread.project_id] || 'Unknown'
-        projectCounts[projectName] = (projectCounts[projectName] || 0) + 1
+      // Calculate stats from usage_logs
+      let totalCost = 0
+      let chatMessages = 0
+      let imagesGenerated = 0
+      const projectCosts: Record<string, { usage: number; cost: number }> = {}
+
+      usageLogs?.forEach(log => {
+        const cost = Number(log.cost) || 0
+        totalCost += cost
+        
+        const isImage = log.model?.toLowerCase().includes('ideogram') || log.model?.toLowerCase().includes('image')
+        if (isImage) {
+          imagesGenerated += 1
+        } else {
+          chatMessages += 1
+        }
+
+        const projectName = threadProjectMap[log.thread_id] || 'Unknown'
+        if (!projectCosts[projectName]) {
+          projectCosts[projectName] = { usage: 0, cost: 0 }
+        }
+        projectCosts[projectName].usage += 1
+        projectCosts[projectName].cost += cost
       })
 
-      const projectUsageData = Object.entries(projectCounts).map(([project, usage]) => ({
+      // Also count image_generations from chat_threads
+      if (threadIds.length > 0) {
+        const { data: threadsWithImages } = await supabase
+          .from('chat_threads')
+          .select('image_generations')
+          .eq('user_id', user.id)
+        
+        const totalImageGens = threadsWithImages?.reduce((sum, t) => sum + (t.image_generations || 0), 0) || 0
+        if (totalImageGens > imagesGenerated) {
+          imagesGenerated = totalImageGens
+        }
+      }
+
+      const projectUsageData = Object.entries(projectCosts).map(([project, data]) => ({
         project,
-        usage,
-        cost: usage * 0.1
-      }))
+        usage: data.usage,
+        cost: data.cost
+      })).sort((a, b) => b.cost - a.cost)
 
-      // Generate monthly data
-      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun']
-      const monthlyCreditsData = months.map(month => ({
-        month,
-        credits: Math.floor(Math.random() * 5000) + 1000
-      }))
+      // Generate real monthly data from usage_logs
+      const { data: allUsageLogs } = await supabase
+        .from('usage_logs')
+        .select('cost, created_at')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: true })
 
-      const totalMessages = messageCount
-      const estimatedCredits = totalMessages * 0.1
+      // Group by month
+      const monthlyMap: Record<string, number> = {}
+      allUsageLogs?.forEach(log => {
+        const date = new Date(log.created_at)
+        const monthKey = date.toLocaleDateString('en-US', { year: 'numeric', month: 'short' })
+        monthlyMap[monthKey] = (monthlyMap[monthKey] || 0) + (Number(log.cost) || 0)
+      })
+
+      // Convert to array, show last 6 months with data
+      const monthlyCreditsData = Object.entries(monthlyMap)
+        .map(([month, credits]) => ({ month, credits }))
+        .slice(-6)
+
+      // If no data, show empty state
+      if (monthlyCreditsData.length === 0) {
+        monthlyCreditsData.push({ month: new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }), credits: 0 })
+      }
 
       setStats({
-        totalCreditsUsed: estimatedCredits,
-        chatMessages: totalMessages,
-        imagesGenerated: 0,
-        avgDailyCredits: estimatedCredits / days
+        totalCreditsUsed: totalCost,
+        chatMessages,
+        imagesGenerated,
+        avgDailyCredits: totalCost / days
       })
       setProjectUsage(projectUsageData)
       setMonthlyData(monthlyCreditsData)
@@ -319,11 +359,11 @@ export default function Analytics() {
                   <div className="mt-4 space-y-2">
                     {projectUsage.map((project, index) => (
                       <div key={project.project} className="flex items-center justify-between text-sm">
-                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2">
                           <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
-                          <span className="text-text-accent">{project.project}</span>
+                          <span className="text-white font-medium">{project.project}</span>
                         </div>
-                        <span className="text-muted-foreground">${project.cost.toFixed(2)}</span>
+                        <span className="text-white/70">${project.cost.toFixed(2)}</span>
                       </div>
                     ))}
                   </div>
