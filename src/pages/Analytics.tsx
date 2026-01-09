@@ -61,11 +61,15 @@ export default function Analytics() {
 
     try {
       // Fetch usage logs for this user in the time range
-      const { data: usageLogs } = await supabase
+      const { data: usageLogs, error: logsError } = await supabase
         .from('usage_logs')
-        .select('*, thread_id, model, tokens, cost, created_at')
+        .select('id, thread_id, model, tokens, tokens_input, tokens_output, cost, estimated_cost, created_at')
         .eq('user_id', user.id)
         .gte('created_at', startDate.toISOString())
+
+      if (logsError) {
+        console.error('Error fetching usage logs:', logsError)
+      }
 
       // Get thread -> project mapping
       const threadIds = [...new Set(usageLogs?.map(l => l.thread_id).filter(Boolean) || [])]
@@ -75,7 +79,7 @@ export default function Analytics() {
       if (threadIds.length > 0) {
         const { data: threads } = await supabase
           .from('chat_threads')
-          .select('id, project_id, image_generations')
+          .select('id, project_id')
           .in('id', threadIds)
 
         const projectIds = [...new Set(threads?.map(t => t.project_id).filter(Boolean) || [])]
@@ -92,18 +96,19 @@ export default function Analytics() {
         }
 
         threads?.forEach(t => {
-          threadProjectMap[t.id] = projectNames[t.project_id] || 'Unknown'
+          threadProjectMap[t.id] = projectNames[t.project_id] || 'Image Generator'
         })
       }
 
-      // Calculate stats from usage_logs
+      // Calculate stats from usage_logs - use estimated_cost or cost column
       let totalCost = 0
       let chatMessages = 0
       let imagesGenerated = 0
       const projectCosts: Record<string, { usage: number; cost: number }> = {}
 
       usageLogs?.forEach(log => {
-        const cost = Number(log.cost) || 0
+        // Use estimated_cost first, fallback to cost
+        const cost = Number(log.estimated_cost) || Number(log.cost) || 0
         totalCost += cost
         
         const isImage = log.model?.toLowerCase().includes('ideogram') || log.model?.toLowerCase().includes('image')
@@ -113,7 +118,11 @@ export default function Analytics() {
           chatMessages += 1
         }
 
-        const projectName = threadProjectMap[log.thread_id] || 'Unknown'
+        // If no thread_id, it's likely an image generation
+        const projectName = log.thread_id 
+          ? (threadProjectMap[log.thread_id] || 'Image Generator')
+          : 'Image Generator'
+          
         if (!projectCosts[projectName]) {
           projectCosts[projectName] = { usage: 0, cost: 0 }
         }
@@ -121,29 +130,16 @@ export default function Analytics() {
         projectCosts[projectName].cost += cost
       })
 
-      // Also count image_generations from chat_threads
-      if (threadIds.length > 0) {
-        const { data: threadsWithImages } = await supabase
-          .from('chat_threads')
-          .select('image_generations')
-          .eq('user_id', user.id)
-        
-        const totalImageGens = threadsWithImages?.reduce((sum, t) => sum + (t.image_generations || 0), 0) || 0
-        if (totalImageGens > imagesGenerated) {
-          imagesGenerated = totalImageGens
-        }
-      }
-
       const projectUsageData = Object.entries(projectCosts).map(([project, data]) => ({
         project,
         usage: data.usage,
         cost: data.cost
       })).sort((a, b) => b.cost - a.cost)
 
-      // Generate real monthly data from usage_logs
+      // Generate real monthly data from usage_logs using estimated_cost
       const { data: allUsageLogs } = await supabase
         .from('usage_logs')
-        .select('cost, created_at')
+        .select('estimated_cost, cost, created_at')
         .eq('user_id', user.id)
         .order('created_at', { ascending: true })
 
@@ -152,7 +148,9 @@ export default function Analytics() {
       allUsageLogs?.forEach(log => {
         const date = new Date(log.created_at)
         const monthKey = date.toLocaleDateString('en-US', { year: 'numeric', month: 'short' })
-        monthlyMap[monthKey] = (monthlyMap[monthKey] || 0) + (Number(log.cost) || 0)
+        // Use estimated_cost first, fallback to cost
+        const logCost = Number(log.estimated_cost) || Number(log.cost) || 0
+        monthlyMap[monthKey] = (monthlyMap[monthKey] || 0) + logCost
       })
 
       // Convert to array, show last 6 months with data
@@ -160,7 +158,7 @@ export default function Analytics() {
         .map(([month, credits]) => ({ month, credits }))
         .slice(-6)
 
-      // If no data, show empty state
+      // If no data, show current month with 0
       if (monthlyCreditsData.length === 0) {
         monthlyCreditsData.push({ month: new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }), credits: 0 })
       }
