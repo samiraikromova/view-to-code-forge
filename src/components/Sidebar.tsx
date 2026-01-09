@@ -312,10 +312,6 @@ export function Sidebar({
                 Settings
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => navigate("/settings")} className="text-muted-foreground">
-                <Sparkles className="mr-2 h-4 w-4" />
-                Upgrade to Pro
-              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => navigate("/pricing/top-up")} className="text-muted-foreground">
                 <CreditCard className="mr-2 h-4 w-4" />
                 Top up credits
@@ -359,10 +355,6 @@ export function Sidebar({
                 Settings
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => navigate("/settings")} className="text-muted-foreground">
-                <Sparkles className="mr-2 h-4 w-4" />
-                Upgrade to Pro
-              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => navigate("/pricing/top-up")} className="text-muted-foreground">
                 <CreditCard className="mr-2 h-4 w-4" />
                 Top up credits

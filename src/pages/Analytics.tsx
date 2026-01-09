@@ -319,9 +319,9 @@ export default function Analytics() {
                   <div className="mt-4 space-y-2">
                     {projectUsage.map((project, index) => (
                       <div key={project.project} className="flex items-center justify-between text-sm">
-                        <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2">
                           <div className="w-3 h-3 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
-                          <span className="text-foreground">{project.project}</span>
+                          <span className="text-text-accent">{project.project}</span>
                         </div>
                         <span className="text-muted-foreground">${project.cost.toFixed(2)}</span>
                       </div>
