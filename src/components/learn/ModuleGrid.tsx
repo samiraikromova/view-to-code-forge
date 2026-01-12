@@ -3,7 +3,7 @@ import { ModuleCard, ModuleCardData } from "./ModuleCard";
 import { BookOpen, Loader2 } from "lucide-react";
 import { Module } from "./LearnSidebar";
 import { useAccess } from "@/hooks/useAccess";
-import { UnlockModal } from "@/components/payments/UnlockModal";
+import { BookCallModal } from "@/components/payments/BookCallModal";
 
 interface ModuleGridProps {
   modules: Module[];
@@ -12,20 +12,19 @@ interface ModuleGridProps {
   contentType: "recordings" | "materials";
 }
 
+// Fanbases product IDs for modules - admin should set these
+const FANBASES_PRODUCT_URLS: Record<string, string> = {
+  'steal-my-script': 'https://fanbases.com/checkout/rRJZp',
+  'bump-offer': 'https://fanbases.com/checkout/bump-offer-id',
+  'outreach-guide': 'https://fanbases.com/checkout/outreach-id',
+  'sales-calls': 'https://fanbases.com/checkout/sales-calls-id',
+  'onboarding-and-fulfillment': 'https://fanbases.com/checkout/onboarding-id',
+  'automation': 'https://fanbases.com/checkout/automation-id',
+};
+
 export function ModuleGrid({ modules, onModuleSelect, isLoading, contentType }: ModuleGridProps) {
-  const { checkModuleAccess, refreshAccess } = useAccess();
-  const [unlockModal, setUnlockModal] = useState<{
-    isOpen: boolean;
-    moduleSlug: string;
-    moduleName: string;
-    requiresCall: boolean;
-    price?: number;
-  }>({
-    isOpen: false,
-    moduleSlug: "",
-    moduleName: "",
-    requiresCall: false,
-  });
+  const { checkModuleAccess, refreshAccess, hasDashboardAccess } = useAccess();
+  const [showBookCallModal, setShowBookCallModal] = useState(false);
 
   if (isLoading) {
     return (
@@ -60,22 +59,19 @@ export function ModuleGrid({ modules, onModuleSelect, isLoading, contentType }: 
 
   const handleModuleClick = (module: ModuleCardData) => {
     if (module.isLocked) {
-      // Show unlock modal
-      setUnlockModal({
-        isOpen: true,
-        moduleSlug: module.id,
-        moduleName: module.title,
-        requiresCall: module.requiresCall || false,
-        price: module.price,
-      });
+      if (module.requiresCall) {
+        // Show book a call modal for call recordings
+        setShowBookCallModal(true);
+      } else if (module.id && FANBASES_PRODUCT_URLS[module.id]) {
+        // Redirect to Fanbases checkout page
+        window.open(FANBASES_PRODUCT_URLS[module.id], '_blank');
+      } else {
+        // Fallback: redirect to generic Fanbases page
+        window.open('https://fanbases.com/checkout', '_blank');
+      }
     } else {
       onModuleSelect(module.id);
     }
-  };
-
-  const handleUnlockSuccess = () => {
-    refreshAccess();
-    setUnlockModal(prev => ({ ...prev, isOpen: false }));
   };
 
   // Transform modules to ModuleCardData with real access checks
@@ -134,14 +130,12 @@ export function ModuleGrid({ modules, onModuleSelect, isLoading, contentType }: 
         </div>
       </div>
 
-      {/* Unlock Modal */}
-      <UnlockModal
-        isOpen={unlockModal.isOpen}
-        onClose={() => setUnlockModal(prev => ({ ...prev, isOpen: false }))}
-        moduleSlug={unlockModal.moduleSlug}
-        moduleName={unlockModal.moduleName}
-        requiresCall={unlockModal.requiresCall}
-        onSuccess={handleUnlockSuccess}
+      {/* Book Call Modal for Call Recordings */}
+      <BookCallModal
+        isOpen={showBookCallModal}
+        onClose={() => setShowBookCallModal(false)}
+        title="Unlock Call Recordings"
+        description="Call recordings are only available to coaching clients. Book a strategy call to get access to all recordings and coaching content."
       />
     </div>
   );

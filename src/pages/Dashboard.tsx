@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Lock, Sparkles } from "lucide-react";
+import { Lock, Sparkles, Calendar, Phone } from "lucide-react";
 import { MetricContainer } from "@/components/dashboard/MetricContainer";
 import { GoalCard } from "@/components/dashboard/GoalCard";
 import { GoalBuilder } from "@/components/dashboard/GoalBuilder";
@@ -8,6 +8,7 @@ import { ComparisonChart } from "@/components/dashboard/ComparisonChart";
 import { LeaderboardTable } from "@/components/dashboard/LeaderboardTable";
 import { ParticleBackground } from "@/components/dashboard/ParticleBackground";
 import { Button } from "@/components/ui/button";
+import { BookCallModal } from "@/components/payments/BookCallModal";
 import {
   getMockMetricsData,
   getMockComparisonData,
@@ -22,6 +23,7 @@ interface DashboardProps {
   isGoalBuilderOpen: boolean;
   onGoalBuilderClose: () => void;
   hasActiveSubscription?: boolean;
+  hasDashboardAccess?: boolean;
   onSubscribe?: () => void;
 }
 
@@ -31,6 +33,7 @@ export function Dashboard({
   isGoalBuilderOpen,
   onGoalBuilderClose,
   hasActiveSubscription = false,
+  hasDashboardAccess = false,
   onSubscribe,
 }: DashboardProps) {
   const navigate = useNavigate();
@@ -38,6 +41,7 @@ export function Dashboard({
   const [selectedChartMetric, setSelectedChartMetric] = useState<MetricKey>("revenue");
   const [viewKey, setViewKey] = useState(0);
   const prevViewRef = useRef(currentView);
+  const [showBookCallModal, setShowBookCallModal] = useState(false);
 
   // Trigger animation on view change
   useEffect(() => {
@@ -95,8 +99,8 @@ export function Dashboard({
     }
   }, [metricsData, onAskAI, navigate]);
 
-  // Locked overlay for non-subscribers
-  if (!hasActiveSubscription) {
+  // Locked overlay for non-coaching users (requires booking a call)
+  if (!hasDashboardAccess) {
     return (
       <div className="relative flex-1 flex flex-col min-h-0 overflow-auto p-6 animate-fade-in">
         {/* Particle Background */}
@@ -130,22 +134,30 @@ export function Dashboard({
               Dashboard Locked
             </h2>
             <p className="text-muted-foreground mb-6">
-              Subscribe to unlock your real-time metrics dashboard with custom goals, 
-              performance tracking, and AI-powered insights.
+              Book a strategy call to unlock your real-time metrics dashboard, 
+              call recordings, and coaching content.
             </p>
             <Button 
               size="lg" 
               className="gap-2 bg-accent hover:bg-accent-hover text-accent-foreground"
-              onClick={onSubscribe}
+              onClick={() => setShowBookCallModal(true)}
             >
-              <Sparkles className="h-5 w-5" />
-              Subscribe to Unlock
+              <Calendar className="h-5 w-5" />
+              Book a Call
             </Button>
             <p className="text-sm text-muted-foreground mt-4">
-              Starting at $29/month
+              Join our coaching program for full access
             </p>
           </div>
         </div>
+
+        {/* Book Call Modal */}
+        <BookCallModal
+          isOpen={showBookCallModal}
+          onClose={() => setShowBookCallModal(false)}
+          title="Unlock Your Dashboard"
+          description="Book a strategy call to get access to your personalized metrics dashboard, call recordings, and exclusive coaching content."
+        />
       </div>
     );
   }

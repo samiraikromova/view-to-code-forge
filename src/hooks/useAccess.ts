@@ -1,5 +1,5 @@
 // Access control hook for managing user permissions
-// Handles module access, subscription status, and dashboard access
+// Handles module access, subscription status, trial, and dashboard access
 
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
@@ -12,6 +12,12 @@ export interface AccessState {
   // Subscription
   hasActiveSubscription: boolean;
   subscriptionTier: string | null;
+  
+  // Trial
+  isOnTrial: boolean;
+  trialEndsAt: Date | null;
+  trialExpired: boolean;
+  trialDaysRemaining: number;
   
   // Dashboard
   hasDashboardAccess: boolean;
@@ -28,6 +34,7 @@ export interface ModuleAccessInfo {
   requiresCall: boolean;
   price?: number;
   productId?: string;
+  fanbasesProductId?: string;
 }
 
 // Modules that require booking a call (cannot be purchased)
@@ -52,6 +59,10 @@ export function useAccess() {
     purchasedModules: [],
     hasActiveSubscription: false,
     subscriptionTier: null,
+    isOnTrial: false,
+    trialEndsAt: null,
+    trialExpired: false,
+    trialDaysRemaining: 0,
     hasDashboardAccess: false,
     hasChatAccess: false,
     loading: true,
@@ -64,6 +75,10 @@ export function useAccess() {
         purchasedModules: [],
         hasActiveSubscription: false,
         subscriptionTier: null,
+        isOnTrial: false,
+        trialEndsAt: null,
+        trialExpired: false,
+        trialDaysRemaining: 0,
         hasDashboardAccess: false,
         hasChatAccess: false,
         loading: false,
@@ -72,6 +87,31 @@ export function useAccess() {
     }
 
     try {
+      // Fetch user data for trial info
+      const { data: userData } = await supabase
+        .from('users')
+        .select('trial_started_at, trial_ends_at, subscription_tier')
+        .eq('id', user.id)
+        .single();
+
+      // Calculate trial status
+      let isOnTrial = false;
+      let trialEndsAt: Date | null = null;
+      let trialExpired = false;
+      let trialDaysRemaining = 0;
+
+      if (userData?.trial_ends_at) {
+        trialEndsAt = new Date(userData.trial_ends_at);
+        const now = new Date();
+        
+        if (userData.trial_started_at && trialEndsAt > now) {
+          isOnTrial = true;
+          trialDaysRemaining = Math.ceil((trialEndsAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+        } else if (userData.trial_started_at) {
+          trialExpired = true;
+        }
+      }
+
       // Fetch purchases
       const { data: purchases } = await supabase
         .from('user_purchases')
@@ -90,7 +130,7 @@ export function useAccess() {
         .maybeSingle();
 
       const hasActiveSubscription = !!subscription;
-      const subscriptionTier = subscription?.tier || null;
+      const subscriptionTier = subscription?.tier || userData?.subscription_tier || null;
 
       // Check dashboard access (requires call booking)
       const { data: dashboardAccess } = await supabase
@@ -102,13 +142,17 @@ export function useAccess() {
 
       const hasDashboardAccess = !!dashboardAccess;
 
-      // Chat access requires subscription
-      const hasChatAccess = hasActiveSubscription;
+      // Chat access requires subscription OR active trial
+      const hasChatAccess = hasActiveSubscription || isOnTrial;
 
       setAccessState({
         purchasedModules,
         hasActiveSubscription,
         subscriptionTier,
+        isOnTrial,
+        trialEndsAt,
+        trialExpired,
+        trialDaysRemaining,
         hasDashboardAccess,
         hasChatAccess,
         loading: false,
@@ -125,10 +169,10 @@ export function useAccess() {
 
   // Check if user has access to a specific module
   const checkModuleAccess = useCallback((moduleSlug: string): ModuleAccessInfo => {
-    // Call-required modules
-    if (CALL_REQUIRED_MODULES.includes(moduleSlug)) {
+    // Call-required modules (call recordings)
+    if (CALL_REQUIRED_MODULES.includes(moduleSlug) || moduleSlug.includes('call-recording') || moduleSlug.includes('recording')) {
       return {
-        hasAccess: accessState.purchasedModules.includes(moduleSlug),
+        hasAccess: accessState.hasDashboardAccess, // Dashboard access means they booked a call
         requiresCall: true,
       };
     }
@@ -145,12 +189,22 @@ export function useAccess() {
       price: MODULE_PRICES[moduleSlug],
       productId: moduleSlug,
     };
-  }, [accessState.purchasedModules]);
+  }, [accessState.purchasedModules, accessState.hasDashboardAccess]);
 
-  // Check if Ask AI is available (requires subscription)
+  // Check if Ask AI is available (requires subscription or trial)
   const canAskAI = useCallback(() => {
     return accessState.hasChatAccess;
   }, [accessState.hasChatAccess]);
+
+  // Check if user needs to start trial (no trial, no subscription)
+  const needsTrial = useCallback(() => {
+    return !accessState.hasActiveSubscription && !accessState.isOnTrial && !accessState.trialExpired;
+  }, [accessState.hasActiveSubscription, accessState.isOnTrial, accessState.trialExpired]);
+
+  // Check if user needs to subscribe (trial expired or no access)
+  const needsSubscription = useCallback(() => {
+    return accessState.trialExpired && !accessState.hasActiveSubscription;
+  }, [accessState.trialExpired, accessState.hasActiveSubscription]);
 
   // Refresh access data
   const refreshAccess = useCallback(() => {
@@ -161,6 +215,8 @@ export function useAccess() {
     ...accessState,
     checkModuleAccess,
     canAskAI,
+    needsTrial,
+    needsSubscription,
     refreshAccess,
   };
 }
