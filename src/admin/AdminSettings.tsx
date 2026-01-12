@@ -52,6 +52,7 @@ export default function AdminSettings() {
                 <Switch 
                   checked={settings.maintenanceMode}
                   onCheckedChange={(checked) => setSettings({...settings, maintenanceMode: checked})}
+                  className="data-[state=checked]:bg-primary/70"
                 />
               </div>
 
@@ -65,6 +66,7 @@ export default function AdminSettings() {
                 <Switch 
                   checked={settings.allowNewSignups}
                   onCheckedChange={(checked) => setSettings({...settings, allowNewSignups: checked})}
+                  className="data-[state=checked]:bg-primary/70"
                 />
               </div>
             </CardContent>
@@ -117,15 +119,6 @@ export default function AdminSettings() {
                 <Label className="text-foreground">Chat Webhook</Label>
                 <Input
                   value="https://n8n.leveragedcreator.ai/webhook/cb4-chat"
-                  readOnly
-                  className="bg-muted border-border text-muted-foreground font-mono text-sm"
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-foreground">Image Generation Webhook</Label>
-                <Input
-                  value="https://n8n.leveragedcreator.ai/webhook/generate-image"
                   readOnly
                   className="bg-muted border-border text-muted-foreground font-mono text-sm"
                 />

@@ -185,7 +185,7 @@ export default function AdminUsage() {
             <Card>
               <CardContent className="p-4">
                 <div className="text-sm text-muted-foreground mb-1">Total Cost</div>
-                <div className="text-2xl font-bold text-primary">${totalCost.toFixed(4)}</div>
+                <div className="text-2xl font-bold text-primary/70">${totalCost.toFixed(4)}</div>
               </CardContent>
             </Card>
             <Card>
