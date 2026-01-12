@@ -5,8 +5,10 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Fanbases API base URL - customers are created via checkout flow
-const FANBASES_API_URL = 'https://www.fanbasis.com/public-api';
+// Fanbases API base URL
+// Use sandbox for testing: https://qa.dev-fan-basis.com/public-api
+// Use production for live: https://www.fanbasis.com/public-api
+const FANBASES_API_URL = 'https://qa.dev-fan-basis.com/public-api';
 
 Deno.serve(async (req) => {
   // Handle CORS preflight
