@@ -98,10 +98,13 @@ export async function purchaseModule(moduleId: string, priceCents: number, modul
 
 /**
  * Start or change subscription
+ * Uses internal_reference: tier1 or tier2
  */
 export async function startSubscription(tier: 'starter' | 'pro'): Promise<ChargeResult> {
   const prices = { starter: 2900, pro: 9900 };
-  return chargeCustomer('subscription', tier, prices[tier], `${tier.charAt(0).toUpperCase() + tier.slice(1)} Plan Subscription`);
+  // Map to internal_reference used in fanbases_products table
+  const tierMapping = { starter: 'tier1', pro: 'tier2' };
+  return chargeCustomer('subscription', tierMapping[tier], prices[tier], `${tier.charAt(0).toUpperCase() + tier.slice(1)} Plan Subscription`);
 }
 
 /**
