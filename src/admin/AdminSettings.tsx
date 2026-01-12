@@ -121,15 +121,6 @@ export default function AdminSettings() {
                   className="bg-muted border-border text-muted-foreground font-mono text-sm"
                 />
               </div>
-
-              <div className="space-y-2">
-                <Label className="text-foreground">Image Generation Webhook</Label>
-                <Input
-                  value="https://n8n.leveragedcreator.ai/webhook/generate-image"
-                  readOnly
-                  className="bg-muted border-border text-muted-foreground font-mono text-sm"
-                />
-              </div>
             </CardContent>
           </Card>
         </div>
