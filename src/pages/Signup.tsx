@@ -104,7 +104,7 @@ const Signup = () => {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email">Email *</Label>
               <Input
                 id="email"
                 type="email"
@@ -113,11 +113,12 @@ const Signup = () => {
                 onChange={(e) => setEmail(e.target.value)}
                 className="h-12"
                 disabled={isLoading}
+                required
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password">Password *</Label>
               <Input
                 id="password"
                 type="password"
@@ -126,11 +127,12 @@ const Signup = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 className="h-12"
                 disabled={isLoading}
+                required
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
+              <Label htmlFor="confirmPassword">Confirm Password *</Label>
               <Input
                 id="confirmPassword"
                 type="password"
@@ -139,6 +141,7 @@ const Signup = () => {
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 className="h-12"
                 disabled={isLoading}
+                required
               />
             </div>
 
