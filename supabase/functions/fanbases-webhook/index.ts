@@ -5,6 +5,13 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-webhook-signature',
 };
 
+// Product mapping interface
+interface FanbasesProduct {
+  fanbases_product_id: string;
+  product_type: 'module' | 'subscription' | 'topup';
+  internal_reference: string;
+}
+
 // HMAC-SHA256 signature validation
 async function validateSignature(payload: string, signature: string, secret: string): Promise<boolean> {
   const encoder = new TextEncoder();
@@ -21,6 +28,44 @@ async function validateSignature(payload: string, signature: string, secret: str
     .join('');
   
   return signature === expectedSignature;
+}
+
+// Look up product from fanbases_products table
+// deno-lint-ignore no-explicit-any
+async function lookupProduct(
+  supabase: any,
+  fanbasesProductId: string
+): Promise<FanbasesProduct | null> {
+  const { data, error } = await supabase
+    .from('fanbases_products')
+    .select('fanbases_product_id, product_type, internal_reference')
+    .eq('fanbases_product_id', fanbasesProductId)
+    .maybeSingle();
+  
+  if (error) {
+    console.error('[Fanbases Webhook] Error looking up product:', error);
+    return null;
+  }
+  return data;
+}
+
+// Get tier and credits from internal_reference
+function getSubscriptionDetails(internalReference: string): { tier: string; credits: number } {
+  // internal_reference format: "tier1" or "tier2"
+  const tierMap: Record<string, { tier: string; credits: number }> = {
+    'tier1': { tier: 'tier1', credits: 10000 },
+    'tier2': { tier: 'tier2', credits: 40000 },
+    'starter': { tier: 'tier1', credits: 10000 },
+    'pro': { tier: 'tier2', credits: 40000 },
+  };
+  return tierMap[internalReference] || { tier: 'tier1', credits: 10000 };
+}
+
+// Get credits from internal_reference for topups
+function getTopupCredits(internalReference: string): number {
+  // internal_reference format: "1000_credits" or just "1000"
+  const match = internalReference.match(/(\d+)/);
+  return match ? parseInt(match[1]) : 0;
 }
 
 Deno.serve(async (req) => {
@@ -134,29 +179,71 @@ Deno.serve(async (req) => {
 
       case 'product.purchased': {
         const productPrice = payload.product_price;
-        const itemType = item?.type;
         const itemId = item?.id;
         const itemTitle = item?.title;
 
-        console.log(`[Fanbases Webhook] Product purchased: ${itemTitle} (${itemType})`);
+        console.log(`[Fanbases Webhook] Product purchased: ${itemTitle} (ID: ${itemId})`);
 
-        // Record the purchase if not already recorded
-        const { data: existingPurchase } = await supabase
-          .from('user_purchases')
-          .select('id')
-          .eq('user_id', userId)
-          .eq('charge_id', payload.payment_id)
-          .maybeSingle();
-
-        if (!existingPurchase) {
+        // Look up product from fanbases_products table
+        const productMapping = await lookupProduct(supabase, String(itemId));
+        
+        if (!productMapping) {
+          console.warn(`[Fanbases Webhook] No product mapping found for: ${itemId}`);
+          // Fall back to recording as module purchase
           await supabase.from('user_purchases').insert({
             user_id: userId,
             product_id: String(itemId),
-            product_type: itemType === 'subscription' ? 'subscription' : 'module',
+            product_type: 'module',
             amount_cents: Math.round(productPrice * 100),
             charge_id: payload.payment_id,
             status: 'completed',
           });
+        } else {
+          // Record based on product type
+          if (productMapping.product_type === 'module') {
+            // Record module purchase with internal_reference as product_id
+            const { data: existingPurchase } = await supabase
+              .from('user_purchases')
+              .select('id')
+              .eq('user_id', userId)
+              .eq('product_id', productMapping.internal_reference)
+              .maybeSingle();
+
+            if (!existingPurchase) {
+              await supabase.from('user_purchases').insert({
+                user_id: userId,
+                product_id: productMapping.internal_reference,
+                product_type: 'module',
+                amount_cents: Math.round(productPrice * 100),
+                charge_id: payload.payment_id,
+                status: 'completed',
+              });
+              console.log(`[Fanbases Webhook] Module ${productMapping.internal_reference} unlocked for user ${userId}`);
+            }
+          } else if (productMapping.product_type === 'topup') {
+            // Add credits
+            const credits = getTopupCredits(productMapping.internal_reference);
+            
+            const { data: userProfile } = await supabase
+              .from('users')
+              .select('credits')
+              .eq('id', userId)
+              .single();
+
+            await supabase.from('users').update({
+              credits: (userProfile?.credits || 0) + credits,
+            }).eq('id', userId);
+
+            await supabase.from('credit_transactions').insert({
+              user_id: userId,
+              amount: credits,
+              type: 'topup',
+              payment_method: 'fanbases',
+              metadata: { product_id: itemId, charge_id: payload.payment_id },
+            });
+            console.log(`[Fanbases Webhook] ${credits} credits added for user ${userId}`);
+          }
+          // Note: subscription.created handles subscription products
         }
 
         await supabase.from('webhook_logs').insert({
@@ -174,8 +261,9 @@ Deno.serve(async (req) => {
         const startDate = subscription?.start_date;
         const frequency = subscription?.payment_frequency;
         const isFreeTrial = subscription?.is_free_trial;
+        const subscriptionProductId = item?.id || subscription?.product_id;
 
-        console.log(`[Fanbases Webhook] Subscription created: ${subId}`);
+        console.log(`[Fanbases Webhook] Subscription created: ${subId}, Product: ${subscriptionProductId}`);
 
         // Calculate period end based on frequency
         const endDate = new Date(startDate);
@@ -187,10 +275,25 @@ Deno.serve(async (req) => {
           endDate.setMonth(endDate.getMonth() + 1); // Default monthly
         }
 
-        // Determine tier from amount or item
-        const amount = payload.amount || 0;
-        const tier = amount >= 9900 ? 'tier2' : 'tier1';
-        const monthlyCredits = tier === 'tier2' ? 40000 : 10000;
+        // Look up subscription product from fanbases_products table
+        let tier = 'tier1';
+        let monthlyCredits = 10000;
+        
+        if (subscriptionProductId) {
+          const productMapping = await lookupProduct(supabase, String(subscriptionProductId));
+          if (productMapping && productMapping.product_type === 'subscription') {
+            const subDetails = getSubscriptionDetails(productMapping.internal_reference);
+            tier = subDetails.tier;
+            monthlyCredits = subDetails.credits;
+            console.log(`[Fanbases Webhook] Mapped to tier: ${tier}, credits: ${monthlyCredits}`);
+          } else {
+            // Fallback: determine tier from amount
+            const amount = payload.amount || 0;
+            tier = amount >= 9900 ? 'tier2' : 'tier1';
+            monthlyCredits = tier === 'tier2' ? 40000 : 10000;
+            console.log(`[Fanbases Webhook] No mapping found, using amount fallback: tier=${tier}`);
+          }
+        }
 
         // Create/update subscription
         await supabase.from('user_subscriptions').upsert({
@@ -220,7 +323,7 @@ Deno.serve(async (req) => {
           amount: monthlyCredits,
           type: 'subscription',
           payment_method: 'fanbases',
-          metadata: { subscription_id: subId, event: 'created' },
+          metadata: { subscription_id: subId, event: 'created', tier },
         });
 
         await supabase.from('webhook_logs').insert({

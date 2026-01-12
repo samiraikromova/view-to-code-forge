@@ -1,5 +1,9 @@
 // Fanbases API configuration and types
 // Card-on-file payment system for one-click purchases
+//
+// NOTE: These are FALLBACK definitions. The authoritative product mappings
+// are stored in the `fanbases_products` Supabase table.
+// After creating products in Fanbases, add their IDs to that table.
 
 export const FANBASES_API_URL = 'https://www.fanbasis.com/public-api';
 

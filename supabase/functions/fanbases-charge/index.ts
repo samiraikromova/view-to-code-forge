@@ -7,6 +7,49 @@ const corsHeaders = {
 
 const FANBASES_API_URL = 'https://www.fanbasis.com/public-api';
 
+// Product mapping interface
+interface FanbasesProduct {
+  fanbases_product_id: string;
+  product_type: 'module' | 'subscription' | 'topup';
+  internal_reference: string;
+}
+
+// Look up product from fanbases_products table
+// deno-lint-ignore no-explicit-any
+async function lookupProduct(
+  supabase: any,
+  fanbasesProductId: string
+): Promise<FanbasesProduct | null> {
+  const { data, error } = await supabase
+    .from('fanbases_products')
+    .select('fanbases_product_id, product_type, internal_reference')
+    .eq('fanbases_product_id', fanbasesProductId)
+    .maybeSingle();
+  
+  if (error) {
+    console.error('[Fanbases Charge] Error looking up product:', error);
+    return null;
+  }
+  return data;
+}
+
+// Get tier and credits from internal_reference
+function getSubscriptionDetails(internalReference: string): { tier: string; credits: number } {
+  const tierMap: Record<string, { tier: string; credits: number }> = {
+    'tier1': { tier: 'tier1', credits: 10000 },
+    'tier2': { tier: 'tier2', credits: 40000 },
+    'starter': { tier: 'tier1', credits: 10000 },
+    'pro': { tier: 'tier2', credits: 40000 },
+  };
+  return tierMap[internalReference] || { tier: 'tier1', credits: 10000 };
+}
+
+// Get credits from internal_reference for topups
+function getTopupCredits(internalReference: string): number {
+  const match = internalReference.match(/(\d+)/);
+  return match ? parseInt(match[1]) : 0;
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -173,14 +216,23 @@ Deno.serve(async (req) => {
     const chargeId = chargeData.data?.charge_id || chargeData.charge_id || chargeData.id;
     console.log(`[Fanbases Charge] Charge successful: ${chargeId}`);
 
+    // Try to look up product from fanbases_products table first
+    const productMapping = await lookupProduct(supabase, product_id);
+    
+    // Determine processing type from mapping or fallback to request
+    const processingType = productMapping?.product_type || product_type;
+    const internalRef = productMapping?.internal_reference || product_id;
+    
+    console.log(`[Fanbases Charge] Processing as: ${processingType}, internal_ref: ${internalRef}`);
+
     // Process based on product type
-    if (product_type === 'module') {
-      // Record module purchase
+    if (processingType === 'module') {
+      // Record module purchase with internal_reference as the module slug
       const { error: purchaseError } = await supabase
         .from('user_purchases')
         .insert({
           user_id: user.id,
-          product_id,
+          product_id: internalRef,
           product_type: 'module',
           amount_cents,
           charge_id: chargeId,
@@ -198,15 +250,16 @@ Deno.serve(async (req) => {
         amount: 0,
         type: 'module_purchase',
         payment_method: 'fanbases',
-        metadata: { product_id, charge_id: chargeId, amount_cents },
+        metadata: { product_id: internalRef, charge_id: chargeId, amount_cents },
       });
 
-      console.log(`[Fanbases Charge] Module ${product_id} unlocked for user ${user.id}`);
+      console.log(`[Fanbases Charge] Module ${internalRef} unlocked for user ${user.id}`);
 
-    } else if (product_type === 'subscription') {
-      // Update or create subscription
-      const tier = product_id; // 'starter' or 'pro'
-      const monthlyCredits = tier === 'pro' ? 40000 : 10000;
+    } else if (processingType === 'subscription') {
+      // Get tier and credits from mapping or infer from product_id
+      const subDetails = getSubscriptionDetails(internalRef);
+      const tier = subDetails.tier;
+      const monthlyCredits = subDetails.credits;
 
       // Calculate next renewal
       const renewalDate = new Date();
@@ -240,7 +293,7 @@ Deno.serve(async (req) => {
       await supabase
         .from('users')
         .update({
-          subscription_tier: tier === 'pro' ? 'tier2' : 'tier1',
+          subscription_tier: tier,
           credits: newCredits,
         })
         .eq('id', user.id);
@@ -256,9 +309,11 @@ Deno.serve(async (req) => {
 
       console.log(`[Fanbases Charge] Subscription ${tier} activated for user ${user.id}`);
 
-    } else if (product_type === 'topup') {
-      // Add credits
-      const credits = parseInt(product_id.replace('credits_', ''));
+    } else if (processingType === 'topup') {
+      // Get credits from mapping or parse from product_id
+      const credits = productMapping 
+        ? getTopupCredits(internalRef)
+        : parseInt(product_id.replace('credits_', ''));
 
       const { data: userProfile } = await supabase
         .from('users')
