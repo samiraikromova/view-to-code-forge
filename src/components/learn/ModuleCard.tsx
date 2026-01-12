@@ -11,6 +11,8 @@ export interface ModuleCardData {
   completedLessons: number;
   isLocked?: boolean;
   unlockMessage?: string;
+  requiresCall?: boolean;
+  price?: number;
 }
 
 interface ModuleCardProps {

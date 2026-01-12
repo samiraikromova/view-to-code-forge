@@ -26,7 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Plus, Trash2, FolderPlus, Clock, FileText, Upload, X, File } from "lucide-react"
+import { Plus, Trash2, FolderPlus, Clock, FileText, Upload, X, File, Pencil } from "lucide-react"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
 
@@ -65,6 +65,8 @@ export default function AdminLessons() {
   const [uploadingFiles, setUploadingFiles] = useState(false)
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [editingLessonId, setEditingLessonId] = useState<string | null>(null)
+  const [existingFiles, setExistingFiles] = useState<LessonFileItem[]>([])
   
   const [formData, setFormData] = useState({
     title: '',
@@ -106,7 +108,7 @@ export default function AdminLessons() {
     e.preventDefault()
 
     // Upload pending files first and collect their URLs
-    const uploadedFiles: LessonFileItem[] = []
+    const uploadedFiles: LessonFileItem[] = [...existingFiles]
     
     if (pendingFiles.length > 0) {
       setUploadingFiles(true)
@@ -153,16 +155,33 @@ export default function AdminLessons() {
       files: uploadedFiles.length > 0 ? uploadedFiles : null
     }
 
-    const { error } = await supabase
-      .from('course_videos')
-      .insert([payload])
+    if (editingLessonId) {
+      // Update existing lesson
+      const { error } = await supabase
+        .from('course_videos')
+        .update(payload)
+        .eq('id', editingLessonId)
 
-    if (error) {
-      toast.error('Error: ' + error.message)
-      return
+      if (error) {
+        toast.error('Error: ' + error.message)
+        return
+      }
+
+      toast.success('Lesson updated')
+    } else {
+      // Insert new lesson
+      const { error } = await supabase
+        .from('course_videos')
+        .insert([payload])
+
+      if (error) {
+        toast.error('Error: ' + error.message)
+        return
+      }
+
+      toast.success('Lesson added')
     }
 
-    toast.success('Lesson added')
     setShowModal(false)
     resetForm()
     loadLessons()
@@ -184,6 +203,39 @@ export default function AdminLessons() {
       order_index: "0"
     })
     setPendingFiles([])
+    setExistingFiles([])
+    setEditingLessonId(null)
+  }
+
+  const editLesson = (lesson: Lesson) => {
+    setFormData({
+      title: lesson.title,
+      description: lesson.description || '',
+      vdocipher_id: lesson.vdocipher_id || '',
+      category: lesson.category,
+      module: lesson.module || '',
+      duration: lesson.duration || '',
+      thumbnail_url: lesson.thumbnail_url || '',
+      transcript_text: lesson.transcript_text || '',
+      access_type: lesson.access_type,
+      required_tier: lesson.required_tier || '',
+      product_id: lesson.product_id || '',
+      order_index: String(lesson.order_index)
+    })
+    setExistingFiles(lesson.files || [])
+    setPendingFiles([])
+    setEditingLessonId(lesson.id)
+    setShowModal(true)
+  }
+
+  const removeExistingFile = async (index: number) => {
+    const file = existingFiles[index]
+    // Extract path from URL and remove from storage
+    const pathParts = file.url.split('/lesson-files/')
+    if (pathParts[1]) {
+      await supabase.storage.from('lesson-files').remove([pathParts[1]])
+    }
+    setExistingFiles(prev => prev.filter((_, i) => i !== index))
   }
 
   const deleteLesson = async (id: string) => {
@@ -356,14 +408,24 @@ export default function AdminLessons() {
                               <TableCell className="text-muted-foreground">{formatDuration(lesson)}</TableCell>
                               <TableCell>{lesson.order_index}</TableCell>
                               <TableCell>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => deleteLesson(lesson.id)}
-                                  className="text-destructive hover:text-destructive"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
+                                <div className="flex gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => editLesson(lesson)}
+                                    className="text-muted-foreground hover:text-foreground"
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => deleteLesson(lesson.id)}
+                                    className="text-destructive hover:text-destructive"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
                               </TableCell>
                             </TableRow>
                           ))}
@@ -443,14 +505,24 @@ export default function AdminLessons() {
                               <TableCell className="text-muted-foreground">{formatDuration(lesson)}</TableCell>
                               <TableCell>{lesson.order_index}</TableCell>
                               <TableCell>
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => deleteLesson(lesson.id)}
-                                  className="text-destructive hover:text-destructive"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
+                                <div className="flex gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => editLesson(lesson)}
+                                    className="text-muted-foreground hover:text-foreground"
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => deleteLesson(lesson.id)}
+                                    className="text-destructive hover:text-destructive"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
                               </TableCell>
                             </TableRow>
                           ))}
@@ -465,10 +537,10 @@ export default function AdminLessons() {
         )}
 
         {/* Add Lesson Modal */}
-        <Dialog open={showModal} onOpenChange={setShowModal}>
+        <Dialog open={showModal} onOpenChange={(open) => { setShowModal(open); if (!open) resetForm(); }}>
           <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Add New Lesson</DialogTitle>
+              <DialogTitle>{editingLessonId ? 'Edit Lesson' : 'Add New Lesson'}</DialogTitle>
             </DialogHeader>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
@@ -623,8 +695,35 @@ export default function AdminLessons() {
                     Add Files (PDFs, guides, images, etc.)
                   </Button>
 
+                  {/* Existing Files (when editing) */}
+                  {existingFiles.length > 0 && (
+                    <div className="space-y-2 mt-3">
+                      <Label className="text-xs text-muted-foreground">Existing Files</Label>
+                      {existingFiles.map((file, index) => (
+                        <div key={`existing-${index}`} className="flex items-center gap-2 p-2 bg-accent/20 rounded-lg border border-accent/30">
+                          <File className="h-4 w-4 text-accent" />
+                          <span className="flex-1 text-sm truncate">{file.name}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {file.size ? `${(file.size / 1024).toFixed(1)} KB` : 'Saved'}
+                          </span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => removeExistingFile(index)}
+                            className="h-6 w-6 p-0 text-destructive hover:text-destructive"
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Pending Files (new uploads) */}
                   {pendingFiles.length > 0 && (
                     <div className="space-y-2 mt-3">
+                      <Label className="text-xs text-muted-foreground">New Files (to be uploaded)</Label>
                       {pendingFiles.map((file, index) => (
                         <div key={index} className="flex items-center gap-2 p-2 bg-muted rounded-lg">
                           <File className="h-4 w-4 text-muted-foreground" />
@@ -680,7 +779,7 @@ export default function AdminLessons() {
 
               <div className="flex gap-3 pt-2">
                 <Button type="submit" className="flex-1" disabled={uploadingFiles}>
-                  {uploadingFiles ? 'Uploading files...' : 'Add Lesson'}
+                  {uploadingFiles ? 'Uploading files...' : editingLessonId ? 'Save Changes' : 'Add Lesson'}
                 </Button>
                 <Button type="button" variant="outline" onClick={() => { setShowModal(false); resetForm(); }}>
                   Cancel
