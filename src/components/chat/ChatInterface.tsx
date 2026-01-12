@@ -332,8 +332,25 @@ export function ChatInterface({
 
   const handleSendMessage = async (content: string, files?: File[], imageSettings?: ImageGenerationSettings) => {
     if (!user) {
-      // User should already be logged in from main page
       console.warn('No user found - should be authenticated');
+      return;
+    }
+
+    // Check chat access - show trial or subscribe modal if needed
+    if (!hasChatAccess) {
+      if (needsTrial()) {
+        setShowTrialModal(true);
+        return;
+      } else if (needsSubscription()) {
+        setShowSubscribeModal(true);
+        return;
+      }
+      // No access and no way to get it shown
+      toast({
+        title: 'Chat Locked',
+        description: 'Please subscribe to use the AI chat.',
+        variant: 'destructive'
+      });
       return;
     }
     
@@ -747,5 +764,25 @@ export function ChatInterface({
             />
           </div>
         </div>}
+
+      {/* Modals */}
+      <UpgradeDialog
+        open={showUpgradeDialog}
+        onOpenChange={setShowUpgradeDialog}
+        currentTier={userTier}
+      />
+
+      <FreeTrialModal
+        isOpen={showTrialModal}
+        onClose={() => setShowTrialModal(false)}
+        userId={user?.id || ''}
+        onSuccess={() => refreshAccess()}
+      />
+
+      <SubscribeModal
+        isOpen={showSubscribeModal}
+        onClose={() => setShowSubscribeModal(false)}
+        trialExpired={trialExpired}
+      />
     </div>;
 }
