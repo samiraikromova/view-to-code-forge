@@ -77,7 +77,7 @@ export default function AdminLessons() {
     duration: '',
     thumbnail_url: '',
     transcript_text: '',
-    access_type: 'free' as 'free' | 'tier_required' | 'purchase_required' | 'unlock_required',
+    access_type: 'free' as 'free' | 'tier_required' | 'purchase_required',
     required_tier: '',
     product_id: '',
     order_index: "0"
@@ -208,6 +208,12 @@ export default function AdminLessons() {
   }
 
   const editLesson = (lesson: Lesson) => {
+    // Map legacy unlock_required to purchase_required
+    let accessType = lesson.access_type;
+    if (accessType === 'unlock_required') {
+      accessType = 'purchase_required';
+    }
+    
     setFormData({
       title: lesson.title,
       description: lesson.description || '',
@@ -217,7 +223,7 @@ export default function AdminLessons() {
       duration: lesson.duration || '',
       thumbnail_url: lesson.thumbnail_url || '',
       transcript_text: lesson.transcript_text || '',
-      access_type: lesson.access_type,
+      access_type: accessType as 'free' | 'tier_required' | 'purchase_required',
       required_tier: lesson.required_tier || '',
       product_id: lesson.product_id || '',
       order_index: String(lesson.order_index)
@@ -315,8 +321,6 @@ export default function AdminLessons() {
         return <Badge variant="outline" className="text-xs">Tier: {lesson.required_tier}</Badge>
       case 'purchase_required':
         return <Badge className="text-xs bg-accent">Purchase</Badge>
-      case 'unlock_required':
-        return <Badge variant="outline" className="text-xs">Unlock</Badge>
       default:
         return null
     }
@@ -340,10 +344,9 @@ export default function AdminLessons() {
           </div>
         ) : (
           <div className="space-y-8">
-            {/* Course Lessons */}
             <div>
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-foreground">📚 Course Lessons</h2>
+                <h2 className="text-lg font-semibold text-foreground">📚 Classroom Modules</h2>
                 <Button variant="outline" size="sm" onClick={() => openModuleModal('course')}>
                   <FolderPlus className="h-4 w-4 mr-2" />
                   New Module
@@ -644,7 +647,6 @@ export default function AdminLessons() {
                       <SelectItem value="free">🆓 Free</SelectItem>
                       <SelectItem value="tier_required">🎖️ Tier Required</SelectItem>
                       <SelectItem value="purchase_required">💳 Purchase Required</SelectItem>
-                      <SelectItem value="unlock_required">🔓 Unlock Required</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
