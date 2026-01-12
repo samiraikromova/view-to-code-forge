@@ -36,14 +36,14 @@ const CALL_REQUIRED_MODULES = [
   'coaching-content',
 ];
 
-// Module pricing map
+// Module pricing map - matches internal_reference values in fanbases_products
 const MODULE_PRICES: Record<string, number> = {
   'steal-my-script': 98,
-  'order-bump': 49,
+  'bump-offer': 49,
   'outreach-guide': 197,
-  'how-to-take-sales-calls': 197,
-  'onboarding-fulfillment': 197,
-  'back-end-automation-tracking-funnels': 297,
+  'sales-calls': 197,
+  'onboarding-and-fulfillment': 197,
+  'automation': 297,
 };
 
 export function useAccess() {

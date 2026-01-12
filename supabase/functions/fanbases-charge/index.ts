@@ -14,20 +14,22 @@ interface FanbasesProduct {
   internal_reference: string;
 }
 
-// Look up product from fanbases_products table
+// Look up product from fanbases_products table by internal_reference
+// The frontend sends internal references (e.g., 'steal-my-script', 'tier1', '1000_credits')
+// and we need to find the actual Fanbases product ID
 // deno-lint-ignore no-explicit-any
-async function lookupProduct(
+async function lookupProductByInternalRef(
   supabase: any,
-  fanbasesProductId: string
+  internalReference: string
 ): Promise<FanbasesProduct | null> {
   const { data, error } = await supabase
     .from('fanbases_products')
     .select('fanbases_product_id, product_type, internal_reference')
-    .eq('fanbases_product_id', fanbasesProductId)
+    .eq('internal_reference', internalReference)
     .maybeSingle();
   
   if (error) {
-    console.error('[Fanbases Charge] Error looking up product:', error);
+    console.error('[Fanbases Charge] Error looking up product by internal_reference:', error);
     return null;
   }
   return data;
@@ -216,14 +218,22 @@ Deno.serve(async (req) => {
     const chargeId = chargeData.data?.charge_id || chargeData.charge_id || chargeData.id;
     console.log(`[Fanbases Charge] Charge successful: ${chargeId}`);
 
-    // Try to look up product from fanbases_products table first
-    const productMapping = await lookupProduct(supabase, product_id);
+    // Look up product from fanbases_products table by internal_reference
+    // The frontend sends internal references like 'steal-my-script', 'tier1', 'credits_1000'
+    // Map credits_X format to X_credits format used in the table
+    let lookupRef = product_id;
+    if (product_id.startsWith('credits_')) {
+      lookupRef = product_id.replace('credits_', '') + '_credits';
+    }
+    
+    const productMapping = await lookupProductByInternalRef(supabase, lookupRef);
     
     // Determine processing type from mapping or fallback to request
     const processingType = productMapping?.product_type || product_type;
     const internalRef = productMapping?.internal_reference || product_id;
+    const fanbasesProductId = productMapping?.fanbases_product_id;
     
-    console.log(`[Fanbases Charge] Processing as: ${processingType}, internal_ref: ${internalRef}`);
+    console.log(`[Fanbases Charge] Processing as: ${processingType}, internal_ref: ${internalRef}, fanbases_id: ${fanbasesProductId}`);
 
     // Process based on product type
     if (processingType === 'module') {
