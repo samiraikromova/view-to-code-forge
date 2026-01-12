@@ -1,11 +1,13 @@
 import { useState, useCallback, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { Lock, Sparkles } from "lucide-react";
 import { MetricContainer } from "@/components/dashboard/MetricContainer";
 import { GoalCard } from "@/components/dashboard/GoalCard";
 import { GoalBuilder } from "@/components/dashboard/GoalBuilder";
 import { ComparisonChart } from "@/components/dashboard/ComparisonChart";
 import { LeaderboardTable } from "@/components/dashboard/LeaderboardTable";
 import { ParticleBackground } from "@/components/dashboard/ParticleBackground";
+import { Button } from "@/components/ui/button";
 import {
   getMockMetricsData,
   getMockComparisonData,
@@ -19,6 +21,8 @@ interface DashboardProps {
   currentView: ViewType;
   isGoalBuilderOpen: boolean;
   onGoalBuilderClose: () => void;
+  hasActiveSubscription?: boolean;
+  onSubscribe?: () => void;
 }
 
 export function Dashboard({ 
@@ -26,6 +30,8 @@ export function Dashboard({
   currentView,
   isGoalBuilderOpen,
   onGoalBuilderClose,
+  hasActiveSubscription = false,
+  onSubscribe,
 }: DashboardProps) {
   const navigate = useNavigate();
   const [goals, setGoals] = useState<Goal[]>(getMockGoals());
@@ -88,6 +94,61 @@ export function Dashboard({
       navigate("/chat");
     }
   }, [metricsData, onAskAI, navigate]);
+
+  // Locked overlay for non-subscribers
+  if (!hasActiveSubscription) {
+    return (
+      <div className="relative flex-1 flex flex-col min-h-0 overflow-auto p-6 animate-fade-in">
+        {/* Particle Background */}
+        <ParticleBackground className="z-0" />
+        
+        {/* Blurred sample content behind the overlay */}
+        <div className="absolute inset-0 p-6 blur-sm opacity-60 pointer-events-none">
+          <div className="grid grid-cols-4 lg:grid-cols-8 gap-3">
+            {/* Sample metric cards - simplified for performance */}
+            {[...Array(12)].map((_, i) => (
+              <div 
+                key={i} 
+                className={`bg-surface/50 rounded-lg border border-border p-4 ${
+                  i < 2 ? 'col-span-2' : i < 6 ? 'col-span-4' : 'col-span-2'
+                }`}
+              >
+                <div className="h-4 w-20 bg-muted-foreground/20 rounded mb-2" />
+                <div className="h-8 w-32 bg-muted-foreground/30 rounded" />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Lock overlay */}
+        <div className="relative z-10 flex-1 flex items-center justify-center">
+          <div className="bg-background/95 backdrop-blur-sm border border-border rounded-xl p-8 max-w-md text-center shadow-2xl">
+            <div className="h-16 w-16 rounded-full bg-primary/20 flex items-center justify-center mx-auto mb-4">
+              <Lock className="h-8 w-8 text-primary" />
+            </div>
+            <h2 className="text-2xl font-bold text-foreground mb-2">
+              Dashboard Locked
+            </h2>
+            <p className="text-muted-foreground mb-6">
+              Subscribe to unlock your real-time metrics dashboard with custom goals, 
+              performance tracking, and AI-powered insights.
+            </p>
+            <Button 
+              size="lg" 
+              className="gap-2 bg-accent hover:bg-accent-hover text-accent-foreground"
+              onClick={onSubscribe}
+            >
+              <Sparkles className="h-5 w-5" />
+              Subscribe to Unlock
+            </Button>
+            <p className="text-sm text-muted-foreground mt-4">
+              Starting at $29/month
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="relative flex-1 flex flex-col min-h-0 overflow-auto p-6 animate-fade-in">
