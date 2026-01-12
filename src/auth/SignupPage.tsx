@@ -29,8 +29,8 @@ const SignupPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!email || !password) {
-      toast.error("Please fill in all required fields");
+    if (!fullName.trim() || !businessName.trim() || !address.trim() || !email.trim() || !password) {
+      toast.error("Please fill in all fields");
       return;
     }
 
@@ -107,7 +107,7 @@ const SignupPage = () => {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="fullName" className="text-foreground">Full Name</Label>
+              <Label htmlFor="fullName" className="text-foreground">Full Name *</Label>
               <div className="relative">
                 <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -118,12 +118,13 @@ const SignupPage = () => {
                   onChange={(e) => setFullName(e.target.value)}
                   className="h-12 pl-10 bg-surface border-border"
                   disabled={isLoading}
+                  required
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="businessName" className="text-foreground">Business Name</Label>
+              <Label htmlFor="businessName" className="text-foreground">Business Name *</Label>
               <div className="relative">
                 <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -134,12 +135,13 @@ const SignupPage = () => {
                   onChange={(e) => setBusinessName(e.target.value)}
                   className="h-12 pl-10 bg-surface border-border"
                   disabled={isLoading}
+                  required
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="address" className="text-foreground">Address</Label>
+              <Label htmlFor="address" className="text-foreground">Address *</Label>
               <div className="relative">
                 <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -150,6 +152,7 @@ const SignupPage = () => {
                   onChange={(e) => setAddress(e.target.value)}
                   className="h-12 pl-10 bg-surface border-border"
                   disabled={isLoading}
+                  required
                 />
               </div>
             </div>

@@ -91,7 +91,7 @@ const LoginPage = () => {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-foreground">Email</Label>
+              <Label htmlFor="email" className="text-foreground">Email *</Label>
               <div className="relative">
                 <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -102,12 +102,13 @@ const LoginPage = () => {
                   onChange={(e) => setEmail(e.target.value)}
                   className="h-12 pl-10 bg-surface border-border"
                   disabled={isLoading}
+                  required
                 />
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-foreground">Password</Label>
+              <Label htmlFor="password" className="text-foreground">Password *</Label>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -118,6 +119,7 @@ const LoginPage = () => {
                   onChange={(e) => setPassword(e.target.value)}
                   className="h-12 pl-10 pr-10 bg-surface border-border"
                   disabled={isLoading}
+                  required
                 />
                 <button
                   type="button"
