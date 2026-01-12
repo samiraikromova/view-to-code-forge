@@ -11,6 +11,7 @@ import { LearnInterface } from "@/components/learn/LearnInterface";
 import { LearnContentSelector } from "@/components/learn/LearnContentSelector";
 import { Dashboard } from "@/pages/Dashboard";
 import { useAuth } from "@/hooks/useAuth";
+import { useAccess } from "@/hooks/useAccess";
 import { fetchUserThreads } from "@/api/chat/chatApi";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
@@ -20,6 +21,7 @@ import { ViewSelector } from "@/components/dashboard/ViewSelector";
 import { DateRangePicker } from "@/components/dashboard/DateRangePicker";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Progress } from "@/components/ui/progress";
+import { SubscriptionModal } from "@/components/payments/SubscriptionModal";
 import type { ViewType, TimePreset } from "@/types/dashboard";
 
 interface Chat {
@@ -30,6 +32,7 @@ interface Chat {
 
 const Main = () => {
   const { user, profile, signOut } = useAuth();
+  const { purchasedModules, hasActiveSubscription, checkModuleAccess, refreshAccess } = useAccess();
   const navigate = useNavigate();
   const [mode, setMode] = useState<NavigationMode>("chat");
   const [chatId, setChatId] = useState<string | null>(null);
@@ -37,6 +40,7 @@ const Main = () => {
   const [threadsLoading, setThreadsLoading] = useState(true);
   const [showHistoryPanel, setShowHistoryPanel] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
 
   // Dashboard state (lifted from Dashboard.tsx)
   const [dashboardView, setDashboardView] = useState<ViewType>("metrics");
@@ -297,6 +301,35 @@ const Main = () => {
     
     const currentData = contentType === "recordings" ? recordingsData : materialsData;
     const lesson = currentData.flatMap((m) => m.lessons).find((l) => l.id === lessonId);
+    
+    if (!lesson) {
+      toast.error("Lesson not found");
+      return;
+    }
+
+    // Find the module this lesson belongs to
+    const parentModule = currentData.find((m) => m.lessons.some((l) => l.id === lessonId));
+    const moduleSlug = parentModule?.id; // Module ID should match internal_reference in fanbases_products
+
+    // Check access: user must own the module OR have an active subscription
+    if (moduleSlug) {
+      const accessInfo = checkModuleAccess(moduleSlug);
+      
+      if (!accessInfo.hasAccess && !hasActiveSubscription) {
+        // User doesn't have access - show appropriate message
+        if (accessInfo.requiresCall) {
+          toast.error("This module requires booking a call to access Ask AI");
+        } else {
+          toast.error("Subscribe or purchase this module to use Ask AI", {
+            action: {
+              label: "Subscribe",
+              onClick: () => setShowSubscriptionModal(true),
+            },
+          });
+        }
+        return;
+      }
+    }
     
     if (lesson?.transcriptUrl) {
       try {
@@ -595,6 +628,8 @@ const Main = () => {
               currentView={dashboardView}
               isGoalBuilderOpen={isGoalBuilderOpen}
               onGoalBuilderClose={() => setIsGoalBuilderOpen(false)}
+              hasActiveSubscription={hasActiveSubscription}
+              onSubscribe={() => setShowSubscriptionModal(true)}
             />
           )}
           
@@ -635,6 +670,16 @@ const Main = () => {
         currentChatId={chatId}
         onChatSelect={handleSelectChat}
         onNewChat={handleNewChat}
+      />
+
+      {/* Subscription Modal */}
+      <SubscriptionModal
+        isOpen={showSubscriptionModal}
+        onClose={() => setShowSubscriptionModal(false)}
+        onSuccess={() => {
+          refreshAccess();
+          setShowSubscriptionModal(false);
+        }}
       />
     </div>
   );
