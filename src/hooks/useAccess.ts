@@ -145,8 +145,12 @@ export function useAccess() {
       }
 
       const purchasedModules = purchasesResult.data?.map(p => p.product_id) || [];
-      const hasActiveSubscription = !!subscriptionResult.data;
-      const subscriptionTier = subscriptionResult.data?.tier || userData?.subscription_tier || null;
+      
+      // Check subscription from user_subscriptions OR users.subscription_tier
+      const subscriptionTier = subscriptionResult.data?.tier || userData?.subscription_tier || 'free';
+      const hasActiveSubscription = !!subscriptionResult.data || 
+        (subscriptionTier && subscriptionTier !== 'free' && subscriptionTier !== 'trial');
+      
       const hasDashboardAccess = !!dashboardAccessResult.data;
       const hasChatAccess = hasActiveSubscription || isOnTrial;
       const fanbasesProducts = fanbasesProductsResult.data || [];
