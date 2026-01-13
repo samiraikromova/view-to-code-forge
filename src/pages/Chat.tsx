@@ -156,13 +156,17 @@ const Chat = () => {
   };
 
   const groupVideosByModule = (videos: CourseVideo[], progressMap: Map<string, boolean>): Module[] => {
-    const moduleMap = new Map<string, Lesson[]>();
+    const moduleMap = new Map<string, { lessons: Lesson[]; accessType?: string; productId?: string }>();
     
     videos.forEach(video => {
       const moduleTitle = video.module || 'Uncategorized';
       
       if (!moduleMap.has(moduleTitle)) {
-        moduleMap.set(moduleTitle, []);
+        moduleMap.set(moduleTitle, { 
+          lessons: [],
+          accessType: video.access_type || 'free',
+          productId: video.product_id || undefined
+        });
       }
       
       const lesson: Lesson = {
@@ -179,18 +183,22 @@ const Chat = () => {
         callDate: video.call_date || undefined,
         speakerCount: video.speaker_count || undefined,
         durationFormatted: video.duration_formatted || undefined,
+        accessType: video.access_type || 'free',
+        productId: video.product_id || undefined,
       };
       
-      moduleMap.get(moduleTitle)!.push(lesson);
+      moduleMap.get(moduleTitle)!.lessons.push(lesson);
     });
     
     // Convert to array and sort modules (newest first for recordings)
     const modules: Module[] = [];
-    moduleMap.forEach((lessons, title) => {
+    moduleMap.forEach((data, title) => {
       modules.push({
         id: title.toLowerCase().replace(/\s+/g, '-'),
         title,
-        lessons
+        lessons: data.lessons,
+        accessType: data.accessType as any,
+        productId: data.productId
       });
     });
     

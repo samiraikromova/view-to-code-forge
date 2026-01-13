@@ -12,16 +12,6 @@ interface ModuleGridProps {
   contentType: "recordings" | "materials";
 }
 
-// Fanbases product IDs for modules - admin should set these
-const FANBASES_PRODUCT_URLS: Record<string, string> = {
-  'steal-my-script': 'https://fanbases.com/checkout/rRJZp',
-  'bump-offer': 'https://fanbases.com/checkout/bump-offer-id',
-  'outreach-guide': 'https://fanbases.com/checkout/outreach-id',
-  'sales-calls': 'https://fanbases.com/checkout/sales-calls-id',
-  'onboarding-and-fulfillment': 'https://fanbases.com/checkout/onboarding-id',
-  'automation': 'https://fanbases.com/checkout/automation-id',
-};
-
 export function ModuleGrid({ modules, onModuleSelect, isLoading, contentType }: ModuleGridProps) {
   const { checkModuleAccess, refreshAccess, hasDashboardAccess } = useAccess();
   const [showBookCallModal, setShowBookCallModal] = useState(false);
@@ -62,31 +52,29 @@ export function ModuleGrid({ modules, onModuleSelect, isLoading, contentType }: 
       if (module.requiresCall) {
         // Show book a call modal for call recordings
         setShowBookCallModal(true);
-      } else if (module.id && FANBASES_PRODUCT_URLS[module.id]) {
+      } else if (module.fanbasesCheckoutUrl) {
         // Redirect to Fanbases checkout page
-        window.open(FANBASES_PRODUCT_URLS[module.id], '_blank');
-      } else {
-        // Fallback: redirect to generic Fanbases page
-        window.open('https://fanbases.com/checkout', '_blank');
+        window.open(module.fanbasesCheckoutUrl, '_blank');
       }
     } else {
       onModuleSelect(module.id);
     }
   };
 
-  // Transform modules to ModuleCardData with real access checks
+  // Transform modules to ModuleCardData with real access checks based on access_type
   const moduleCards: ModuleCardData[] = modules.map((module) => {
-    const accessInfo = checkModuleAccess(module.id);
+    // Pass access_type and productId from the module to checkModuleAccess
+    const accessInfo = checkModuleAccess(module.id, module.accessType, module.productId);
     const isLocked = !accessInfo.hasAccess;
     
     let unlockMessage: string | undefined;
     if (isLocked) {
       if (accessInfo.requiresCall) {
         unlockMessage = "Book a call to unlock";
-      } else if (accessInfo.price) {
-        unlockMessage = `Unlock for $${accessInfo.price}`;
+      } else if (accessInfo.fanbasesCheckoutUrl) {
+        unlockMessage = "Click to unlock";
       } else {
-        unlockMessage = "Locked";
+        unlockMessage = undefined; // Free modules shouldn't show unlock message
       }
     }
 
@@ -100,7 +88,7 @@ export function ModuleGrid({ modules, onModuleSelect, isLoading, contentType }: 
       isLocked,
       unlockMessage,
       requiresCall: accessInfo.requiresCall,
-      price: accessInfo.price,
+      fanbasesCheckoutUrl: accessInfo.fanbasesCheckoutUrl,
     };
   });
 
