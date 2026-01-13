@@ -25,8 +25,18 @@ export interface AccessState {
   // Chat/AI
   hasChatAccess: boolean;
   
+  // Products from fanbases_products table
+  fanbasesProducts: FanbasesProduct[];
+  
   // Loading
   loading: boolean;
+}
+
+export interface FanbasesProduct {
+  fanbases_product_id: string;
+  product_type: string;
+  internal_reference: string;
+  price_cents?: number;
 }
 
 export interface ModuleAccessInfo {
@@ -35,6 +45,7 @@ export interface ModuleAccessInfo {
   price?: number;
   productId?: string;
   fanbasesProductId?: string;
+  fanbasesCheckoutUrl?: string;
 }
 
 // Modules that require booking a call (cannot be purchased)
@@ -42,16 +53,6 @@ const CALL_REQUIRED_MODULES = [
   'call-recordings',
   'coaching-content',
 ];
-
-// Module pricing map - matches internal_reference values in fanbases_products
-const MODULE_PRICES: Record<string, number> = {
-  'steal-my-script': 98,
-  'bump-offer': 49,
-  'outreach-guide': 197,
-  'sales-calls': 197,
-  'onboarding-and-fulfillment': 197,
-  'automation': 297,
-};
 
 export function useAccess() {
   const { user, profile } = useAuth();
@@ -65,6 +66,7 @@ export function useAccess() {
     trialDaysRemaining: 0,
     hasDashboardAccess: false,
     hasChatAccess: false,
+    fanbasesProducts: [],
     loading: true,
   });
 
@@ -81,19 +83,49 @@ export function useAccess() {
         trialDaysRemaining: 0,
         hasDashboardAccess: false,
         hasChatAccess: false,
+        fanbasesProducts: [],
         loading: false,
       });
       return;
     }
 
     try {
-      // Fetch user data for trial info
-      const { data: userData } = await supabase
-        .from('users')
-        .select('trial_started_at, trial_ends_at, subscription_tier')
-        .eq('id', user.id)
-        .single();
+      // Fetch all data in parallel
+      const [userDataResult, purchasesResult, subscriptionResult, dashboardAccessResult, fanbasesProductsResult] = await Promise.all([
+        // User data for trial info
+        supabase
+          .from('users')
+          .select('trial_started_at, trial_ends_at, subscription_tier')
+          .eq('id', user.id)
+          .single(),
+        // Purchases
+        supabase
+          .from('user_purchases')
+          .select('product_id')
+          .eq('user_id', user.id)
+          .eq('status', 'completed'),
+        // Subscription
+        supabase
+          .from('user_subscriptions')
+          .select('tier, status')
+          .eq('user_id', user.id)
+          .eq('status', 'active')
+          .maybeSingle(),
+        // Dashboard access
+        supabase
+          .from('user_special_access')
+          .select('id')
+          .eq('user_id', user.id)
+          .eq('access_type', 'dashboard')
+          .maybeSingle(),
+        // Fanbases products for pricing
+        supabase
+          .from('fanbases_products')
+          .select('fanbases_product_id, product_type, internal_reference')
+      ]);
 
+      const userData = userDataResult.data;
+      
       // Calculate trial status
       let isOnTrial = false;
       let trialEndsAt: Date | null = null;
@@ -112,38 +144,12 @@ export function useAccess() {
         }
       }
 
-      // Fetch purchases
-      const { data: purchases } = await supabase
-        .from('user_purchases')
-        .select('product_id')
-        .eq('user_id', user.id)
-        .eq('status', 'completed');
-
-      const purchasedModules = purchases?.map(p => p.product_id) || [];
-
-      // Fetch subscription
-      const { data: subscription } = await supabase
-        .from('user_subscriptions')
-        .select('tier, status')
-        .eq('user_id', user.id)
-        .eq('status', 'active')
-        .maybeSingle();
-
-      const hasActiveSubscription = !!subscription;
-      const subscriptionTier = subscription?.tier || userData?.subscription_tier || null;
-
-      // Check dashboard access (requires call booking)
-      const { data: dashboardAccess } = await supabase
-        .from('user_special_access')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('access_type', 'dashboard')
-        .maybeSingle();
-
-      const hasDashboardAccess = !!dashboardAccess;
-
-      // Chat access requires subscription OR active trial
+      const purchasedModules = purchasesResult.data?.map(p => p.product_id) || [];
+      const hasActiveSubscription = !!subscriptionResult.data;
+      const subscriptionTier = subscriptionResult.data?.tier || userData?.subscription_tier || null;
+      const hasDashboardAccess = !!dashboardAccessResult.data;
       const hasChatAccess = hasActiveSubscription || isOnTrial;
+      const fanbasesProducts = fanbasesProductsResult.data || [];
 
       setAccessState({
         purchasedModules,
@@ -155,6 +161,7 @@ export function useAccess() {
         trialDaysRemaining,
         hasDashboardAccess,
         hasChatAccess,
+        fanbasesProducts,
         loading: false,
       });
     } catch (error) {
@@ -167,9 +174,9 @@ export function useAccess() {
     loadAccessData();
   }, [loadAccessData]);
 
-  // Check if user has access to a specific module
-  const checkModuleAccess = useCallback((moduleSlug: string): ModuleAccessInfo => {
-    // Call-required modules (call recordings)
+  // Check if user has access to a specific module based on its access_type
+  const checkModuleAccess = useCallback((moduleSlug: string, accessType?: string, productId?: string): ModuleAccessInfo => {
+    // Call-required modules (call recordings) - always require call booking
     if (CALL_REQUIRED_MODULES.includes(moduleSlug) || moduleSlug.includes('call-recording') || moduleSlug.includes('recording')) {
       return {
         hasAccess: accessState.hasDashboardAccess, // Dashboard access means they booked a call
@@ -177,19 +184,69 @@ export function useAccess() {
       };
     }
 
-    // Check if purchased
+    // If access_type is 'free', module is always accessible
+    if (accessType === 'free') {
+      return { hasAccess: true, requiresCall: false };
+    }
+
+    // If access_type is 'call_booking', require a call
+    if (accessType === 'call_booking') {
+      return {
+        hasAccess: accessState.hasDashboardAccess,
+        requiresCall: true,
+      };
+    }
+
+    // If access_type is 'tier_required', check subscription
+    if (accessType === 'tier_required') {
+      return {
+        hasAccess: accessState.hasActiveSubscription,
+        requiresCall: false,
+      };
+    }
+
+    // If access_type is 'purchase_required', check if purchased
+    if (accessType === 'purchase_required') {
+      // Check if user has purchased this module
+      const hasPurchased = accessState.purchasedModules.includes(moduleSlug) || 
+                           (productId && accessState.purchasedModules.includes(productId));
+      
+      if (hasPurchased) {
+        return { hasAccess: true, requiresCall: false };
+      }
+
+      // Find product in fanbases_products for checkout link
+      const product = accessState.fanbasesProducts.find(p => 
+        p.internal_reference === moduleSlug || p.internal_reference === productId
+      );
+
+      return {
+        hasAccess: false,
+        requiresCall: false,
+        productId: productId || moduleSlug,
+        fanbasesProductId: product?.fanbases_product_id,
+        fanbasesCheckoutUrl: product ? `https://www.fanbasis.com/checkout/${product.fanbases_product_id}` : undefined,
+      };
+    }
+
+    // Default: check if purchased (backward compatibility)
     if (accessState.purchasedModules.includes(moduleSlug)) {
       return { hasAccess: true, requiresCall: false };
     }
 
-    // Return locked with price
+    // Find product for price info
+    const product = accessState.fanbasesProducts.find(p => 
+      p.internal_reference === moduleSlug || p.internal_reference === productId
+    );
+
     return {
       hasAccess: false,
       requiresCall: false,
-      price: MODULE_PRICES[moduleSlug],
-      productId: moduleSlug,
+      productId: productId || moduleSlug,
+      fanbasesProductId: product?.fanbases_product_id,
+      fanbasesCheckoutUrl: product ? `https://www.fanbasis.com/checkout/${product.fanbases_product_id}` : undefined,
     };
-  }, [accessState.purchasedModules, accessState.hasDashboardAccess]);
+  }, [accessState.purchasedModules, accessState.hasDashboardAccess, accessState.hasActiveSubscription, accessState.fanbasesProducts]);
 
   // Check if Ask AI is available (requires subscription or trial)
   const canAskAI = useCallback(() => {

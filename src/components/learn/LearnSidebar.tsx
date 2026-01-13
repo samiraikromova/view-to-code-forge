@@ -18,6 +18,8 @@ export interface Module {
   id: string;
   title: string;
   lessons: Lesson[];
+  accessType?: 'free' | 'tier_required' | 'purchase_required' | 'call_booking';
+  productId?: string; // internal_reference in fanbases_products
 }
 
 export interface LessonFileItem {

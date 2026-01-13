@@ -13,6 +13,7 @@ export interface ModuleCardData {
   unlockMessage?: string;
   requiresCall?: boolean;
   price?: number;
+  fanbasesCheckoutUrl?: string;
 }
 
 interface ModuleCardProps {
@@ -28,11 +29,10 @@ export function ModuleCard({ module, onClick }: ModuleCardProps) {
   return (
     <button
       onClick={onClick}
-      disabled={module.isLocked}
       className={cn(
         "group relative w-full text-left rounded-xl border border-border/50 bg-card/80 backdrop-blur-sm overflow-hidden transition-all duration-300",
         module.isLocked 
-          ? "opacity-70 cursor-not-allowed" 
+          ? "opacity-80 hover:opacity-100 hover:border-primary/30 cursor-pointer" 
           : "hover:border-primary/50 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1"
       )}
     >
@@ -52,11 +52,13 @@ export function ModuleCard({ module, onClick }: ModuleCardProps) {
         
         {/* Locked Overlay */}
         {module.isLocked && (
-          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center gap-2">
+          <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center gap-3">
             <Lock className="w-8 h-8 text-muted-foreground" />
-            <span className="text-sm text-muted-foreground font-medium">
-              {module.unlockMessage || "Locked"}
-            </span>
+            {module.unlockMessage && (
+              <span className="bg-primary text-primary-foreground px-4 py-2 rounded-full text-sm font-medium shadow-lg hover:bg-primary/90 transition-colors">
+                {module.unlockMessage}
+              </span>
+            )}
           </div>
         )}
         
