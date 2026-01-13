@@ -1,9 +1,16 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { ShieldX, ArrowLeft, Mail } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
 const AccessDeniedPage = () => {
   const navigate = useNavigate();
+
+  const handleTryDifferentAccount = async () => {
+    // Sign out first, then redirect to login
+    await supabase.auth.signOut();
+    navigate("/auth/login");
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
@@ -43,7 +50,7 @@ const AccessDeniedPage = () => {
             
             <Button 
               variant="outline" 
-              onClick={() => navigate("/auth/login")}
+              onClick={handleTryDifferentAccount}
               className="w-full"
             >
               Try Different Account
