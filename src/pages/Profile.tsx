@@ -202,10 +202,6 @@ export default function Profile() {
                 <span className="text-sm text-muted-foreground">Member since</span>
                 <span className="text-sm text-foreground">{formatDate(createdAt)}</span>
               </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">User ID</span>
-                <span className="text-xs text-muted-foreground font-mono">{user?.id?.slice(0, 8)}...</span>
-              </div>
             </div>
           </CardContent>
         </Card>
