@@ -40,11 +40,16 @@ export function useAuth() {
   }, [])
 
   const fetchProfile = async (userId: string) => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('users')
-      .select('id, name, email, credits, subscription_tier, created_at, total_tokens, total_cost, last_credit_update, business_name, address')
+      .select('id, name, email, credits, subscription_tier, created_at, total_tokens, total_cost, last_credit_update, business_name, address, trial_started_at, trial_ends_at')
       .eq('id', userId)
       .maybeSingle()
+
+    if (error) {
+      console.error('Error fetching profile:', error)
+      return
+    }
 
     if (data) {
       setProfile(data as UserProfile)

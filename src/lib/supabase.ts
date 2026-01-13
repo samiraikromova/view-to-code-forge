@@ -52,4 +52,6 @@ export type UserProfile = {
   last_credit_update?: string
   business_name?: string | null
   address?: string | null
+  trial_started_at?: string | null
+  trial_ends_at?: string | null
 }
