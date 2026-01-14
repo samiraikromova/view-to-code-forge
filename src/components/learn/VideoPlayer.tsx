@@ -8,6 +8,28 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
+
+// Convert Google Drive URLs to direct download links
+const getDirectDownloadUrl = (url: string): string => {
+  // Check if it's a Google Drive link
+  const drivePatterns = [
+    /https:\/\/drive\.google\.com\/file\/d\/([^/]+)/,
+    /https:\/\/drive\.google\.com\/open\?id=([^&]+)/,
+    /https:\/\/docs\.google\.com\/document\/d\/([^/]+)/,
+    /https:\/\/docs\.google\.com\/spreadsheets\/d\/([^/]+)/,
+    /https:\/\/docs\.google\.com\/presentation\/d\/([^/]+)/,
+  ];
+  
+  for (const pattern of drivePatterns) {
+    const match = url.match(pattern);
+    if (match && match[1]) {
+      return `https://drive.google.com/uc?export=download&id=${match[1]}`;
+    }
+  }
+  
+  return url;
+};
+
 interface VideoPlayerProps {
   lesson: Lesson;
   contentType: "recordings" | "materials";
@@ -316,7 +338,8 @@ export const VideoPlayer = ({ lesson, contentType, onAskAI, onVideoComplete }: V
               {lesson.files.map((file, index) => (
                 <a
                   key={index}
-                  href={file.url}
+                  href={getDirectDownloadUrl(file.url)}
+                  download={file.name}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-3 p-2 rounded-lg hover:bg-surface transition-colors group"

@@ -24,6 +24,26 @@ import { Progress } from "@/components/ui/progress";
 import { SubscriptionModal } from "@/components/payments/SubscriptionModal";
 import type { ViewType, TimePreset } from "@/types/dashboard";
 
+// Convert Google Drive URLs to direct download links
+const getDirectDownloadUrl = (url: string): string => {
+  const drivePatterns = [
+    /https:\/\/drive\.google\.com\/file\/d\/([^/]+)/,
+    /https:\/\/drive\.google\.com\/open\?id=([^&]+)/,
+    /https:\/\/docs\.google\.com\/document\/d\/([^/]+)/,
+    /https:\/\/docs\.google\.com\/spreadsheets\/d\/([^/]+)/,
+    /https:\/\/docs\.google\.com\/presentation\/d\/([^/]+)/,
+  ];
+  
+  for (const pattern of drivePatterns) {
+    const match = url.match(pattern);
+    if (match && match[1]) {
+      return `https://drive.google.com/uc?export=download&id=${match[1]}`;
+    }
+  }
+  
+  return url;
+};
+
 interface Chat {
   id: string;
   title: string;
@@ -621,7 +641,7 @@ const Main = () => {
                     onClick={() => {
                       const url = transcriptFile?.url || selectedLesson.transcriptUrl;
                       if (url) {
-                        window.open(url, '_blank');
+                        window.open(getDirectDownloadUrl(url), '_blank');
                       }
                     }}
                   >
