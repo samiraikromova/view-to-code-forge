@@ -75,8 +75,12 @@ const Chat = () => {
       
       setVideosLoading(true);
       
-      // Fetch videos and user progress in parallel
-      const [videosResult, progressResult] = await Promise.all([
+      // Fetch modules, videos and user progress in parallel
+      const [modulesResult, videosResult, progressResult] = await Promise.all([
+        supabase
+          .from('modules')
+          .select('*')
+          .order('order_index', { ascending: true }),
         supabase
           .from('course_videos')
           .select('*')
@@ -87,8 +91,8 @@ const Chat = () => {
           .eq('user_id', user.id)
       ]);
 
-      if (videosResult.error) {
-        console.error('Error fetching course videos:', videosResult.error);
+      if (videosResult.error || modulesResult.error) {
+        console.error('Error fetching course data:', videosResult.error || modulesResult.error);
         toast.error('Failed to load course content');
         setVideosLoading(false);
         return;
@@ -103,17 +107,19 @@ const Chat = () => {
       }
       setUserProgress(progressMap);
 
+      const dbModules = modulesResult.data || [];
+
       if (videosResult.data) {
         // Separate call recordings and course materials
         const recordings = videosResult.data.filter((v: CourseVideo) => v.category === 'call_recording');
         const materials = videosResult.data.filter((v: CourseVideo) => v.category === 'course');
 
         // Group recordings by module (month)
-        const recordingsGrouped = groupVideosByModule(recordings, progressMap);
+        const recordingsGrouped = groupVideosByModule(recordings, progressMap, dbModules);
         setRecordingsData(recordingsGrouped);
 
         // Group materials by module
-        const materialsGrouped = groupVideosByModule(materials, progressMap);
+        const materialsGrouped = groupVideosByModule(materials, progressMap, dbModules);
         setMaterialsData(materialsGrouped);
       }
       
@@ -155,23 +161,37 @@ const Chat = () => {
     return formatted;
   };
 
-  const groupVideosByModule = (videos: CourseVideo[], progressMap: Map<string, boolean>): Module[] => {
-    const moduleMap = new Map<string, { lessons: Lesson[]; accessType?: string; productId?: string }>();
+  interface DbModule {
+    id: string;
+    name: string;
+    category: 'course' | 'call_recording';
+    access_type: 'free' | 'tier_required' | 'purchase_required';
+    required_tier: string | null;
+    fanbases_product_id: string | null;
+    order_index: number;
+  }
+
+  const groupVideosByModule = (videos: CourseVideo[], progressMap: Map<string, boolean>, dbModules: DbModule[]): Module[] => {
+    // Create a map of module_id to module info
+    const moduleInfoMap = new Map(dbModules.map(m => [m.id, m]));
+    
+    // Group videos by module_id
+    const moduleMap = new Map<string, { lessons: Lesson[]; moduleInfo?: DbModule }>();
     
     videos.forEach(video => {
-      const moduleTitle = video.module || 'Uncategorized';
+      const moduleId = video.module_id || 'uncategorized';
+      const moduleInfo = video.module_id ? moduleInfoMap.get(video.module_id) : undefined;
       
-      if (!moduleMap.has(moduleTitle)) {
-        moduleMap.set(moduleTitle, { 
+      if (!moduleMap.has(moduleId)) {
+        moduleMap.set(moduleId, { 
           lessons: [],
-          accessType: video.access_type || 'free',
-          productId: video.product_id || undefined
+          moduleInfo
         });
       }
       
       const lesson: Lesson = {
         id: video.id,
-        moduleId: moduleTitle,
+        moduleId: moduleId,
         title: video.title,
         duration: video.duration_formatted || video.duration || '',
         completed: progressMap.get(video.id) || false,
@@ -183,22 +203,23 @@ const Chat = () => {
         callDate: video.call_date || undefined,
         speakerCount: video.speaker_count || undefined,
         durationFormatted: video.duration_formatted || undefined,
-        accessType: video.access_type || 'free',
-        productId: video.product_id || undefined,
+        accessType: moduleInfo?.access_type || 'free',
+        productId: moduleInfo?.fanbases_product_id || undefined,
       };
       
-      moduleMap.get(moduleTitle)!.lessons.push(lesson);
+      moduleMap.get(moduleId)!.lessons.push(lesson);
     });
     
-    // Convert to array and sort modules (newest first for recordings)
+    // Convert to array and sort modules
     const modules: Module[] = [];
-    moduleMap.forEach((data, title) => {
+    moduleMap.forEach((data, moduleId) => {
+      const title = data.moduleInfo?.name || 'Uncategorized';
       modules.push({
-        id: title.toLowerCase().replace(/\s+/g, '-'),
+        id: moduleId,
         title,
         lessons: data.lessons,
-        accessType: data.accessType as any,
-        productId: data.productId
+        accessType: data.moduleInfo?.access_type as any || 'free',
+        productId: data.moduleInfo?.fanbases_product_id || undefined
       });
     });
     
