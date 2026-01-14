@@ -180,15 +180,8 @@ export function useAccess() {
 
   // Check if user has access to a specific module based on its access_type
   const checkModuleAccess = useCallback((moduleSlug: string, accessType?: string, productId?: string): ModuleAccessInfo => {
-    // Call-required modules (call recordings) - always require call booking
-    if (CALL_REQUIRED_MODULES.includes(moduleSlug) || moduleSlug.includes('call-recording') || moduleSlug.includes('recording')) {
-      return {
-        hasAccess: accessState.hasDashboardAccess, // Dashboard access means they booked a call
-        requiresCall: true,
-      };
-    }
-
-    // If access_type is 'free', module is always accessible
+    // PRIORITY 1: Check access_type from database FIRST
+    // If access_type is 'free', module is always accessible (regardless of module name)
     if (accessType === 'free') {
       return { hasAccess: true, requiresCall: false };
     }
@@ -233,15 +226,29 @@ export function useAccess() {
       };
     }
 
-    // Default: check if purchased (backward compatibility)
+    // PRIORITY 2: Fallback pattern matching (only if no accessType provided)
+    // Call-required modules (call recordings) - require call booking
+    if (!accessType && (CALL_REQUIRED_MODULES.includes(moduleSlug) || moduleSlug.includes('call-recording'))) {
+      return {
+        hasAccess: accessState.hasDashboardAccess,
+        requiresCall: true,
+      };
+    }
+
+    // PRIORITY 3: Default - check if purchased (backward compatibility)
     if (accessState.purchasedModules.includes(moduleSlug)) {
       return { hasAccess: true, requiresCall: false };
     }
 
-    // Find product for price info
+    // No accessType and not purchased - check fanbases for purchase option
     const product = accessState.fanbasesProducts.find(p => 
       p.internal_reference === moduleSlug || p.internal_reference === productId
     );
+
+    // If no product found and no accessType, default to free
+    if (!product && !accessType) {
+      return { hasAccess: true, requiresCall: false };
+    }
 
     return {
       hasAccess: false,
