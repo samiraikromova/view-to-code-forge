@@ -658,19 +658,7 @@ export default function AdminLessons() {
                       className="mt-1"
                       value={formData.required_tier}
                       onChange={(e) => setFormData({ ...formData, required_tier: e.target.value })}
-                      placeholder="e.g., pro, premium"
-                    />
-                  </div>
-                )}
-
-                {formData.access_type === 'purchase_required' && (
-                  <div>
-                    <Label>Product ID</Label>
-                    <Input
-                      className="mt-1"
-                      value={formData.product_id}
-                      onChange={(e) => setFormData({ ...formData, product_id: e.target.value })}
-                      placeholder="e.g., prod_abc123"
+                      placeholder="e.g., tier1, tier2"
                     />
                   </div>
                 )}
