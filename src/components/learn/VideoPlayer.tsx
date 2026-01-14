@@ -102,38 +102,10 @@ export const VideoPlayer = ({ lesson, contentType, onAskAI, onVideoComplete }: V
     fetchOtp();
   }, [lesson.vdocipherId, lesson.firefliesEmbedUrl, lesson.id]);
 
-  // Listen for VdoCipher video end event via postMessage
-  useEffect(() => {
-    const handleMessage = async (event: MessageEvent) => {
-      // VdoCipher sends messages when video events occur
-      if (event.data && typeof event.data === 'string') {
-        try {
-          const data = JSON.parse(event.data);
-          // Check if video ended (progress >= 95%)
-          if (data.event === 'progress' && data.currentTime && data.duration) {
-            const progress = (data.currentTime / data.duration) * 100;
-            if (progress >= 95 && !hasMarkedComplete.current && !lesson.completed) {
-              hasMarkedComplete.current = true;
-              await markVideoComplete();
-            }
-          }
-          // Also check for 'ended' event
-          if (data.event === 'ended' && !hasMarkedComplete.current && !lesson.completed) {
-            hasMarkedComplete.current = true;
-            await markVideoComplete();
-          }
-        } catch {
-          // Not JSON, ignore
-        }
-      }
-    };
-
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
-  }, [lesson.id, lesson.completed, user?.id]);
-
   const markVideoComplete = async () => {
     if (!user?.id) return;
+    
+    console.log('Marking video complete:', lesson.id);
     
     const { error } = await supabase
       .from('user_video_progress')
@@ -146,11 +118,49 @@ export const VideoPlayer = ({ lesson, contentType, onAskAI, onVideoComplete }: V
         onConflict: 'user_id,video_id'
       });
 
-    if (!error) {
+    if (error) {
+      console.error('Error marking video complete:', error);
+      toast.error('Failed to save progress');
+    } else {
+      console.log('Video marked complete successfully');
       toast.success('Video marked as complete!');
       onVideoComplete?.(lesson.id);
     }
   };
+
+  // Listen for VdoCipher video end event via postMessage
+  useEffect(() => {
+    const handleMessage = async (event: MessageEvent) => {
+      // VdoCipher sends messages when video events occur
+      if (event.data && typeof event.data === 'string') {
+        try {
+          const data = JSON.parse(event.data);
+          console.log('VdoCipher event:', data.event, data);
+          
+          // Check if video ended (progress >= 95%)
+          if (data.event === 'progress' && data.currentTime && data.duration) {
+            const progress = (data.currentTime / data.duration) * 100;
+            if (progress >= 95 && !hasMarkedComplete.current) {
+              console.log('Video progress >= 95%, marking complete');
+              hasMarkedComplete.current = true;
+              await markVideoComplete();
+            }
+          }
+          // Also check for 'ended' event
+          if (data.event === 'ended' && !hasMarkedComplete.current) {
+            console.log('Video ended event received, marking complete');
+            hasMarkedComplete.current = true;
+            await markVideoComplete();
+          }
+        } catch {
+          // Not JSON, ignore
+        }
+      }
+    };
+
+    window.addEventListener('message', handleMessage);
+    return () => window.removeEventListener('message', handleMessage);
+  }, [lesson.id, user?.id, onVideoComplete]);
 
   const handleDownloadTranscript = () => {
     // Try transcriptText first, then transcriptUrl
@@ -228,7 +238,8 @@ export const VideoPlayer = ({ lesson, contentType, onAskAI, onVideoComplete }: V
             src={lesson.firefliesVideoUrl}
             playsInline
             onEnded={() => {
-              if (!hasMarkedComplete.current && !lesson.completed) {
+              if (!hasMarkedComplete.current) {
+                console.log('Native video ended, marking complete');
                 hasMarkedComplete.current = true;
                 markVideoComplete();
               }
@@ -236,7 +247,8 @@ export const VideoPlayer = ({ lesson, contentType, onAskAI, onVideoComplete }: V
             onTimeUpdate={(e) => {
               const video = e.currentTarget;
               const progress = (video.currentTime / video.duration) * 100;
-              if (progress >= 95 && !hasMarkedComplete.current && !lesson.completed) {
+              if (progress >= 95 && !hasMarkedComplete.current) {
+                console.log('Native video progress >= 95%, marking complete');
                 hasMarkedComplete.current = true;
                 markVideoComplete();
               }
