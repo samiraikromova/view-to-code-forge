@@ -629,7 +629,25 @@ const Main = () => {
                 f.type.toLowerCase().includes('text')
               ) || selectedLesson.files?.[0];
               
-              const hasTranscript = transcriptFile || selectedLesson.transcriptUrl;
+              const hasTranscript = selectedLesson.transcriptText || transcriptFile || selectedLesson.transcriptUrl;
+              
+              const handleDownloadTranscript = () => {
+                // Prioritize transcript_text from database
+                if (selectedLesson.transcriptText) {
+                  const blob = new Blob([selectedLesson.transcriptText], { type: 'text/plain' });
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `${selectedLesson.title.replace(/[^a-z0-9]/gi, '_')}_transcript.txt`;
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                  URL.revokeObjectURL(url);
+                } else if (transcriptFile?.url || selectedLesson.transcriptUrl) {
+                  const url = transcriptFile?.url || selectedLesson.transcriptUrl;
+                  window.open(getDirectDownloadUrl(url!), '_blank');
+                }
+              };
               
               return (
                 <>
@@ -638,12 +656,7 @@ const Main = () => {
                     size="sm"
                     className="gap-1.5"
                     disabled={!hasTranscript}
-                    onClick={() => {
-                      const url = transcriptFile?.url || selectedLesson.transcriptUrl;
-                      if (url) {
-                        window.open(getDirectDownloadUrl(url), '_blank');
-                      }
-                    }}
+                    onClick={handleDownloadTranscript}
                   >
                     <FileText className="w-4 h-4" />
                     Download Transcript
