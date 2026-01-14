@@ -3,6 +3,7 @@ import { VideoPlayer } from "./VideoPlayer";
 import { ModuleGrid } from "./ModuleGrid";
 import { LessonListPanel } from "./LessonListPanel";
 import { Module } from "./LearnSidebar";
+import { useAccess } from "@/hooks/useAccess";
 
 interface LearnInterfaceProps {
   selectedModuleId: string | null;
@@ -27,6 +28,8 @@ export const LearnInterface = ({
   onAskAI, 
   onVideoComplete 
 }: LearnInterfaceProps) => {
+  const { checkModuleAccess } = useAccess();
+
   // If no module is selected, show the grid view
   if (!selectedModuleId) {
     return (
@@ -62,6 +65,10 @@ export const LearnInterface = ({
     );
   }
 
+  // Check module access
+  const accessInfo = checkModuleAccess(selectedModule.id, selectedModule.accessType, selectedModule.productId);
+  const isLocked = !accessInfo.hasAccess;
+
   // Get the selected lesson
   const selectedLesson = lessonId 
     ? selectedModule.lessons.find(l => l.id === lessonId)
@@ -91,6 +98,9 @@ export const LearnInterface = ({
               contentType={contentType} 
               onAskAI={onAskAI} 
               onVideoComplete={onVideoComplete}
+              isLocked={isLocked}
+              fanbasesProductId={accessInfo.fanbasesProductId}
+              fanbasesCheckoutUrl={accessInfo.fanbasesCheckoutUrl}
             />
           </div>
         ) : (
