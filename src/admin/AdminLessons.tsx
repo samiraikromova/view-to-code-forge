@@ -37,6 +37,7 @@ interface Module {
   access_type: 'free' | 'tier_required' | 'purchase_required'
   required_tier?: string
   fanbases_product_id?: string
+  price_cents?: number
   order_index: number
 }
 
@@ -75,6 +76,7 @@ export default function AdminLessons() {
   const [newModuleAccessType, setNewModuleAccessType] = useState<'free' | 'tier_required' | 'purchase_required'>('free')
   const [newModuleRequiredTier, setNewModuleRequiredTier] = useState('')
   const [newModuleFanbasesId, setNewModuleFanbasesId] = useState('')
+  const [newModulePrice, setNewModulePrice] = useState('')
   const [editingModule, setEditingModule] = useState<Module | null>(null)
   const [uploadingFiles, setUploadingFiles] = useState(false)
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
@@ -226,6 +228,7 @@ export default function AdminLessons() {
     setNewModuleAccessType('free')
     setNewModuleRequiredTier('')
     setNewModuleFanbasesId('')
+    setNewModulePrice('')
     setEditingModule(null)
   }
 
@@ -253,6 +256,7 @@ export default function AdminLessons() {
     setNewModuleAccessType(module.access_type)
     setNewModuleRequiredTier(module.required_tier || '')
     setNewModuleFanbasesId(module.fanbases_product_id || '')
+    setNewModulePrice(module.price_cents ? String(module.price_cents / 100) : '')
     setModuleType(module.category)
     setShowEditModuleModal(true)
   }
@@ -268,7 +272,8 @@ export default function AdminLessons() {
       name: newModuleName.trim(),
       access_type: newModuleAccessType,
       required_tier: newModuleAccessType === 'tier_required' ? newModuleRequiredTier : null,
-      fanbases_product_id: newModuleAccessType === 'purchase_required' ? newModuleFanbasesId : null
+      fanbases_product_id: newModuleAccessType === 'purchase_required' ? newModuleFanbasesId : null,
+      price_cents: newModuleAccessType === 'purchase_required' && newModulePrice ? Math.round(parseFloat(newModulePrice) * 100) : null
     }
 
     // Update module
@@ -359,6 +364,7 @@ export default function AdminLessons() {
       access_type: newModuleAccessType,
       required_tier: newModuleAccessType === 'tier_required' ? newModuleRequiredTier : null,
       fanbases_product_id: newModuleAccessType === 'purchase_required' ? newModuleFanbasesId : null,
+      price_cents: newModuleAccessType === 'purchase_required' && newModulePrice ? Math.round(parseFloat(newModulePrice) * 100) : null,
       order_index: modules.filter(m => m.category === moduleType).length
     }
 
@@ -996,15 +1002,29 @@ export default function AdminLessons() {
               )}
 
               {newModuleAccessType === 'purchase_required' && (
-                <div>
-                  <Label>Fanbases Product ID</Label>
-                  <Input
-                    className="mt-1"
-                    value={newModuleFanbasesId}
-                    onChange={(e) => setNewModuleFanbasesId(e.target.value)}
-                    placeholder="e.g., abc123"
-                  />
-                </div>
+                <>
+                  <div>
+                    <Label>Fanbases Product ID</Label>
+                    <Input
+                      className="mt-1"
+                      value={newModuleFanbasesId}
+                      onChange={(e) => setNewModuleFanbasesId(e.target.value)}
+                      placeholder="e.g., abc123"
+                    />
+                  </div>
+                  <div>
+                    <Label>Price (USD)</Label>
+                    <Input
+                      className="mt-1"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={newModulePrice}
+                      onChange={(e) => setNewModulePrice(e.target.value)}
+                      placeholder="e.g., 97.00"
+                    />
+                  </div>
+                </>
               )}
 
               <div className="flex gap-3">
@@ -1066,15 +1086,29 @@ export default function AdminLessons() {
               )}
 
               {newModuleAccessType === 'purchase_required' && (
-                <div>
-                  <Label>Fanbases Product ID</Label>
-                  <Input
-                    className="mt-1"
-                    value={newModuleFanbasesId}
-                    onChange={(e) => setNewModuleFanbasesId(e.target.value)}
-                    placeholder="e.g., abc123"
-                  />
-                </div>
+                <>
+                  <div>
+                    <Label>Fanbases Product ID</Label>
+                    <Input
+                      className="mt-1"
+                      value={newModuleFanbasesId}
+                      onChange={(e) => setNewModuleFanbasesId(e.target.value)}
+                      placeholder="e.g., abc123"
+                    />
+                  </div>
+                  <div>
+                    <Label>Price (USD)</Label>
+                    <Input
+                      className="mt-1"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={newModulePrice}
+                      onChange={(e) => setNewModulePrice(e.target.value)}
+                      placeholder="e.g., 97.00"
+                    />
+                  </div>
+                </>
               )}
 
               <div className="flex gap-3">

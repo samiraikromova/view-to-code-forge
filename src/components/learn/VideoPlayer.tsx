@@ -38,6 +38,7 @@ interface VideoPlayerProps {
   isLocked?: boolean;
   fanbasesProductId?: string;
   fanbasesCheckoutUrl?: string;
+  modulePriceCents?: number;
 }
 
 export const VideoPlayer = ({ 
@@ -47,36 +48,18 @@ export const VideoPlayer = ({
   onVideoComplete,
   isLocked = false,
   fanbasesProductId,
-  fanbasesCheckoutUrl
+  fanbasesCheckoutUrl,
+  modulePriceCents
 }: VideoPlayerProps) => {
   const { user } = useAuth();
   const [videoOtp, setVideoOtp] = useState<string | null>(null);
   const [playbackInfo, setPlaybackInfo] = useState<string | null>(null);
   const [videoLoading, setVideoLoading] = useState(false);
   const [videoError, setVideoError] = useState<string | null>(null);
-  const [modulePrice, setModulePrice] = useState<number | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const hasMarkedComplete = useRef(false);
 
-  // Fetch module price when locked
-  useEffect(() => {
-    const fetchPrice = async () => {
-      if (!isLocked || !fanbasesProductId) return;
-      
-      // Try to get price from database first
-      const { data } = await supabase
-        .from('fanbases_products')
-        .select('price_cents, internal_reference')
-        .eq('fanbases_product_id', fanbasesProductId)
-        .maybeSingle();
-      
-      if (data?.price_cents) {
-        setModulePrice(data.price_cents);
-      }
-    };
-    
-    fetchPrice();
-  }, [isLocked, fanbasesProductId]);
+  // Use price directly from props (from modules table)
 
   // Fetch OTP when lesson changes (only for VdoCipher videos)
   useEffect(() => {
@@ -279,7 +262,7 @@ export const VideoPlayer = ({
                   className="gap-2"
                 >
                   <Lock className="h-4 w-4" />
-                  Unlock for {modulePrice ? `$${(modulePrice / 100).toFixed(0)}` : 'Purchase'}
+                  Unlock for {modulePriceCents ? `$${(modulePriceCents / 100).toFixed(0)}` : 'Purchase'}
                 </Button>
               )}
             </div>
