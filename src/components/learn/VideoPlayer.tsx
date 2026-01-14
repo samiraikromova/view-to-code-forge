@@ -336,13 +336,27 @@ export const VideoPlayer = ({ lesson, contentType, onAskAI, onVideoComplete }: V
             <h3 className="text-sm font-semibold text-foreground mb-3">Resources</h3>
             <div className="space-y-2">
               {lesson.files.map((file, index) => (
-                <a
+                <button
                   key={index}
-                  href={getDirectDownloadUrl(file.url)}
-                  download={file.name}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-surface transition-colors group"
+                  onClick={async () => {
+                    try {
+                      const response = await fetch(file.url);
+                      const blob = await response.blob();
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement('a');
+                      a.href = url;
+                      a.download = file.name;
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                      URL.revokeObjectURL(url);
+                      toast.success('File downloaded');
+                    } catch (error) {
+                      console.error('Download error:', error);
+                      toast.error('Failed to download file');
+                    }
+                  }}
+                  className="flex items-center gap-3 p-2 rounded-lg hover:bg-surface transition-colors group w-full text-left"
                 >
                   <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-accent/10 text-accent">
                     {getFileIcon(file.type)}
@@ -356,7 +370,7 @@ export const VideoPlayer = ({ lesson, contentType, onAskAI, onVideoComplete }: V
                     </p>
                   </div>
                   <Download className="h-4 w-4 text-muted-foreground group-hover:text-accent transition-colors" />
-                </a>
+                </button>
               ))}
             </div>
           </div>
