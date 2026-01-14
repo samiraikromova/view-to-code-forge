@@ -26,9 +26,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Plus, Trash2, FolderPlus, Clock, FileText, Upload, X, File, Pencil } from "lucide-react"
+import { Plus, Trash2, FolderPlus, Clock, FileText, Upload, X, File, Pencil, Settings } from "lucide-react"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
+
+interface Module {
+  id: string
+  name: string
+  category: 'course' | 'call_recording'
+  access_type: 'free' | 'tier_required' | 'purchase_required'
+  required_tier?: string
+  fanbases_product_id?: string
+  order_index: number
+}
 
 interface Lesson {
   id: string
@@ -41,9 +51,6 @@ interface Lesson {
   duration_formatted: string
   thumbnail_url?: string
   transcript_text?: string
-  access_type: 'free' | 'tier_required' | 'purchase_required' | 'unlock_required'
-  required_tier?: string
-  product_id?: string
   order_index: number
   files?: LessonFileItem[]
 }
@@ -57,11 +64,17 @@ interface LessonFileItem {
 
 export default function AdminLessons() {
   const [lessons, setLessons] = useState<Lesson[]>([])
+  const [modules, setModules] = useState<Module[]>([])
   const [loading, setLoading] = useState(true)
   const [showModal, setShowModal] = useState(false)
   const [showModuleModal, setShowModuleModal] = useState(false)
+  const [showEditModuleModal, setShowEditModuleModal] = useState(false)
   const [moduleType, setModuleType] = useState<'course' | 'call_recording'>('course')
   const [newModuleName, setNewModuleName] = useState('')
+  const [newModuleAccessType, setNewModuleAccessType] = useState<'free' | 'tier_required' | 'purchase_required'>('free')
+  const [newModuleRequiredTier, setNewModuleRequiredTier] = useState('')
+  const [newModuleFanbasesId, setNewModuleFanbasesId] = useState('')
+  const [editingModule, setEditingModule] = useState<Module | null>(null)
   const [uploadingFiles, setUploadingFiles] = useState(false)
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -77,30 +90,34 @@ export default function AdminLessons() {
     duration: '',
     thumbnail_url: '',
     transcript_text: '',
-    access_type: 'free' as 'free' | 'tier_required' | 'purchase_required',
-    required_tier: '',
-    product_id: '',
     order_index: "0"
   })
 
   useEffect(() => {
-    loadLessons()
+    loadData()
   }, [])
 
-  const loadLessons = async () => {
+  const loadData = async () => {
     setLoading(true)
-    const { data, error } = await supabase
-      .from('course_videos')
-      .select('*')
-      .order('category', { ascending: true })
-      .order('module', { ascending: true })
-      .order('order_index', { ascending: true })
+    
+    // Load modules and lessons in parallel
+    const [modulesResult, lessonsResult] = await Promise.all([
+      supabase.from('modules').select('*').order('category').order('order_index'),
+      supabase.from('course_videos').select('*').order('category').order('module').order('order_index')
+    ])
 
-    if (error) {
+    if (modulesResult.error) {
+      toast.error('Failed to load modules')
+    } else {
+      setModules(modulesResult.data || [])
+    }
+
+    if (lessonsResult.error) {
       toast.error('Failed to load lessons')
     } else {
-      setLessons(data || [])
+      setLessons(lessonsResult.data || [])
     }
+    
     setLoading(false)
   }
 
@@ -148,15 +165,11 @@ export default function AdminLessons() {
       duration: formData.duration || null,
       thumbnail_url: formData.thumbnail_url || null,
       transcript_text: formData.transcript_text || null,
-      access_type: formData.access_type,
-      required_tier: formData.access_type === 'tier_required' ? formData.required_tier : null,
-      product_id: formData.access_type === 'purchase_required' ? formData.product_id : null,
       order_index: Number(formData.order_index),
       files: uploadedFiles.length > 0 ? uploadedFiles : null
     }
 
     if (editingLessonId) {
-      // Update existing lesson
       const { error } = await supabase
         .from('course_videos')
         .update(payload)
@@ -169,7 +182,6 @@ export default function AdminLessons() {
 
       toast.success('Lesson updated')
     } else {
-      // Insert new lesson
       const { error } = await supabase
         .from('course_videos')
         .insert([payload])
@@ -184,7 +196,7 @@ export default function AdminLessons() {
 
     setShowModal(false)
     resetForm()
-    loadLessons()
+    loadData()
   }
 
   const resetForm = () => {
@@ -197,9 +209,6 @@ export default function AdminLessons() {
       duration: '',
       thumbnail_url: '',
       transcript_text: '',
-      access_type: 'free',
-      required_tier: '',
-      product_id: '',
       order_index: "0"
     })
     setPendingFiles([])
@@ -207,13 +216,15 @@ export default function AdminLessons() {
     setEditingLessonId(null)
   }
 
+  const resetModuleForm = () => {
+    setNewModuleName('')
+    setNewModuleAccessType('free')
+    setNewModuleRequiredTier('')
+    setNewModuleFanbasesId('')
+    setEditingModule(null)
+  }
+
   const editLesson = (lesson: Lesson) => {
-    // Map legacy unlock_required to purchase_required
-    let accessType = lesson.access_type;
-    if (accessType === 'unlock_required') {
-      accessType = 'purchase_required';
-    }
-    
     setFormData({
       title: lesson.title,
       description: lesson.description || '',
@@ -223,15 +234,142 @@ export default function AdminLessons() {
       duration: lesson.duration || '',
       thumbnail_url: lesson.thumbnail_url || '',
       transcript_text: lesson.transcript_text || '',
-      access_type: accessType as 'free' | 'tier_required' | 'purchase_required',
-      required_tier: lesson.required_tier || '',
-      product_id: lesson.product_id || '',
       order_index: String(lesson.order_index)
     })
     setExistingFiles(lesson.files || [])
     setPendingFiles([])
     setEditingLessonId(lesson.id)
     setShowModal(true)
+  }
+
+  const openEditModuleModal = (module: Module) => {
+    setEditingModule(module)
+    setNewModuleName(module.name)
+    setNewModuleAccessType(module.access_type)
+    setNewModuleRequiredTier(module.required_tier || '')
+    setNewModuleFanbasesId(module.fanbases_product_id || '')
+    setModuleType(module.category)
+    setShowEditModuleModal(true)
+  }
+
+  const handleSaveModule = async () => {
+    if (!editingModule) return
+    if (!newModuleName.trim()) {
+      toast.error('Please enter a module name')
+      return
+    }
+
+    const payload: Partial<Module> = {
+      name: newModuleName.trim(),
+      access_type: newModuleAccessType,
+      required_tier: newModuleAccessType === 'tier_required' ? newModuleRequiredTier : null,
+      fanbases_product_id: newModuleAccessType === 'purchase_required' ? newModuleFanbasesId : null
+    }
+
+    // Update module
+    const { error: moduleError } = await supabase
+      .from('modules')
+      .update(payload)
+      .eq('id', editingModule.id)
+
+    if (moduleError) {
+      toast.error('Failed to update module: ' + moduleError.message)
+      return
+    }
+
+    // Update all lessons in this module to use new name if changed
+    if (editingModule.name !== newModuleName.trim()) {
+      const { error: lessonsError } = await supabase
+        .from('course_videos')
+        .update({ module: newModuleName.trim() })
+        .eq('module', editingModule.name)
+        .eq('category', editingModule.category)
+
+      if (lessonsError) {
+        toast.error('Failed to update lessons: ' + lessonsError.message)
+        return
+      }
+    }
+
+    toast.success('Module updated')
+    setShowEditModuleModal(false)
+    resetModuleForm()
+    loadData()
+  }
+
+  const handleDeleteModule = async (module: Module) => {
+    const lessonsInModule = lessons.filter(l => l.module === module.name && l.category === module.category)
+    
+    if (lessonsInModule.length > 0) {
+      if (!confirm(`This module contains ${lessonsInModule.length} lesson(s). Delete all lessons and the module?`)) {
+        return
+      }
+      
+      // Delete all lessons in this module
+      for (const lesson of lessonsInModule) {
+        if (lesson.files) {
+          for (const file of lesson.files) {
+            const pathParts = file.url.split('/lesson-files/')
+            if (pathParts[1]) {
+              await supabase.storage.from('lesson-files').remove([pathParts[1]])
+            }
+          }
+        }
+      }
+
+      const { error: lessonsError } = await supabase
+        .from('course_videos')
+        .delete()
+        .eq('module', module.name)
+        .eq('category', module.category)
+
+      if (lessonsError) {
+        toast.error('Failed to delete lessons: ' + lessonsError.message)
+        return
+      }
+    } else {
+      if (!confirm('Delete this empty module?')) return
+    }
+
+    const { error } = await supabase
+      .from('modules')
+      .delete()
+      .eq('id', module.id)
+
+    if (error) {
+      toast.error('Failed to delete module: ' + error.message)
+    } else {
+      toast.success('Module deleted')
+      loadData()
+    }
+  }
+
+  const handleCreateModule = async () => {
+    if (!newModuleName.trim()) {
+      toast.error('Please enter a name')
+      return
+    }
+
+    const payload = {
+      name: newModuleName.trim(),
+      category: moduleType,
+      access_type: newModuleAccessType,
+      required_tier: newModuleAccessType === 'tier_required' ? newModuleRequiredTier : null,
+      fanbases_product_id: newModuleAccessType === 'purchase_required' ? newModuleFanbasesId : null,
+      order_index: modules.filter(m => m.category === moduleType).length
+    }
+
+    const { error } = await supabase.from('modules').insert([payload])
+
+    if (error) {
+      toast.error('Failed to create module: ' + error.message)
+      return
+    }
+
+    toast.success(`${moduleType === 'course' ? 'Module' : 'Month'} created!`)
+    setShowModuleModal(false)
+    resetModuleForm()
+    loadData()
   }
 
   const removeExistingFile = async (index: number) => {
@@ -267,7 +405,7 @@ export default function AdminLessons() {
       toast.error('Failed to delete')
     } else {
       toast.success('Lesson deleted')
-      loadLessons()
+      loadData()
     }
   }
 
@@ -280,30 +418,31 @@ export default function AdminLessons() {
     setPendingFiles(prev => prev.filter((_, i) => i !== index))
   }
 
-  // Get unique modules/months
-  const courseModules = [...new Set(lessons.filter(v => v.category === 'course').map(v => v.module))].filter(Boolean)
-  const callMonths = [...new Set(lessons.filter(v => v.category === 'call_recording').map(v => v.module))].filter(Boolean)
+  // Get module names for dropdowns
+  const courseModuleNames = modules.filter(m => m.category === 'course').map(m => m.name)
+  const callModuleNames = modules.filter(m => m.category === 'call_recording').map(m => m.name)
 
   const courseLessons = lessons.filter(v => v.category === 'course')
   const callRecordings = lessons.filter(v => v.category === 'call_recording')
 
-  // Group lessons by module
-  const groupByModule = (items: Lesson[]) => {
-    const groups: { [key: string]: Lesson[] } = {}
-    items.forEach(v => {
-      const key = v.module || 'Uncategorized'
-      if (!groups[key]) groups[key] = []
-      groups[key].push(v)
-    })
-    return groups
-  }
+  // Get modules with their lessons
+  const courseModulesWithLessons = modules
+    .filter(m => m.category === 'course')
+    .map(m => ({
+      ...m,
+      lessons: lessons.filter(l => l.module === m.name && l.category === 'course')
+    }))
 
-  const courseGroups = groupByModule(courseLessons)
-  const callGroups = groupByModule(callRecordings)
+  const callModulesWithLessons = modules
+    .filter(m => m.category === 'call_recording')
+    .map(m => ({
+      ...m,
+      lessons: lessons.filter(l => l.module === m.name && l.category === 'call_recording')
+    }))
 
   const openModuleModal = (type: 'course' | 'call_recording') => {
     setModuleType(type)
-    setNewModuleName('')
+    resetModuleForm()
     setShowModuleModal(true)
   }
 
@@ -313,16 +452,16 @@ export default function AdminLessons() {
     return '-'
   }
 
-  const getAccessBadge = (lesson: Lesson) => {
-    switch (lesson.access_type) {
+  const getModuleAccessBadge = (module: Module) => {
+    switch (module.access_type) {
       case 'free':
-        return <Badge variant="secondary" className="text-xs">Free</Badge>
+        return <Badge variant="secondary" className="text-xs">🆓 Free</Badge>
       case 'tier_required':
-        return <Badge variant="outline" className="text-xs">Tier: {lesson.required_tier}</Badge>
+        return <Badge variant="outline" className="text-xs">🎖️ {module.required_tier}</Badge>
       case 'purchase_required':
-        return <Badge className="text-xs bg-accent">Purchase</Badge>
+        return <Badge className="text-xs bg-accent">💳 Purchase</Badge>
       default:
-        return null
+        return <Badge variant="secondary" className="text-xs">🆓 Free</Badge>
     }
   }
 
@@ -353,87 +492,117 @@ export default function AdminLessons() {
                 </Button>
               </div>
               
-              {Object.keys(courseGroups).length === 0 ? (
+              {courseModulesWithLessons.length === 0 ? (
                 <div className="bg-card border border-border rounded-lg p-6 text-center text-muted-foreground">
-                  No course lessons yet
+                  No modules yet. Create a module to add lessons.
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {Object.entries(courseGroups).map(([moduleName, items]) => (
-                    <div key={moduleName} className="bg-card border border-border rounded-lg overflow-hidden">
-                      <div className="bg-muted/50 px-4 py-2 border-b border-border">
-                        <h3 className="font-medium text-foreground">{moduleName}</h3>
-                        <span className="text-xs text-muted-foreground">{items.length} lesson{items.length !== 1 ? 's' : ''}</span>
+                  {courseModulesWithLessons.map((module) => (
+                    <div key={module.id} className="bg-card border border-border rounded-lg overflow-hidden">
+                      <div className="bg-muted/50 px-4 py-2 border-b border-border flex items-center justify-between">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-medium text-foreground">{module.name}</h3>
+                            {getModuleAccessBadge(module)}
+                          </div>
+                          <span className="text-xs text-muted-foreground">
+                            {module.lessons.length} lesson{module.lessons.length !== 1 ? 's' : ''}
+                            {module.fanbases_product_id && <span className="ml-2">• Fanbases ID: {module.fanbases_product_id}</span>}
+                          </span>
+                        </div>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openEditModuleModal(module)}
+                            className="text-muted-foreground hover:text-foreground"
+                          >
+                            <Settings className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteModule(module)}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Title</TableHead>
-                            <TableHead>Access</TableHead>
-                            <TableHead>
-                              <div className="flex items-center gap-1">
-                                <FileText className="h-3 w-3" />
-                                Transcript
-                              </div>
-                            </TableHead>
-                            <TableHead>Files</TableHead>
-                            <TableHead>
-                              <div className="flex items-center gap-1">
-                                <Clock className="h-3 w-3" />
-                                Duration
-                              </div>
-                            </TableHead>
-                            <TableHead>Order</TableHead>
-                            <TableHead>Actions</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {items.map((lesson) => (
-                            <TableRow key={lesson.id}>
-                              <TableCell className="font-medium">{lesson.title}</TableCell>
-                              <TableCell>{getAccessBadge(lesson)}</TableCell>
-                              <TableCell>
-                                {lesson.transcript_text ? (
-                                  <Badge variant="secondary" className="text-xs">Yes</Badge>
-                                ) : (
-                                  <span className="text-muted-foreground text-xs">-</span>
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                {lesson.files?.length ? (
-                                  <Badge variant="secondary" className="text-xs">
-                                    {lesson.files.length} file{lesson.files.length !== 1 ? 's' : ''}
-                                  </Badge>
-                                ) : (
-                                  <span className="text-muted-foreground text-xs">-</span>
-                                )}
-                              </TableCell>
-                              <TableCell className="text-muted-foreground">{formatDuration(lesson)}</TableCell>
-                              <TableCell>{lesson.order_index}</TableCell>
-                              <TableCell>
-                                <div className="flex gap-1">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => editLesson(lesson)}
-                                    className="text-muted-foreground hover:text-foreground"
-                                  >
-                                    <Pencil className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => deleteLesson(lesson.id)}
-                                    className="text-destructive hover:text-destructive"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
+                      {module.lessons.length === 0 ? (
+                        <div className="p-4 text-center text-muted-foreground text-sm">
+                          No lessons in this module yet
+                        </div>
+                      ) : (
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Title</TableHead>
+                              <TableHead>
+                                <div className="flex items-center gap-1">
+                                  <FileText className="h-3 w-3" />
+                                  Transcript
                                 </div>
-                              </TableCell>
+                              </TableHead>
+                              <TableHead>Files</TableHead>
+                              <TableHead>
+                                <div className="flex items-center gap-1">
+                                  <Clock className="h-3 w-3" />
+                                  Duration
+                                </div>
+                              </TableHead>
+                              <TableHead>Order</TableHead>
+                              <TableHead>Actions</TableHead>
                             </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
+                          </TableHeader>
+                          <TableBody>
+                            {module.lessons.map((lesson) => (
+                              <TableRow key={lesson.id}>
+                                <TableCell className="font-medium">{lesson.title}</TableCell>
+                                <TableCell>
+                                  {lesson.transcript_text ? (
+                                    <Badge variant="secondary" className="text-xs">Yes</Badge>
+                                  ) : (
+                                    <span className="text-muted-foreground text-xs">-</span>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  {lesson.files?.length ? (
+                                    <Badge variant="secondary" className="text-xs">
+                                      {lesson.files.length} file{lesson.files.length !== 1 ? 's' : ''}
+                                    </Badge>
+                                  ) : (
+                                    <span className="text-muted-foreground text-xs">-</span>
+                                  )}
+                                </TableCell>
+                                <TableCell className="text-muted-foreground">{formatDuration(lesson)}</TableCell>
+                                <TableCell>{lesson.order_index}</TableCell>
+                                <TableCell>
+                                  <div className="flex gap-1">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => editLesson(lesson)}
+                                      className="text-muted-foreground hover:text-foreground"
+                                    >
+                                      <Pencil className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => deleteLesson(lesson.id)}
+                                      className="text-destructive hover:text-destructive"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -450,87 +619,117 @@ export default function AdminLessons() {
                 </Button>
               </div>
               
-              {Object.keys(callGroups).length === 0 ? (
+              {callModulesWithLessons.length === 0 ? (
                 <div className="bg-card border border-border rounded-lg p-6 text-center text-muted-foreground">
-                  No call recordings yet
+                  No months yet. Create a month to add recordings.
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {Object.entries(callGroups).map(([monthName, items]) => (
-                    <div key={monthName} className="bg-card border border-border rounded-lg overflow-hidden">
-                      <div className="bg-muted/50 px-4 py-2 border-b border-border">
-                        <h3 className="font-medium text-foreground">{monthName}</h3>
-                        <span className="text-xs text-muted-foreground">{items.length} recording{items.length !== 1 ? 's' : ''}</span>
+                  {callModulesWithLessons.map((module) => (
+                    <div key={module.id} className="bg-card border border-border rounded-lg overflow-hidden">
+                      <div className="bg-muted/50 px-4 py-2 border-b border-border flex items-center justify-between">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-medium text-foreground">{module.name}</h3>
+                            {getModuleAccessBadge(module)}
+                          </div>
+                          <span className="text-xs text-muted-foreground">
+                            {module.lessons.length} recording{module.lessons.length !== 1 ? 's' : ''}
+                            {module.fanbases_product_id && <span className="ml-2">• Fanbases ID: {module.fanbases_product_id}</span>}
+                          </span>
+                        </div>
+                        <div className="flex gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => openEditModuleModal(module)}
+                            className="text-muted-foreground hover:text-foreground"
+                          >
+                            <Settings className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteModule(module)}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Title</TableHead>
-                            <TableHead>Access</TableHead>
-                            <TableHead>
-                              <div className="flex items-center gap-1">
-                                <FileText className="h-3 w-3" />
-                                Transcript
-                              </div>
-                            </TableHead>
-                            <TableHead>Files</TableHead>
-                            <TableHead>
-                              <div className="flex items-center gap-1">
-                                <Clock className="h-3 w-3" />
-                                Duration
-                              </div>
-                            </TableHead>
-                            <TableHead>Order</TableHead>
-                            <TableHead>Actions</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {items.map((lesson) => (
-                            <TableRow key={lesson.id}>
-                              <TableCell className="font-medium">{lesson.title}</TableCell>
-                              <TableCell>{getAccessBadge(lesson)}</TableCell>
-                              <TableCell>
-                                {lesson.transcript_text ? (
-                                  <Badge variant="secondary" className="text-xs">Yes</Badge>
-                                ) : (
-                                  <span className="text-muted-foreground text-xs">-</span>
-                                )}
-                              </TableCell>
-                              <TableCell>
-                                {lesson.files?.length ? (
-                                  <Badge variant="secondary" className="text-xs">
-                                    {lesson.files.length} file{lesson.files.length !== 1 ? 's' : ''}
-                                  </Badge>
-                                ) : (
-                                  <span className="text-muted-foreground text-xs">-</span>
-                                )}
-                              </TableCell>
-                              <TableCell className="text-muted-foreground">{formatDuration(lesson)}</TableCell>
-                              <TableCell>{lesson.order_index}</TableCell>
-                              <TableCell>
-                                <div className="flex gap-1">
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => editLesson(lesson)}
-                                    className="text-muted-foreground hover:text-foreground"
-                                  >
-                                    <Pencil className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() => deleteLesson(lesson.id)}
-                                    className="text-destructive hover:text-destructive"
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
+                      {module.lessons.length === 0 ? (
+                        <div className="p-4 text-center text-muted-foreground text-sm">
+                          No recordings in this month yet
+                        </div>
+                      ) : (
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Title</TableHead>
+                              <TableHead>
+                                <div className="flex items-center gap-1">
+                                  <FileText className="h-3 w-3" />
+                                  Transcript
                                 </div>
-                              </TableCell>
+                              </TableHead>
+                              <TableHead>Files</TableHead>
+                              <TableHead>
+                                <div className="flex items-center gap-1">
+                                  <Clock className="h-3 w-3" />
+                                  Duration
+                                </div>
+                              </TableHead>
+                              <TableHead>Order</TableHead>
+                              <TableHead>Actions</TableHead>
                             </TableRow>
-                          ))}
-                        </TableBody>
+                          </TableHeader>
+                          <TableBody>
+                            {module.lessons.map((lesson) => (
+                              <TableRow key={lesson.id}>
+                                <TableCell className="font-medium">{lesson.title}</TableCell>
+                                <TableCell>
+                                  {lesson.transcript_text ? (
+                                    <Badge variant="secondary" className="text-xs">Yes</Badge>
+                                  ) : (
+                                    <span className="text-muted-foreground text-xs">-</span>
+                                  )}
+                                </TableCell>
+                                <TableCell>
+                                  {lesson.files?.length ? (
+                                    <Badge variant="secondary" className="text-xs">
+                                      {lesson.files.length} file{lesson.files.length !== 1 ? 's' : ''}
+                                    </Badge>
+                                  ) : (
+                                    <span className="text-muted-foreground text-xs">-</span>
+                                  )}
+                                </TableCell>
+                                <TableCell className="text-muted-foreground">{formatDuration(lesson)}</TableCell>
+                                <TableCell>{lesson.order_index}</TableCell>
+                                <TableCell>
+                                  <div className="flex gap-1">
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => editLesson(lesson)}
+                                      className="text-muted-foreground hover:text-foreground"
+                                    >
+                                      <Pencil className="h-4 w-4" />
+                                    </Button>
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => deleteLesson(lesson.id)}
+                                      className="text-destructive hover:text-destructive"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
                       </Table>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -573,17 +772,14 @@ export default function AdminLessons() {
                       <SelectValue placeholder={`Select ${formData.category === 'course' ? 'module' : 'month'}...`} />
                     </SelectTrigger>
                     <SelectContent>
-                      {(formData.category === 'course' ? courseModules : callMonths).map((m) => (
+                      {(formData.category === 'course' ? courseModuleNames : callModuleNames).map((m) => (
                         <SelectItem key={m} value={m}>{m}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  <Input
-                    className="mt-2"
-                    value={formData.module}
-                    onChange={(e) => setFormData({ ...formData, module: e.target.value })}
-                    placeholder={formData.category === 'course' ? 'Or type new module name' : 'Or type new month'}
-                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Create modules using the "New Module" button first
+                  </p>
                 </div>
               </div>
 
@@ -632,37 +828,6 @@ export default function AdminLessons() {
                 </p>
               </div>
 
-              {/* Access Control */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label>Access Type</Label>
-                  <Select
-                    value={formData.access_type}
-                    onValueChange={(v) => setFormData({ ...formData, access_type: v as typeof formData.access_type })}
-                  >
-                    <SelectTrigger className="mt-1">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="free">🆓 Free</SelectItem>
-                      <SelectItem value="tier_required">🎖️ Tier Required</SelectItem>
-                      <SelectItem value="purchase_required">💳 Purchase Required</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {formData.access_type === 'tier_required' && (
-                  <div>
-                    <Label>Required Tier</Label>
-                    <Input
-                      className="mt-1"
-                      value={formData.required_tier}
-                      onChange={(e) => setFormData({ ...formData, required_tier: e.target.value })}
-                      placeholder="e.g., tier1, tier2"
-                    />
-                  </div>
-                )}
-              </div>
 
               {/* File Uploads */}
               <div>
@@ -780,7 +945,7 @@ export default function AdminLessons() {
         </Dialog>
 
         {/* New Module/Month Modal */}
-        <Dialog open={showModuleModal} onOpenChange={setShowModuleModal}>
+        <Dialog open={showModuleModal} onOpenChange={(open) => { setShowModuleModal(open); if (!open) resetModuleForm(); }}>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle>
@@ -797,32 +962,123 @@ export default function AdminLessons() {
                   placeholder={moduleType === 'course' ? 'e.g., Module 3: Advanced Topics' : 'e.g., February 2025'}
                 />
               </div>
-              <p className="text-sm text-muted-foreground">
-                {moduleType === 'course' 
-                  ? 'This will create a new module. You can then add lessons to it.'
-                  : 'This will create a new month period. You can then add call recordings to it.'}
-              </p>
-              <div className="flex gap-3">
-                <Button 
-                  className="flex-1"
-                  onClick={() => {
-                    if (!newModuleName.trim()) {
-                      toast.error('Please enter a name')
-                      return
-                    }
-                    setShowModuleModal(false)
-                    setShowModal(true)
-                    setFormData(prev => ({
-                      ...prev,
-                      category: moduleType,
-                      module: newModuleName.trim()
-                    }))
-                    toast.success(`${moduleType === 'course' ? 'Module' : 'Month'} created! Now add a lesson.`)
-                  }}
+
+              <div>
+                <Label>Access Type</Label>
+                <Select
+                  value={newModuleAccessType}
+                  onValueChange={(v) => setNewModuleAccessType(v as typeof newModuleAccessType)}
                 >
-                  Create & Add Lesson
+                  <SelectTrigger className="mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="free">🆓 Free</SelectItem>
+                    <SelectItem value="tier_required">🎖️ Tier Required</SelectItem>
+                    <SelectItem value="purchase_required">💳 Purchase Required</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {newModuleAccessType === 'tier_required' && (
+                <div>
+                  <Label>Required Tier</Label>
+                  <Input
+                    className="mt-1"
+                    value={newModuleRequiredTier}
+                    onChange={(e) => setNewModuleRequiredTier(e.target.value)}
+                    placeholder="e.g., tier1, tier2"
+                  />
+                </div>
+              )}
+
+              {newModuleAccessType === 'purchase_required' && (
+                <div>
+                  <Label>Fanbases Product ID</Label>
+                  <Input
+                    className="mt-1"
+                    value={newModuleFanbasesId}
+                    onChange={(e) => setNewModuleFanbasesId(e.target.value)}
+                    placeholder="e.g., abc123"
+                  />
+                </div>
+              )}
+
+              <div className="flex gap-3">
+                <Button className="flex-1" onClick={handleCreateModule}>
+                  Create {moduleType === 'course' ? 'Module' : 'Month'}
                 </Button>
-                <Button variant="outline" onClick={() => setShowModuleModal(false)}>Cancel</Button>
+                <Button variant="outline" onClick={() => { setShowModuleModal(false); resetModuleForm(); }}>Cancel</Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Module Modal */}
+        <Dialog open={showEditModuleModal} onOpenChange={(open) => { setShowEditModuleModal(open); if (!open) resetModuleForm(); }}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>
+                Edit {editingModule?.category === 'course' ? 'Module' : 'Month'}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label>{editingModule?.category === 'course' ? 'Module Name' : 'Month Name'}</Label>
+                <Input
+                  className="mt-1"
+                  value={newModuleName}
+                  onChange={(e) => setNewModuleName(e.target.value)}
+                  placeholder={editingModule?.category === 'course' ? 'e.g., Module 3: Advanced Topics' : 'e.g., February 2025'}
+                />
+              </div>
+
+              <div>
+                <Label>Access Type</Label>
+                <Select
+                  value={newModuleAccessType}
+                  onValueChange={(v) => setNewModuleAccessType(v as typeof newModuleAccessType)}
+                >
+                  <SelectTrigger className="mt-1">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="free">🆓 Free</SelectItem>
+                    <SelectItem value="tier_required">🎖️ Tier Required</SelectItem>
+                    <SelectItem value="purchase_required">💳 Purchase Required</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {newModuleAccessType === 'tier_required' && (
+                <div>
+                  <Label>Required Tier</Label>
+                  <Input
+                    className="mt-1"
+                    value={newModuleRequiredTier}
+                    onChange={(e) => setNewModuleRequiredTier(e.target.value)}
+                    placeholder="e.g., tier1, tier2"
+                  />
+                </div>
+              )}
+
+              {newModuleAccessType === 'purchase_required' && (
+                <div>
+                  <Label>Fanbases Product ID</Label>
+                  <Input
+                    className="mt-1"
+                    value={newModuleFanbasesId}
+                    onChange={(e) => setNewModuleFanbasesId(e.target.value)}
+                    placeholder="e.g., abc123"
+                  />
+                </div>
+              )}
+
+              <div className="flex gap-3">
+                <Button className="flex-1" onClick={handleSaveModule}>
+                  Save Changes
+                </Button>
+                <Button variant="outline" onClick={() => { setShowEditModuleModal(false); resetModuleForm(); }}>Cancel</Button>
               </div>
             </div>
           </DialogContent>
