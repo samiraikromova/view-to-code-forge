@@ -251,10 +251,11 @@ export const VideoPlayer = ({ lesson, contentType, onAskAI, onVideoComplete }: V
         ) : lesson.vdocipherId && videoError ? (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center space-y-4">
-              <div className="w-20 h-20 rounded-full bg-destructive/20 flex items-center justify-center mx-auto">
-                <Play className="h-10 w-10 text-destructive" />
+              <div className="w-20 h-20 rounded-full bg-muted/30 flex items-center justify-center mx-auto">
+                <Play className="h-10 w-10 text-muted-foreground" />
               </div>
-              <p className="text-sm text-muted-foreground">{videoError}</p>
+              <p className="text-sm text-muted-foreground">Video unavailable</p>
+              <p className="text-xs text-muted-foreground/70">This video will be available soon</p>
             </div>
           </div>
         ) : (
