@@ -13,7 +13,8 @@ export interface CourseVideo {
   fireflies_embed_url: string | null;
   fireflies_video_url: string | null; // Direct mp4 URL from Fireflies CDN
   category: 'course' | 'call_recording';
-  module: string;
+  module: string; // Legacy field, kept for backward compatibility
+  module_id: string | null; // Foreign key to modules table
   duration: string | null;
   duration_formatted: string | null;
   thumbnail_url: string | null;
@@ -27,9 +28,6 @@ export interface CourseVideo {
   conversation_turns: number | null;
   file_size_kb: number | null;
   order_index: number;
-  access_type: 'free' | 'tier_required' | 'purchase_required' | 'unlock_required';
-  required_tier: string | null;
-  product_id: string | null;
   files: LessonFileItem[] | null;
   created_at: string;
   updated_at: string;

@@ -46,7 +46,8 @@ interface Lesson {
   description: string
   vdocipher_id: string
   category: 'course' | 'call_recording'
-  module: string
+  module: string // Legacy field
+  module_id: string | null // Foreign key to modules table
   duration: string
   duration_formatted: string
   thumbnail_url?: string
@@ -86,7 +87,7 @@ export default function AdminLessons() {
     description: '',
     vdocipher_id: '',
     category: 'course' as 'course' | 'call_recording',
-    module: '',
+    module_id: '', // Use module_id instead of module name
     duration: '',
     thumbnail_url: '',
     transcript_text: '',
@@ -156,12 +157,16 @@ export default function AdminLessons() {
       setUploadingFiles(false)
     }
 
+    // Find the selected module to get its name for legacy field
+    const selectedModule = modules.find(m => m.id === formData.module_id)
+    
     const payload = {
       title: formData.title,
       description: formData.description,
       vdocipher_id: formData.vdocipher_id || null,
       category: formData.category,
-      module: formData.module,
+      module_id: formData.module_id || null, // Foreign key
+      module: selectedModule?.name || '', // Legacy field for backward compatibility
       duration: formData.duration || null,
       thumbnail_url: formData.thumbnail_url || null,
       transcript_text: formData.transcript_text || null,
@@ -205,7 +210,7 @@ export default function AdminLessons() {
       description: '',
       vdocipher_id: '',
       category: 'course',
-      module: '',
+      module_id: '',
       duration: '',
       thumbnail_url: '',
       transcript_text: '',
@@ -230,7 +235,7 @@ export default function AdminLessons() {
       description: lesson.description || '',
       vdocipher_id: lesson.vdocipher_id || '',
       category: lesson.category,
-      module: lesson.module || '',
+      module_id: lesson.module_id || '',
       duration: lesson.duration || '',
       thumbnail_url: lesson.thumbnail_url || '',
       transcript_text: lesson.transcript_text || '',
@@ -277,13 +282,12 @@ export default function AdminLessons() {
       return
     }
 
-    // Update all lessons in this module to use new name if changed
+    // Update all lessons in this module to use new name if changed (for legacy field)
     if (editingModule.name !== newModuleName.trim()) {
       const { error: lessonsError } = await supabase
         .from('course_videos')
         .update({ module: newModuleName.trim() })
-        .eq('module', editingModule.name)
-        .eq('category', editingModule.category)
+        .eq('module_id', editingModule.id)
 
       if (lessonsError) {
         toast.error('Failed to update lessons: ' + lessonsError.message)
@@ -298,7 +302,7 @@ export default function AdminLessons() {
   }
 
   const handleDeleteModule = async (module: Module) => {
-    const lessonsInModule = lessons.filter(l => l.module === module.name && l.category === module.category)
+    const lessonsInModule = lessons.filter(l => l.module_id === module.id)
     
     if (lessonsInModule.length > 0) {
       if (!confirm(`This module contains ${lessonsInModule.length} lesson(s). Delete all lessons and the module?`)) {
@@ -320,8 +324,7 @@ export default function AdminLessons() {
       const { error: lessonsError } = await supabase
         .from('course_videos')
         .delete()
-        .eq('module', module.name)
-        .eq('category', module.category)
+        .eq('module_id', module.id)
 
       if (lessonsError) {
         toast.error('Failed to delete lessons: ' + lessonsError.message)
@@ -418,26 +421,26 @@ export default function AdminLessons() {
     setPendingFiles(prev => prev.filter((_, i) => i !== index))
   }
 
-  // Get module names for dropdowns
-  const courseModuleNames = modules.filter(m => m.category === 'course').map(m => m.name)
-  const callModuleNames = modules.filter(m => m.category === 'call_recording').map(m => m.name)
+  // Get modules for dropdowns (use id instead of name)
+  const courseModules = modules.filter(m => m.category === 'course')
+  const callModules = modules.filter(m => m.category === 'call_recording')
 
   const courseLessons = lessons.filter(v => v.category === 'course')
   const callRecordings = lessons.filter(v => v.category === 'call_recording')
 
-  // Get modules with their lessons
+  // Get modules with their lessons (using module_id)
   const courseModulesWithLessons = modules
     .filter(m => m.category === 'course')
     .map(m => ({
       ...m,
-      lessons: lessons.filter(l => l.module === m.name && l.category === 'course')
+      lessons: lessons.filter(l => l.module_id === m.id)
     }))
 
   const callModulesWithLessons = modules
     .filter(m => m.category === 'call_recording')
     .map(m => ({
       ...m,
-      lessons: lessons.filter(l => l.module === m.name && l.category === 'call_recording')
+      lessons: lessons.filter(l => l.module_id === m.id)
     }))
 
   const openModuleModal = (type: 'course' | 'call_recording') => {
@@ -750,7 +753,7 @@ export default function AdminLessons() {
                   <Label>Category</Label>
                   <Select
                     value={formData.category}
-                    onValueChange={(v) => setFormData({ ...formData, category: v as 'course' | 'call_recording', module: '' })}
+                    onValueChange={(v) => setFormData({ ...formData, category: v as 'course' | 'call_recording', module_id: '' })}
                   >
                     <SelectTrigger className="mt-1">
                       <SelectValue />
@@ -765,15 +768,15 @@ export default function AdminLessons() {
                 <div>
                   <Label>{formData.category === 'course' ? 'Module' : 'Month'}</Label>
                   <Select
-                    value={formData.module}
-                    onValueChange={(v) => setFormData({ ...formData, module: v })}
+                    value={formData.module_id}
+                    onValueChange={(v) => setFormData({ ...formData, module_id: v })}
                   >
                     <SelectTrigger className="mt-1">
                       <SelectValue placeholder={`Select ${formData.category === 'course' ? 'module' : 'month'}...`} />
                     </SelectTrigger>
                     <SelectContent>
-                      {(formData.category === 'course' ? courseModuleNames : callModuleNames).map((m) => (
-                        <SelectItem key={m} value={m}>{m}</SelectItem>
+                      {(formData.category === 'course' ? courseModules : callModules).map((m) => (
+                        <SelectItem key={m.id} value={m.id}>{m.name}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
