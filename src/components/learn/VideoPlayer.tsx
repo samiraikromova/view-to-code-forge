@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Play, ExternalLink, MessageSquare, Calendar, Clock, Users, Download, FileText, File, Image, FileSpreadsheet, Presentation } from "lucide-react";
+import { Play, ExternalLink, MessageSquare, Calendar, Clock, Users, Download, FileText, File, Image, FileSpreadsheet, Presentation, Lock } from "lucide-react";
 import { Lesson, LessonFileItem } from "./LearnSidebar";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -35,16 +35,48 @@ interface VideoPlayerProps {
   contentType: "recordings" | "materials";
   onAskAI?: (lessonId: string) => void;
   onVideoComplete?: (lessonId: string) => void;
+  isLocked?: boolean;
+  fanbasesProductId?: string;
+  fanbasesCheckoutUrl?: string;
 }
 
-export const VideoPlayer = ({ lesson, contentType, onAskAI, onVideoComplete }: VideoPlayerProps) => {
+export const VideoPlayer = ({ 
+  lesson, 
+  contentType, 
+  onAskAI, 
+  onVideoComplete,
+  isLocked = false,
+  fanbasesProductId,
+  fanbasesCheckoutUrl
+}: VideoPlayerProps) => {
   const { user } = useAuth();
   const [videoOtp, setVideoOtp] = useState<string | null>(null);
   const [playbackInfo, setPlaybackInfo] = useState<string | null>(null);
   const [videoLoading, setVideoLoading] = useState(false);
   const [videoError, setVideoError] = useState<string | null>(null);
+  const [modulePrice, setModulePrice] = useState<number | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const hasMarkedComplete = useRef(false);
+
+  // Fetch module price when locked
+  useEffect(() => {
+    const fetchPrice = async () => {
+      if (!isLocked || !fanbasesProductId) return;
+      
+      // Try to get price from database first
+      const { data } = await supabase
+        .from('fanbases_products')
+        .select('price_cents, internal_reference')
+        .eq('fanbases_product_id', fanbasesProductId)
+        .maybeSingle();
+      
+      if (data?.price_cents) {
+        setModulePrice(data.price_cents);
+      }
+    };
+    
+    fetchPrice();
+  }, [isLocked, fanbasesProductId]);
 
   // Fetch OTP when lesson changes (only for VdoCipher videos)
   useEffect(() => {
@@ -230,8 +262,32 @@ export const VideoPlayer = ({ lesson, contentType, onAskAI, onVideoComplete }: V
     <div className="space-y-6">
       {/* Video Container */}
       <div className="relative w-full aspect-video bg-surface rounded-2xl overflow-hidden border border-border">
+        {/* Locked Module Overlay */}
+        {isLocked ? (
+          <div className="absolute inset-0 flex items-center justify-center bg-background/80 backdrop-blur-sm z-10">
+            <div className="text-center space-y-4 p-6">
+              <div className="w-20 h-20 rounded-full bg-primary/20 flex items-center justify-center mx-auto">
+                <Lock className="h-10 w-10 text-primary" />
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-xl font-semibold text-foreground">This Module is Locked</h3>
+                <p className="text-sm text-muted-foreground">Unlock to access all lessons in this module</p>
+              </div>
+              {fanbasesCheckoutUrl && (
+                <Button
+                  onClick={() => window.open(fanbasesCheckoutUrl, '_blank')}
+                  className="gap-2"
+                >
+                  <Lock className="h-4 w-4" />
+                  Unlock for {modulePrice ? `$${(modulePrice / 100).toFixed(0)}` : 'Purchase'}
+                </Button>
+              )}
+            </div>
+          </div>
+        ) : null}
+        
         {/* Fireflies direct mp4 video */}
-        {lesson.firefliesVideoUrl ? (
+        {!isLocked && lesson.firefliesVideoUrl ? (
           <video
             controls
             className="w-full h-full"
@@ -256,7 +312,7 @@ export const VideoPlayer = ({ lesson, contentType, onAskAI, onVideoComplete }: V
           >
             Your browser does not support the video tag.
           </video>
-        ) : lesson.firefliesEmbedUrl ? (
+        ) : !isLocked && lesson.firefliesEmbedUrl ? (
           <iframe
             src={lesson.firefliesEmbedUrl}
             className="w-full h-full"
@@ -264,7 +320,7 @@ export const VideoPlayer = ({ lesson, contentType, onAskAI, onVideoComplete }: V
             allow="autoplay; fullscreen"
             allowFullScreen
           />
-        ) : lesson.vdocipherId && videoOtp && playbackInfo ? (
+        ) : !isLocked && lesson.vdocipherId && videoOtp && playbackInfo ? (
           <iframe
             ref={iframeRef}
             src={`https://player.vdocipher.com/v2/?otp=${videoOtp}&playbackInfo=${playbackInfo}`}
@@ -273,7 +329,7 @@ export const VideoPlayer = ({ lesson, contentType, onAskAI, onVideoComplete }: V
             allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
             allowFullScreen
           />
-        ) : lesson.vdocipherId && videoLoading ? (
+        ) : !isLocked && lesson.vdocipherId && videoLoading ? (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center space-y-4">
               <div className="w-20 h-20 rounded-full bg-accent/20 flex items-center justify-center mx-auto animate-pulse">
@@ -282,7 +338,7 @@ export const VideoPlayer = ({ lesson, contentType, onAskAI, onVideoComplete }: V
               <p className="text-sm text-muted-foreground">Loading video...</p>
             </div>
           </div>
-        ) : lesson.vdocipherId && videoError ? (
+        ) : !isLocked && lesson.vdocipherId && videoError ? (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center space-y-4">
               <div className="w-20 h-20 rounded-full bg-muted/30 flex items-center justify-center mx-auto">
@@ -292,7 +348,7 @@ export const VideoPlayer = ({ lesson, contentType, onAskAI, onVideoComplete }: V
               <p className="text-xs text-muted-foreground/70">This video will be available soon</p>
             </div>
           </div>
-        ) : (
+        ) : !isLocked ? (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center space-y-4">
               <div className="w-20 h-20 rounded-full bg-accent/20 flex items-center justify-center mx-auto">
@@ -301,7 +357,7 @@ export const VideoPlayer = ({ lesson, contentType, onAskAI, onVideoComplete }: V
               <p className="text-sm text-muted-foreground">Video will be available soon</p>
             </div>
           </div>
-        )}
+        ) : null}
       </div>
 
       {/* Lesson Info */}
