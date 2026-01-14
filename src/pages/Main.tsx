@@ -182,6 +182,7 @@ const Main = () => {
     access_type: 'free' | 'tier_required' | 'purchase_required';
     required_tier: string | null;
     fanbases_product_id: string | null;
+    price_cents: number | null;
     order_index: number;
   }
 
@@ -236,6 +237,7 @@ const Main = () => {
         lessons: data.lessons,
         accessType: data.moduleInfo?.access_type as any || 'free',
         productId: data.moduleInfo?.fanbases_product_id || undefined,
+        priceCents: data.moduleInfo?.price_cents || undefined,
       });
     });
     

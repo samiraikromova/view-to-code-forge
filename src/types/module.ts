@@ -5,6 +5,7 @@ export interface DbModule {
   access_type: 'free' | 'tier_required' | 'purchase_required';
   required_tier: string | null;
   fanbases_product_id: string | null;
+  price_cents: number | null;
   order_index: number;
   created_at: string;
   updated_at: string;

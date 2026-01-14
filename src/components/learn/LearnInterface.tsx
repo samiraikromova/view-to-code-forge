@@ -101,6 +101,7 @@ export const LearnInterface = ({
               isLocked={isLocked}
               fanbasesProductId={accessInfo.fanbasesProductId}
               fanbasesCheckoutUrl={accessInfo.fanbasesCheckoutUrl}
+              modulePriceCents={selectedModule.priceCents}
             />
           </div>
         ) : (
