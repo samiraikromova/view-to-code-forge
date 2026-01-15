@@ -21,6 +21,7 @@ export interface Module {
   accessType?: 'free' | 'tier_required' | 'purchase_required' | 'call_booking';
   productId?: string; // internal_reference in fanbases_products
   priceCents?: number; // Price in cents for purchase_required modules
+  fanbasesProductId?: string; // Direct fanbases product ID for checkout
 }
 
 export interface LessonFileItem {

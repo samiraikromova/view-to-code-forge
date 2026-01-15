@@ -80,6 +80,11 @@ export function ModuleGrid({ modules, onModuleSelect, isLoading, contentType }: 
       }
     }
 
+    // Build checkout URL directly from module's fanbasesProductId if available
+    const checkoutUrl = module.fanbasesProductId 
+      ? `https://www.fanbasis.com/checkout/${module.fanbasesProductId}`
+      : accessInfo.fanbasesCheckoutUrl;
+
     return {
       id: module.id,
       title: module.title,
@@ -90,7 +95,7 @@ export function ModuleGrid({ modules, onModuleSelect, isLoading, contentType }: 
       isLocked,
       unlockMessage,
       requiresCall: accessInfo.requiresCall,
-      fanbasesCheckoutUrl: accessInfo.fanbasesCheckoutUrl,
+      fanbasesCheckoutUrl: checkoutUrl,
       priceCents: module.priceCents,
     };
   });
