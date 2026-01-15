@@ -238,6 +238,7 @@ const Main = () => {
         accessType: data.moduleInfo?.access_type as any || 'free',
         productId: data.moduleInfo?.fanbases_product_id || undefined,
         priceCents: data.moduleInfo?.price_cents || undefined,
+        fanbasesProductId: data.moduleInfo?.fanbases_product_id || undefined,
       });
     });
     
