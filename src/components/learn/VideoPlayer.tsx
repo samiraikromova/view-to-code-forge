@@ -201,7 +201,7 @@ export const VideoPlayer = ({
   const handleAskAI = () => {
     if (onAskAI) {
       onAskAI(lesson.id);
-      toast.success('Opening AI chat with lesson context');
+      // Toast is handled by the parent component after processing
     }
   };
 
