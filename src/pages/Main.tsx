@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Sparkles, RefreshCw, UserIcon, CreditCard, LogOut, TrendingUp, Settings, FileText } from "lucide-react";
+import { Plus, Sparkles, RefreshCw, UserIcon, CreditCard, LogOut, TrendingUp, Settings, FileText, Loader2 } from "lucide-react";
 import { MainNavigation, NavigationMode } from "@/components/MainNavigation";
 import { AmbientBackground } from "@/components/AmbientBackground";
 import { ChatInterface } from "@/components/chat/ChatInterface";
@@ -61,6 +61,7 @@ const Main = () => {
   const [showHistoryPanel, setShowHistoryPanel] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
+  const [askAILoading, setAskAILoading] = useState(false);
 
   // Dashboard state (lifted from Dashboard.tsx)
   const [dashboardView, setDashboardView] = useState<ViewType>("metrics");
@@ -345,11 +346,14 @@ const Main = () => {
       return;
     }
     
+    setAskAILoading(true);
+    
     const currentData = contentType === "recordings" ? recordingsData : materialsData;
     const lesson = currentData.flatMap((m) => m.lessons).find((l) => l.id === lessonId);
     
     if (!lesson) {
       toast.error("Lesson not found");
+      setAskAILoading(false);
       return;
     }
 
@@ -373,6 +377,7 @@ const Main = () => {
             },
           });
         }
+        setAskAILoading(false);
         return;
       }
     }
@@ -384,12 +389,10 @@ const Main = () => {
 
       if (lesson?.transcriptText) {
         // Use transcriptText directly (already formatted text)
-        toast.info("Preparing transcript for chat...");
         const blob = new Blob([lesson.transcriptText], { type: "text/plain" });
         file = new File([blob], filename, { type: "text/plain" });
       } else if (lesson?.transcriptUrl) {
         // Download and format JSON transcript
-        toast.info("Downloading transcript...");
         const response = await fetch(lesson.transcriptUrl);
         if (!response.ok) {
           throw new Error("Failed to download transcript from source");
@@ -400,7 +403,6 @@ const Main = () => {
         file = new File([blob], filename, { type: "text/plain" });
       } else if (lesson?.overview || lesson?.description) {
         // Use overview or description as fallback
-        toast.info("Preparing lesson notes for chat...");
         const content = lesson.overview || lesson.description || "";
         const notesFilename = `${lesson.title.replace(/\s+/g, "_")}_notes.txt`;
         const blob = new Blob([content], { type: "text/plain" });
@@ -409,11 +411,11 @@ const Main = () => {
 
       if (!file) {
         toast.error("No transcript or notes available for this lesson");
+        setAskAILoading(false);
         return;
       }
 
       // Upload to storage
-      toast.info("Uploading to chat...");
       const filePath = `${user.id}/${Date.now()}-${file.name}`;
       const { error: uploadError } = await supabase.storage
         .from("chat-files")
@@ -432,8 +434,6 @@ const Main = () => {
         file_size: file.size,
       });
 
-      toast.success("Opening chat with transcript attached");
-
       // Set the file for chat and switch mode
       setTranscriptForNewChat(file);
       setMode("chat");
@@ -441,6 +441,8 @@ const Main = () => {
     } catch (error) {
       console.error("Error loading transcript:", error);
       toast.error("Failed to load transcript");
+    } finally {
+      setAskAILoading(false);
     }
   };
 
@@ -664,10 +666,15 @@ const Main = () => {
                     variant="outline"
                     size="sm"
                     className="gap-1.5"
+                    disabled={askAILoading}
                     onClick={() => handleAskAIAboutVideo(selectedLesson.id)}
                   >
-                    <Sparkles className="w-4 h-4" />
-                    Ask AI
+                    {askAILoading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Sparkles className="w-4 h-4" />
+                    )}
+                    {askAILoading ? "Loading..." : "Ask AI"}
                   </Button>
                 </>
               );
