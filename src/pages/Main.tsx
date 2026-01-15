@@ -426,11 +426,13 @@ const Main = () => {
         throw new Error("Failed to upload transcript");
       }
 
-      // Record in file_uploads table
+      // Record in file_uploads table with proper MIME type
+      const mimeType = file.name.endsWith('.json') ? 'application/json' : 
+                       file.name.endsWith('.md') ? 'text/markdown' : 'text/plain';
       await supabase.from("file_uploads").insert({
         filename: file.name,
         file_path: filePath,
-        file_type: "text/plain",
+        file_type: mimeType,
         file_size: file.size,
       });
 
