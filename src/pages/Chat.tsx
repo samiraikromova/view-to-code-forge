@@ -199,6 +199,9 @@ const Chat = () => {
         description: video.description || '',
         vdocipherId: video.vdocipher_id || undefined,
         transcriptUrl: video.transcript_url || undefined,
+        transcriptText: video.transcript_text || undefined,
+        firefliesEmbedUrl: video.fireflies_embed_url || undefined,
+        firefliesVideoUrl: video.fireflies_video_url || undefined,
         overview: video.overview || undefined,
         keywords: video.keywords || undefined,
         callDate: video.call_date || undefined,
@@ -206,6 +209,7 @@ const Chat = () => {
         durationFormatted: video.duration_formatted || undefined,
         accessType: moduleInfo?.access_type || 'free',
         productId: moduleInfo?.fanbases_product_id || undefined,
+        files: video.files || undefined,
       };
       
       moduleMap.get(moduleId)!.lessons.push(lesson);
@@ -309,26 +313,14 @@ const Chat = () => {
     const currentData = contentType === "recordings" ? recordingsData : materialsData;
     const lesson = currentData.flatMap((m) => m.lessons).find((l) => l.id === lessonId);
     
-    if (lesson?.transcriptUrl) {
+    // Priority 1: Use transcriptText if available (already stored in DB)
+    if (lesson?.transcriptText) {
       try {
-        toast.info('Downloading transcript...');
+        toast.info('Preparing transcript...');
         
-        // Fetch the transcript from the URL (Google Drive)
-        const response = await fetch(lesson.transcriptUrl);
-        if (!response.ok) {
-          throw new Error('Failed to download transcript from source');
-        }
-        const transcriptData = await response.json();
-        
-        // Format the transcript for chat
-        const formattedTranscript = formatTranscriptForChat(transcriptData, lesson.title);
-        
-        // Create a file from the transcript
         const filename = `${lesson.title.replace(/\s+/g, '_')}_transcript.txt`;
-        const blob = new Blob([formattedTranscript], { type: 'text/plain' });
+        const blob = new Blob([lesson.transcriptText], { type: 'text/plain' });
         const file = new File([blob], filename, { type: 'text/plain' });
-        
-        toast.info('Uploading transcript to storage...');
         
         // Upload to Supabase storage
         const filePath = `${user.id}/${Date.now()}-${filename}`;
@@ -341,61 +333,128 @@ const Chat = () => {
           throw new Error('Failed to upload transcript');
         }
         
-        // Get public URL
-        const { data: urlData } = supabase.storage.from('chat-files').getPublicUrl(filePath);
-        
-        if (!urlData?.publicUrl) {
-          throw new Error('Failed to get transcript URL');
-        }
-        
-        // Store in file_uploads table with proper MIME type
-        const mimeType = filename.endsWith('.json') ? 'application/json' : 
-                         filename.endsWith('.md') ? 'text/markdown' : 'text/plain';
+        // Store in file_uploads table
         const { error: dbError } = await supabase
           .from('file_uploads')
           .insert({
             filename: filename,
             file_path: filePath,
-            file_type: mimeType,
+            file_type: 'text/plain',
             file_size: file.size
           });
         
         if (dbError) {
           console.error('DB error:', dbError);
-          // Don't fail - file is uploaded, just log the error
         }
         
         toast.success('Transcript ready for chat');
-        
-        // Pass file to chat - it will be sent to n8n with the first message
         setTranscriptForNewChat(file);
         setMode("chat");
         setChatId(null);
+        return;
       } catch (error) {
-        console.error('Error loading transcript:', error);
-        toast.error('Failed to load transcript');
+        console.error('Error with transcriptText:', error);
+        // Fall through to try other methods
       }
-    } else if (lesson?.overview || lesson?.description) {
-      // Fallback: use overview or description as transcript content
+    }
+    
+    // Priority 2: Try fetching from transcriptUrl (may fail due to CORS)
+    if (lesson?.transcriptUrl) {
+      try {
+        toast.info('Loading transcript...');
+        
+        // Try to fetch - this may fail for Google Drive due to CORS
+        const response = await fetch(lesson.transcriptUrl, { 
+          mode: 'cors',
+          credentials: 'omit'
+        });
+        
+        if (!response.ok) {
+          throw new Error('CORS or network error');
+        }
+        
+        const contentType = response.headers.get('content-type') || '';
+        let formattedTranscript: string;
+        
+        if (contentType.includes('application/json')) {
+          const transcriptData = await response.json();
+          formattedTranscript = formatTranscriptForChat(transcriptData, lesson.title);
+        } else {
+          formattedTranscript = await response.text();
+        }
+        
+        const filename = `${lesson.title.replace(/\s+/g, '_')}_transcript.txt`;
+        const blob = new Blob([formattedTranscript], { type: 'text/plain' });
+        const file = new File([blob], filename, { type: 'text/plain' });
+        
+        // Upload to Supabase storage
+        const filePath = `${user.id}/${Date.now()}-${filename}`;
+        const { error: uploadError } = await supabase.storage
+          .from('chat-files')
+          .upload(filePath, file, { cacheControl: '3600', upsert: false });
+        
+        if (uploadError) {
+          console.error('Upload error:', uploadError);
+          throw new Error('Failed to upload transcript');
+        }
+        
+        // Store in file_uploads table
+        const { error: dbError } = await supabase
+          .from('file_uploads')
+          .insert({
+            filename: filename,
+            file_path: filePath,
+            file_type: 'text/plain',
+            file_size: file.size
+          });
+        
+        if (dbError) {
+          console.error('DB error:', dbError);
+        }
+        
+        toast.success('Transcript ready for chat');
+        setTranscriptForNewChat(file);
+        setMode("chat");
+        setChatId(null);
+        return;
+      } catch (error) {
+        console.error('Error fetching transcriptUrl:', error);
+        // Fall through to try overview/description
+      }
+    }
+    
+    // Priority 3: Fallback to overview or description
+    if (lesson?.overview || lesson?.description) {
       const content = lesson.overview || lesson.description || '';
       const filename = `${lesson.title.replace(/\s+/g, "_")}_notes.txt`;
       const blob = new Blob([content], { type: "text/plain" });
       const file = new File([blob], filename, { type: "text/plain" });
       
-      // Upload fallback content to storage too
       try {
         const filePath = `${user.id}/${Date.now()}-${filename}`;
         await supabase.storage
           .from('chat-files')
           .upload(filePath, file, { cacheControl: '3600', upsert: false });
+          
+        await supabase.from('file_uploads').insert({
+          filename: filename,
+          file_path: filePath,
+          file_type: 'text/plain',
+          file_size: file.size
+        });
       } catch (e) {
         console.error('Failed to upload notes file:', e);
       }
       
+      toast.success('Notes ready for chat');
       setTranscriptForNewChat(file);
       setMode("chat");
       setChatId(null);
+      return;
     }
+    
+    // No transcript data available
+    toast.error('No transcript available for this lesson');
   };
 
   const handleVideoComplete = (lessonId: string) => {
