@@ -3,7 +3,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { useState } from "react";
-import { Check, Copy, Loader2, Download, Trash2 } from "lucide-react";
+import { Check, Copy, Loader2, Download, Trash2, FileIcon, X } from "lucide-react";
 import { ImageModal } from "./ImageModal";
 
 // Image component with loading state, hover actions, and modal view
@@ -123,16 +123,25 @@ function ImageWithLoading({ url, idx, onDelete }: ImageWithLoadingProps) {
   );
 }
 
+export interface FileAttachment {
+  url: string;
+  name: string;
+  type?: string;
+  size?: number;
+}
+
 interface MessageData {
   id: string;
   role: "user" | "assistant";
   content: string;
   timestamp: string;
   imageUrls?: string[];
+  files?: FileAttachment[];
 }
 
 interface MessageProps {
   message: MessageData;
+  onDeleteImage?: (url: string) => void;
 }
 
 // Custom purple syntax theme
@@ -262,9 +271,10 @@ function isImageResponse(content: string): boolean {
   return textWithoutUrls.length < 100; // If minimal text remains, it's an image response
 }
 
-export function Message({ message }: MessageProps) {
+export function Message({ message, onDeleteImage }: MessageProps) {
   const isUser = message.role === "user";
   const [copied, setCopied] = useState(false);
+  const [previewFile, setPreviewFile] = useState<FileAttachment | null>(null);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(message.content);
@@ -272,10 +282,44 @@ export function Message({ message }: MessageProps) {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const isImageFile = (type?: string) => type?.startsWith('image/');
+
   if (isUser) {
+    const hasFiles = message.files && message.files.length > 0;
+    
     return (
       <div className="flex justify-end">
         <div className="group flex max-w-[80%] flex-col items-end">
+          {/* File attachments */}
+          {hasFiles && (
+            <div className="flex flex-wrap gap-2 mb-2 justify-end">
+              {message.files!.map((file, idx) => (
+                <div
+                  key={idx}
+                  className="relative flex-shrink-0 w-[100px] rounded-lg border border-border bg-surface hover:bg-surface-hover transition-all duration-200 p-1.5 cursor-pointer"
+                  onClick={() => setPreviewFile(file)}
+                >
+                  {isImageFile(file.type) ? (
+                    <div className="aspect-square rounded bg-surface-hover flex items-center justify-center overflow-hidden">
+                      <img
+                        src={file.url}
+                        alt={file.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  ) : (
+                    <div className="aspect-square rounded bg-surface-hover flex items-center justify-center">
+                      <FileIcon className="h-6 w-6 text-muted-foreground" />
+                    </div>
+                  )}
+                  <p className="text-[10px] font-medium text-foreground truncate mt-1 leading-tight" title={file.name}>
+                    {file.name}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+          
           <div className="rounded-2xl bg-surface px-4 py-3">
             <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
               {message.content}
@@ -296,6 +340,47 @@ export function Message({ message }: MessageProps) {
             </button>
           </div>
         </div>
+        
+        {/* File preview modal */}
+        {previewFile && (
+          <div 
+            className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-md"
+            onClick={() => setPreviewFile(null)}
+          >
+            <div 
+              className="relative max-w-[90vw] max-h-[90vh] animate-scale-in"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                onClick={() => setPreviewFile(null)}
+                className="absolute -top-12 right-0 p-2 rounded-full bg-surface border border-border hover:bg-surface-hover transition-colors z-10"
+              >
+                <X className="h-5 w-5 text-foreground" />
+              </button>
+              
+              {isImageFile(previewFile.type) ? (
+                <img
+                  src={previewFile.url}
+                  alt={previewFile.name}
+                  className="max-w-full max-h-[85vh] rounded-lg object-contain shadow-2xl"
+                />
+              ) : (
+                <div className="bg-surface border border-border rounded-lg p-8 max-w-lg">
+                  <FileIcon className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
+                  <p className="text-foreground font-medium text-center">{previewFile.name}</p>
+                  <a 
+                    href={previewFile.url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="mt-4 block text-center text-accent hover:underline"
+                  >
+                    Open file
+                  </a>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -318,7 +403,7 @@ export function Message({ message }: MessageProps) {
           {/* Render images in a grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {imageUrls.map((url, idx) => (
-              <ImageWithLoading key={idx} url={url} idx={idx} />
+              <ImageWithLoading key={idx} url={url} idx={idx} onDelete={onDeleteImage} />
             ))}
           </div>
         </div>
