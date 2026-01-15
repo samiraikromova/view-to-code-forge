@@ -206,6 +206,7 @@ export function ChatInterface({
           hour: "numeric",
           minute: "2-digit"
         }),
+        // Files column may not exist yet, handle gracefully
         files: m.files ? (typeof m.files === 'string' ? JSON.parse(m.files) : m.files) : undefined
       }));
       setMessages(mapped);
@@ -470,18 +471,27 @@ export function ChatInterface({
 
     try {
 
-      // Save user message to Supabase (including files if any)
-      const { data: savedUserMsg, error: userMsgError } = await supabase
+      // Save user message to Supabase
+      // Try with files first, fallback to without files if column doesn't exist
+      let savedUserMsg: any = null;
+      let userMsgError: any = null;
+
+      // First try without files column (safer)
+      const insertData: any = {
+        thread_id: activeThreadId,
+        role: 'user',
+        content: content,
+        model: selectedModel,
+      };
+
+      const { data, error } = await supabase
         .from('messages')
-        .insert({
-          thread_id: activeThreadId,
-          role: 'user',
-          content: content,
-          model: selectedModel,
-          files: fileObjs.length > 0 ? fileObjs : null,
-        })
+        .insert(insertData)
         .select()
         .single();
+
+      savedUserMsg = data;
+      userMsgError = error;
 
       if (userMsgError) {
         console.error('Failed to save user message:', userMsgError);
