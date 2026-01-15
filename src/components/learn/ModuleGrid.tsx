@@ -89,6 +89,7 @@ export function ModuleGrid({ modules, onModuleSelect, isLoading, contentType }: 
       unlockMessage,
       requiresCall: accessInfo.requiresCall,
       fanbasesCheckoutUrl: accessInfo.fanbasesCheckoutUrl,
+      priceCents: module.priceCents,
     };
   });
 
