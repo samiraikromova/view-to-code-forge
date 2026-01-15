@@ -54,9 +54,9 @@ export function ModuleCard({ module, onClick }: ModuleCardProps) {
         {module.isLocked && (
           <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center gap-3">
             <Lock className="w-8 h-8 text-muted-foreground" />
-            {module.unlockMessage && (
+            {(module.unlockMessage || module.priceCents) && (
               <span className="bg-primary text-primary-foreground px-4 py-2 rounded-full text-sm font-medium shadow-lg hover:bg-primary/90 transition-colors">
-                {module.priceCents ? `Unlock for $${(module.priceCents / 100).toFixed(0)}` : module.unlockMessage}
+                {module.unlockMessage}
               </span>
             )}
           </div>

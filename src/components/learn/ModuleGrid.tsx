@@ -71,6 +71,8 @@ export function ModuleGrid({ modules, onModuleSelect, isLoading, contentType }: 
     if (isLocked) {
       if (accessInfo.requiresCall) {
         unlockMessage = "Book a call to unlock";
+      } else if (module.priceCents) {
+        unlockMessage = `Unlock for $${(module.priceCents / 100).toFixed(0)}`;
       } else if (accessInfo.fanbasesCheckoutUrl) {
         unlockMessage = "Click to unlock";
       } else {
