@@ -1,4 +1,4 @@
-import { Message } from "./Message";
+import { Message, FileAttachment } from "./Message";
 import { Bot } from "lucide-react";
 
 interface MessageData {
@@ -6,14 +6,16 @@ interface MessageData {
   role: "user" | "assistant";
   content: string;
   timestamp: string;
+  files?: FileAttachment[];
 }
 
 interface MessageListProps {
   messages: MessageData[];
   isStreaming: boolean;
+  onDeleteImage?: (url: string) => void;
 }
 
-export function MessageList({ messages, isStreaming }: MessageListProps) {
+export function MessageList({ messages, isStreaming, onDeleteImage }: MessageListProps) {
   if (messages.length === 0) {
     return (
       <div className="flex flex-1 items-center justify-center p-8">
@@ -35,7 +37,7 @@ export function MessageList({ messages, isStreaming }: MessageListProps) {
       <div className="mx-auto max-w-[720px] space-y-6">
         {messages.map((message) => (
           <div key={message.id} className="animate-fade-in">
-            <Message message={message} />
+            <Message message={message} onDeleteImage={onDeleteImage} />
           </div>
         ))}
         {isStreaming && (

@@ -15,11 +15,19 @@ import { sendChatMessage, estimateTokens, calculateChatCost, calculateImageCost 
 import { generateImageViaAPI } from "@/api/generate-image/imageApi";
 import { toast } from "@/hooks/use-toast";
 
+interface FileAttachment {
+  url: string;
+  name: string;
+  type?: string;
+  size?: number;
+}
+
 interface Message {
   id: string;
   role: "user" | "assistant";
   content: string;
   timestamp: string;
+  files?: FileAttachment[];
 }
 
 // Default project slug - CB4
@@ -311,9 +319,30 @@ export function ChatInterface({
     }
   };
 
-  const uploadFiles = async (files: File[]): Promise<Array<{ url: string; name: string; type?: string; size?: number }>> => {
+  // Handle deleting an image from a message
+  const handleDeleteImage = (imageUrl: string) => {
+    // Remove the image URL from any message that contains it
+    setMessages(prev => prev.map(msg => {
+      if (msg.content.includes(imageUrl)) {
+        // Remove the URL from the content
+        const newContent = msg.content
+          .split('\n')
+          .filter(line => !line.includes(imageUrl))
+          .join('\n');
+        return { ...msg, content: newContent };
+      }
+      return msg;
+    }).filter(msg => msg.content.trim().length > 0));
+    
+    toast({
+      title: 'Image deleted',
+      description: 'The image has been removed from the chat.',
+    });
+  };
+
+  const uploadFiles = async (files: File[]): Promise<FileAttachment[]> => {
     if (!user) return [];
-    const uploaded: Array<{ url: string; name: string; type?: string; size?: number }> = [];
+    const uploaded: FileAttachment[] = [];
     
     for (const file of files) {
       const filePath = `${user.id}/${Date.now()}-${file.name}`;
@@ -408,6 +437,12 @@ export function ChatInterface({
       }
     }
 
+    // Upload files first so we can include them in the message
+    let fileObjs: FileAttachment[] = [];
+    if (files && files.length > 0) {
+      fileObjs = await uploadFiles(files);
+    }
+
     const newMessage: Message = {
       id: `temp-${Date.now()}`,
       role: "user",
@@ -415,7 +450,8 @@ export function ChatInterface({
       timestamp: new Date().toLocaleTimeString("en-US", {
         hour: "numeric",
         minute: "2-digit"
-      })
+      }),
+      files: fileObjs.length > 0 ? fileObjs : undefined
     };
 
     // Add user message optimistically
@@ -432,11 +468,6 @@ export function ChatInterface({
     }
 
     try {
-      // Upload files if any
-      let fileObjs: any[] = [];
-      if (files && files.length > 0) {
-        fileObjs = await uploadFiles(files);
-      }
 
       // Save user message to Supabase
       const { data: savedUserMsg, error: userMsgError } = await supabase
@@ -744,7 +775,7 @@ export function ChatInterface({
         </div>
       ) : <div className="flex flex-1 flex-col min-h-0 overflow-hidden animate-fade-in relative">
           <div ref={messagesContainerRef} className="flex-1 overflow-y-auto relative">
-            <MessageList messages={messages} isStreaming={isStreaming} />
+            <MessageList messages={messages} isStreaming={isStreaming} onDeleteImage={handleDeleteImage} />
             <div ref={messagesEndRef} />
             
             {/* Gradient fade overlay */}
