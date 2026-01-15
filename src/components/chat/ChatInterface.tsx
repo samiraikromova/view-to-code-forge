@@ -115,6 +115,15 @@ export function ChatInterface({
           systemPrompt: p.system_prompt
         }));
         setProjects(mappedProjects);
+        
+        // Set default project to CB4 if no project is currently selected
+        if (!selectedProject) {
+          const cb4Project = mappedProjects.find(p => p.slug === DEFAULT_PROJECT_SLUG);
+          if (cb4Project) {
+            setSelectedProject(cb4Project);
+            setSystemPrompt(cb4Project.systemPrompt || "");
+          }
+        }
       } else {
         console.log('No projects found in database');
         setProjects([]);
@@ -630,6 +639,18 @@ export function ChatInterface({
 
   const isEmpty = messages.length === 0 && !isTransitioning;
   const showTransition = isTransitioning;
+
+  // Show loading state while projects are loading
+  if (projectsLoading) {
+    return (
+      <div className="flex h-full flex-1 flex-col min-h-0 overflow-hidden relative items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="h-10 w-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin" />
+          <p className="text-muted-foreground text-sm">Loading chat...</p>
+        </div>
+      </div>
+    );
+  }
   
   return <div className="flex h-full flex-1 flex-col min-h-0 overflow-hidden relative">
       {/* Upgrade Dialog */}

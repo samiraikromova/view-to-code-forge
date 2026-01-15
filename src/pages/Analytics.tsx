@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useNavigate } from "react-router-dom"
 import { useAuth } from "@/hooks/useAuth"
 import { supabase } from "@/lib/supabase"
+import { PageLoader } from "@/components/ui/PageLoader"
 
 interface UsageStats {
   totalCreditsUsed: number
@@ -31,6 +32,7 @@ export default function Analytics() {
   const { user, profile } = useAuth()
   const [timeRange, setTimeRange] = useState("all")
   const [loading, setLoading] = useState(true)
+  const [initialLoading, setInitialLoading] = useState(true)
   const [stats, setStats] = useState<UsageStats>({
     totalCreditsUsed: 0,
     chatMessages: 0,
@@ -224,7 +226,12 @@ export default function Analytics() {
       console.error('Error fetching analytics:', error)
     } finally {
       setLoading(false)
+      setInitialLoading(false)
     }
+  }
+
+  if (initialLoading) {
+    return <PageLoader message="Loading analytics..." />
   }
 
   return (
