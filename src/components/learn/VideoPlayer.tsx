@@ -441,6 +441,31 @@ export const VideoPlayer = ({
           </div>
         )}
 
+        {/* Ask AI Button - prominent CTA for transcript-based AI chat */}
+        {!isLocked && (lesson.transcriptUrl || lesson.transcriptText || lesson.overview || lesson.description) && onAskAI && (
+          <div className="rounded-xl border border-primary/30 bg-primary/5 p-4">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/20 text-primary">
+                  <MessageSquare className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground">Ask AI About This Lesson</h3>
+                  <p className="text-xs text-muted-foreground">Chat with AI using the lesson transcript as context</p>
+                </div>
+              </div>
+              <Button
+                onClick={handleAskAI}
+                className="gap-2"
+                size="sm"
+              >
+                <MessageSquare className="h-4 w-4" />
+                Ask AI
+              </Button>
+            </div>
+          </div>
+        )}
+
         {/* Description/Notes with Enhanced Markdown Styling - renamed to Call Summary */}
         {lesson.description && (
           <div className="rounded-xl border border-border bg-surface/30 p-6">
