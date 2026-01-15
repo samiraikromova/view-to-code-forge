@@ -1,5 +1,5 @@
 import { useState, useRef, KeyboardEvent, useEffect } from "react";
-import { ArrowUp, Plus, Clock, X, FileIcon, Image as ImageIcon, Loader2 } from "lucide-react";
+import { ArrowUp, Plus, Clock, X, FileIcon, Image as ImageIcon, Loader2, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -8,6 +8,7 @@ import { Project } from "./ChatHeader";
 import { ProjectSelector } from "./ProjectSelector";
 import { ModelThinkingSelector } from "./ModelThinkingSelector";
 import { ImageGenerationSelectors } from "./ImageGenerationSelectors";
+import { SingleFilePreviewModal } from "./SingleFilePreviewModal";
 import { SubscriptionTier } from "@/types/subscription";
 const mockProjects: Project[] = [{
   id: "cb4",
@@ -96,6 +97,10 @@ export function ChatInput({
   const [lineCount, setLineCount] = useState(1);
   const [isFocused, setIsFocused] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  
+  // File preview modal state
+  const [previewFile, setPreviewFile] = useState<File | null>(null);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   
   // Image generation settings
   const [imageQuality, setImageQuality] = useState("BALANCED");
@@ -266,14 +271,33 @@ export function ChatInput({
                   {files.map((file, index) => (
                     <div
                       key={index}
-                      className="relative flex-shrink-0 w-[122px] rounded-lg border border-border bg-surface hover:bg-surface-hover transition-all duration-200 hover:scale-105 p-2 group"
+                      className="relative flex-shrink-0 w-[122px] rounded-lg border border-border bg-surface hover:bg-surface-hover transition-all duration-200 hover:scale-105 p-2 group cursor-pointer"
+                      onClick={() => {
+                        setPreviewFile(file);
+                        setIsPreviewOpen(true);
+                      }}
                     >
                       {/* Remove button - only visible on hover */}
                       <button
-                        onClick={() => handleRemoveFile(index)}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRemoveFile(index);
+                        }}
                         className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-background border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-surface transition-all z-10 shadow-sm opacity-0 group-hover:opacity-100"
                       >
                         <X className="h-3 w-3" />
+                      </button>
+
+                      {/* Preview button - only visible on hover */}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setPreviewFile(file);
+                          setIsPreviewOpen(true);
+                        }}
+                        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-background/90 border border-border flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-surface transition-all z-10 shadow-sm opacity-0 group-hover:opacity-100"
+                      >
+                        <Eye className="h-4 w-4" />
                       </button>
 
                       {/* File preview */}
@@ -395,5 +419,23 @@ export function ChatInput({
           </div>
         </div>
       </div>
+      
+      {/* File Preview Modal */}
+      <SingleFilePreviewModal
+        isOpen={isPreviewOpen}
+        file={previewFile}
+        onClose={() => {
+          setIsPreviewOpen(false);
+          setPreviewFile(null);
+        }}
+        onDelete={previewFile ? () => {
+          const fileIndex = files.findIndex(f => f === previewFile);
+          if (fileIndex !== -1) {
+            handleRemoveFile(fileIndex);
+          }
+          setIsPreviewOpen(false);
+          setPreviewFile(null);
+        } : undefined}
+      />
     </>;
 }
