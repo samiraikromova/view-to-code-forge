@@ -12,7 +12,7 @@ export interface ModuleCardData {
   isLocked?: boolean;
   unlockMessage?: string;
   requiresCall?: boolean;
-  price?: number;
+  priceCents?: number;
   fanbasesCheckoutUrl?: string;
 }
 
@@ -56,7 +56,7 @@ export function ModuleCard({ module, onClick }: ModuleCardProps) {
             <Lock className="w-8 h-8 text-muted-foreground" />
             {module.unlockMessage && (
               <span className="bg-primary text-primary-foreground px-4 py-2 rounded-full text-sm font-medium shadow-lg hover:bg-primary/90 transition-colors">
-                {module.unlockMessage}
+                {module.priceCents ? `Unlock for $${(module.priceCents / 100).toFixed(0)}` : module.unlockMessage}
               </span>
             )}
           </div>
