@@ -191,24 +191,43 @@ export function ChatInterface({
   };
 
   const loadMessages = async (threadId: string) => {
-    const { data } = await supabase
+    // Fetch messages
+    const { data: messagesData } = await supabase
       .from('messages')
       .select('*')
       .eq('thread_id', threadId)
       .order('created_at', { ascending: true });
 
-    if (data) {
-      const mapped = data.map(m => ({
-        id: m.id,
-        role: m.role as "user" | "assistant",
-        content: m.content,
-        timestamp: new Date(m.created_at).toLocaleTimeString("en-US", {
-          hour: "numeric",
-          minute: "2-digit"
-        }),
-        // Files column may not exist yet, handle gracefully
-        files: m.files ? (typeof m.files === 'string' ? JSON.parse(m.files) : m.files) : undefined
-      }));
+    // Fetch file uploads for this thread
+    const { data: fileUploads } = await supabase
+      .from('file_uploads')
+      .select('*')
+      .eq('thread_id', threadId);
+
+    if (messagesData) {
+      const mapped = messagesData.map(m => {
+        // Get files for this message from file_uploads table
+        const messageFiles = fileUploads?.filter(f => f.message_id === m.id).map(f => {
+          const { data: urlData } = supabase.storage.from('chat-files').getPublicUrl(f.file_path);
+          return {
+            url: urlData?.publicUrl || '',
+            name: f.filename,
+            type: f.file_type,
+            size: f.file_size
+          };
+        }) || [];
+
+        return {
+          id: m.id,
+          role: m.role as "user" | "assistant",
+          content: m.content,
+          timestamp: new Date(m.created_at).toLocaleTimeString("en-US", {
+            hour: "numeric",
+            minute: "2-digit"
+          }),
+          files: messageFiles.length > 0 ? messageFiles : undefined
+        };
+      });
       setMessages(mapped);
       setCurrentThreadId(threadId);
     }
@@ -342,15 +361,57 @@ export function ChatInterface({
     });
   };
 
-  const uploadFiles = async (files: File[]): Promise<FileAttachment[]> => {
+  // Helper to get proper MIME type
+  const getMimeType = (file: File): string => {
+    // Use the browser-detected type if available
+    if (file.type && file.type !== 'application/octet-stream') {
+      return file.type;
+    }
+    // Fallback to extension-based detection
+    const ext = file.name.split('.').pop()?.toLowerCase() || '';
+    const mimeMap: Record<string, string> = {
+      // Images
+      'jpg': 'image/jpeg', 'jpeg': 'image/jpeg', 'png': 'image/png',
+      'gif': 'image/gif', 'webp': 'image/webp', 'svg': 'image/svg+xml',
+      'ico': 'image/x-icon', 'bmp': 'image/bmp',
+      // Documents
+      'pdf': 'application/pdf',
+      'doc': 'application/msword',
+      'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'xls': 'application/vnd.ms-excel',
+      'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'ppt': 'application/vnd.ms-powerpoint',
+      'pptx': 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      // Text/Code
+      'txt': 'text/plain', 'csv': 'text/csv', 'json': 'application/json',
+      'xml': 'application/xml', 'html': 'text/html', 'css': 'text/css',
+      'js': 'application/javascript', 'ts': 'application/typescript',
+      'md': 'text/markdown',
+      // Archives
+      'zip': 'application/zip', 'rar': 'application/x-rar-compressed',
+      '7z': 'application/x-7z-compressed',
+      // Audio/Video
+      'mp3': 'audio/mpeg', 'wav': 'audio/wav', 'mp4': 'video/mp4',
+      'webm': 'video/webm', 'avi': 'video/x-msvideo',
+    };
+    return mimeMap[ext] || 'application/octet-stream';
+  };
+
+  const uploadFiles = async (files: File[], threadId?: string, messageId?: string): Promise<FileAttachment[]> => {
     if (!user) return [];
     const uploaded: FileAttachment[] = [];
     
     for (const file of files) {
       const filePath = `${user.id}/${Date.now()}-${file.name}`;
+      const mimeType = getMimeType(file);
+      
       const { error: uploadErr } = await supabase.storage
         .from('chat-files')
-        .upload(filePath, file, { cacheControl: '3600', upsert: false });
+        .upload(filePath, file, { 
+          cacheControl: '3600', 
+          upsert: false,
+          contentType: mimeType 
+        });
 
       if (uploadErr) {
         console.error('Upload error:', uploadErr);
@@ -359,10 +420,20 @@ export function ChatInterface({
 
       const { data } = supabase.storage.from('chat-files').getPublicUrl(filePath);
       if (data?.publicUrl) {
+        // Record in file_uploads table with proper file type
+        await supabase.from('file_uploads').insert({
+          thread_id: threadId || null,
+          message_id: messageId || null,
+          filename: file.name,
+          file_path: filePath,
+          file_type: mimeType,
+          file_size: file.size,
+        });
+
         uploaded.push({
           url: data.publicUrl,
           name: file.name,
-          type: file.type,
+          type: mimeType,
           size: file.size
         });
       }
@@ -439,10 +510,10 @@ export function ChatInterface({
       }
     }
 
-    // Upload files first so we can include them in the message
+    // Upload files first (with thread_id, message_id will be updated after message is saved)
     let fileObjs: FileAttachment[] = [];
     if (files && files.length > 0) {
-      fileObjs = await uploadFiles(files);
+      fileObjs = await uploadFiles(files, activeThreadId);
     }
 
     const newMessage: Message = {
@@ -508,6 +579,21 @@ export function ChatInterface({
       setMessages(prev => prev.map(m => 
         m.id === newMessage.id ? { ...m, id: savedUserMsg.id } : m
       ));
+
+      // Update file_uploads with the message_id now that we have it
+      if (fileObjs.length > 0 && savedUserMsg?.id) {
+        for (const fileObj of fileObjs) {
+          // Extract file_path from URL
+          const urlParts = fileObj.url.split('/chat-files/');
+          const filePath = urlParts.length > 1 ? decodeURIComponent(urlParts[1]) : null;
+          if (filePath) {
+            await supabase
+              .from('file_uploads')
+              .update({ message_id: savedUserMsg.id })
+              .eq('file_path', filePath);
+          }
+        }
+      }
 
       // Build conversation history for context
       const conversationHistory = messages.map(m => ({

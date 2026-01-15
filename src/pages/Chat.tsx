@@ -348,13 +348,15 @@ const Chat = () => {
           throw new Error('Failed to get transcript URL');
         }
         
-        // Store in file_uploads table (thread_id and message_id will be null initially)
+        // Store in file_uploads table with proper MIME type
+        const mimeType = filename.endsWith('.json') ? 'application/json' : 
+                         filename.endsWith('.md') ? 'text/markdown' : 'text/plain';
         const { error: dbError } = await supabase
           .from('file_uploads')
           .insert({
             filename: filename,
             file_path: filePath,
-            file_type: 'text/plain',
+            file_type: mimeType,
             file_size: file.size
           });
         
