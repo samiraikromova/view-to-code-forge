@@ -205,7 +205,8 @@ export function ChatInterface({
         timestamp: new Date(m.created_at).toLocaleTimeString("en-US", {
           hour: "numeric",
           minute: "2-digit"
-        })
+        }),
+        files: m.files ? (typeof m.files === 'string' ? JSON.parse(m.files) : m.files) : undefined
       }));
       setMessages(mapped);
       setCurrentThreadId(threadId);
@@ -469,7 +470,7 @@ export function ChatInterface({
 
     try {
 
-      // Save user message to Supabase
+      // Save user message to Supabase (including files if any)
       const { data: savedUserMsg, error: userMsgError } = await supabase
         .from('messages')
         .insert({
@@ -477,6 +478,7 @@ export function ChatInterface({
           role: 'user',
           content: content,
           model: selectedModel,
+          files: fileObjs.length > 0 ? fileObjs : null,
         })
         .select()
         .single();
