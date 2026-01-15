@@ -9,11 +9,13 @@ import { useNavigate } from "react-router-dom"
 import { useAuth } from "@/hooks/useAuth"
 import { supabase } from "@/lib/supabase"
 import { toast } from "sonner"
+import { PageLoader } from "@/components/ui/PageLoader"
 
 export default function Profile() {
   const navigate = useNavigate()
-  const { user, profile, refreshProfile } = useAuth()
+  const { user, profile, loading: authLoading, refreshProfile } = useAuth()
   const [loading, setLoading] = useState(false)
+  const [pageLoading, setPageLoading] = useState(true)
   const [fullName, setFullName] = useState("")
   const [credits, setCredits] = useState(0)
   const [tier, setTier] = useState("free")
@@ -25,8 +27,11 @@ export default function Profile() {
       setCredits(profile.credits || 0)
       setTier(profile.subscription_tier || "free")
       setCreatedAt(profile.created_at || null)
+      setPageLoading(false)
+    } else if (!authLoading) {
+      setPageLoading(false)
     }
-  }, [profile])
+  }, [profile, authLoading])
 
   const handleSaveProfile = async () => {
     if (!user) return
@@ -83,6 +88,10 @@ export default function Profile() {
       month: "long",
       day: "numeric",
     })
+  }
+
+  if (pageLoading) {
+    return <PageLoader message="Loading profile..." />
   }
 
   return (

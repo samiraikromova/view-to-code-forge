@@ -3,59 +3,123 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { useState } from "react";
-import { Check, Copy, Loader2 } from "lucide-react";
+import { Check, Copy, Loader2, Download, Trash2 } from "lucide-react";
+import { ImageModal } from "./ImageModal";
 
-// Image component with loading state and smooth fade-in
-function ImageWithLoading({ url, idx }: { url: string; idx: number }) {
+// Image component with loading state, hover actions, and modal view
+interface ImageWithLoadingProps {
+  url: string;
+  idx: number;
+  onDelete?: (url: string) => void;
+}
+
+function ImageWithLoading({ url, idx, onDelete }: ImageWithLoadingProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const handleImageClick = () => {
-    window.open(url, '_blank', 'noopener,noreferrer');
+    setIsModalOpen(true);
+  };
+
+  const handleDownload = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setIsDownloading(true);
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const downloadUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = downloadUrl;
+      a.download = `generated-image-${Date.now()}.png`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+      console.error('Error downloading image:', error);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  const handleDelete = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onDelete?.(url);
   };
 
   return (
-    <div 
-      className="relative group/image rounded-lg overflow-hidden border border-border bg-surface cursor-pointer"
-      onClick={handleImageClick}
-    >
-      {/* Loading state */}
-      {isLoading && !hasError && (
-        <div className="absolute inset-0 flex items-center justify-center bg-surface z-10">
-          <Loader2 className="h-8 w-8 text-accent animate-spin" />
-        </div>
-      )}
-      
-      {/* Error state */}
-      {hasError && (
-        <div className="absolute inset-0 flex items-center justify-center bg-surface z-10">
-          <p className="text-sm text-muted-foreground">Failed to load image</p>
-        </div>
-      )}
-      
-      <img 
-        src={url} 
-        alt={`Generated image ${idx + 1}`} 
-        className={cn(
-          "w-full h-auto object-cover transition-opacity duration-500",
-          isLoading ? "opacity-0" : "opacity-100"
+    <>
+      <div 
+        className="relative group/image rounded-lg overflow-hidden border border-border bg-surface cursor-pointer"
+        onClick={handleImageClick}
+      >
+        {/* Loading state */}
+        {isLoading && !hasError && (
+          <div className="absolute inset-0 flex items-center justify-center bg-surface z-10">
+            <Loader2 className="h-8 w-8 text-accent animate-spin" />
+          </div>
         )}
-        onLoad={() => setIsLoading(false)}
-        onError={() => {
-          setIsLoading(false);
-          setHasError(true);
-        }}
+        
+        {/* Error state */}
+        {hasError && (
+          <div className="absolute inset-0 flex items-center justify-center bg-surface z-10">
+            <p className="text-sm text-muted-foreground">Failed to load image</p>
+          </div>
+        )}
+        
+        <img 
+          src={url} 
+          alt={`Generated image ${idx + 1}`} 
+          className={cn(
+            "w-full h-auto object-cover transition-opacity duration-500",
+            isLoading ? "opacity-0" : "opacity-100"
+          )}
+          onLoad={() => setIsLoading(false)}
+          onError={() => {
+            setIsLoading(false);
+            setHasError(true);
+          }}
+        />
+        
+        {/* Hover overlay with actions */}
+        {!isLoading && !hasError && (
+          <div className="absolute inset-0 bg-background/80 opacity-0 group-hover/image:opacity-100 transition-opacity flex items-center justify-center gap-3">
+            <button
+              onClick={handleDownload}
+              disabled={isDownloading}
+              className="p-2 rounded-full bg-surface border border-border hover:bg-primary hover:border-primary transition-colors"
+            >
+              {isDownloading ? (
+                <Loader2 className="h-5 w-5 text-foreground animate-spin" />
+              ) : (
+                <Download className="h-5 w-5 text-foreground" />
+              )}
+            </button>
+            {onDelete && (
+              <button
+                onClick={handleDelete}
+                className="p-2 rounded-full bg-surface border border-border hover:bg-destructive hover:border-destructive transition-colors"
+              >
+                <Trash2 className="h-5 w-5 text-foreground" />
+              </button>
+            )}
+            <span className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium">
+              View Full Size
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Image Modal */}
+      <ImageModal
+        isOpen={isModalOpen}
+        imageUrl={url}
+        onClose={() => setIsModalOpen(false)}
+        onDelete={onDelete ? () => onDelete(url) : undefined}
       />
-      
-      {/* Hover overlay */}
-      {!isLoading && !hasError && (
-        <div className="absolute inset-0 bg-background/80 opacity-0 group-hover/image:opacity-100 transition-opacity flex items-center justify-center gap-2">
-          <span className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium">
-            Open Full Size
-          </span>
-        </div>
-      )}
-    </div>
+    </>
   );
 }
 
