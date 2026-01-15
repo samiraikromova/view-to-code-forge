@@ -82,7 +82,7 @@ export function ModuleGrid({ modules, onModuleSelect, isLoading, contentType }: 
 
     // Build checkout URL directly from module's fanbasesProductId if available
     const checkoutUrl = module.fanbasesProductId 
-      ? `https://www.fanbasis.com/checkout/${module.fanbasesProductId}`
+      ? `https://www.fanbasis.com/agency-checkout/leveragedcreator/${module.fanbasesProductId}`
       : accessInfo.fanbasesCheckoutUrl;
 
     return {
