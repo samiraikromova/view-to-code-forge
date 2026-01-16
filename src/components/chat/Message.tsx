@@ -539,7 +539,7 @@ export function Message({ message, onDeleteImage }: MessageProps) {
           )}
           
           <div className="rounded-2xl bg-surface px-4 py-3">
-            <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground">
+            <p className="whitespace-pre-wrap text-sm leading-relaxed text-foreground font-sans">
               {message.content}
             </p>
           </div>
@@ -634,7 +634,7 @@ export function Message({ message, onDeleteImage }: MessageProps) {
 
   return (
     <div className="group flex flex-col">
-      <div className="markdown-content w-full">
+      <div className="markdown-content w-full font-serif">
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
           components={{
