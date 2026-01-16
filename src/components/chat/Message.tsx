@@ -42,7 +42,6 @@ function ImageThumbnail({ url, name }: { url: string; name: string }) {
 
 // File preview button - opens file in a new window/modal
 function FilePreviewButton({ file, onClick }: { file: FileAttachment; onClick: () => void }) {
-  const [isOpeningPdf, setIsOpeningPdf] = useState(false);
   const fileName = file.name.toLowerCase();
   const isJson = fileName.endsWith('.json') || file.type === 'application/json';
   const isPdf = fileName.endsWith('.pdf') || file.type === 'application/pdf';
@@ -57,24 +56,10 @@ function FilePreviewButton({ file, onClick }: { file: FileAttachment; onClick: (
     return <FileIcon className="h-5 w-5 text-muted-foreground" />;
   };
 
-  const handleClick = async () => {
-    // PDFs: download as blob and open in new tab to avoid Chrome blocking
+  const handleClick = () => {
+    // PDFs: open directly using the public Supabase URL
     if (isPdf) {
-      setIsOpeningPdf(true);
-      try {
-        const response = await fetch(file.url);
-        const blob = await response.blob();
-        const blobUrl = URL.createObjectURL(blob);
-        window.open(blobUrl, '_blank');
-        // Clean up blob URL after a delay
-        setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
-      } catch (error) {
-        console.error('Error opening PDF:', error);
-        // Fallback to direct URL
-        window.open(file.url, '_blank');
-      } finally {
-        setIsOpeningPdf(false);
-      }
+      window.open(file.url, '_blank', 'noopener,noreferrer');
     } else {
       onClick();
     }
@@ -83,7 +68,6 @@ function FilePreviewButton({ file, onClick }: { file: FileAttachment; onClick: (
   return (
     <button
       onClick={handleClick}
-      disabled={isOpeningPdf}
       className="flex items-center gap-3 p-3 rounded-lg border border-border bg-surface hover:bg-surface-hover transition-colors w-full text-left"
     >
       {getFileIcon()}
@@ -93,9 +77,7 @@ function FilePreviewButton({ file, onClick }: { file: FileAttachment; onClick: (
           <p className="text-xs text-muted-foreground">{(file.size / 1024).toFixed(1)} KB</p>
         )}
       </div>
-      {isOpeningPdf ? (
-        <Loader2 className="h-4 w-4 text-muted-foreground animate-spin" />
-      ) : isPdf ? (
+      {isPdf ? (
         <ExternalLink className="h-4 w-4 text-muted-foreground" />
       ) : (
         <Download className="h-4 w-4 text-muted-foreground" />
