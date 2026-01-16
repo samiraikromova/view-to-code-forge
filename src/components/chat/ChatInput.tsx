@@ -390,7 +390,7 @@ export function ChatInput({
                 placeholder="How can I help you today?" 
                 rows={1} 
                 disabled={disabled} 
-                className="min-h-[3rem] max-h-96 resize-none border-0 bg-transparent px-0 py-0 text-sm font-sans focus-visible:ring-0 focus-visible:outline-none outline-none ring-0 placeholder:text-sm placeholder:text-muted-foreground overflow-y-auto" 
+                className="min-h-[3rem] max-h-96 resize-none border-0 bg-transparent px-0 py-0 text-base font-sans focus-visible:ring-0 focus-visible:outline-none outline-none ring-0 placeholder:text-base placeholder:text-muted-foreground overflow-y-auto" 
               />
             </div>
 
