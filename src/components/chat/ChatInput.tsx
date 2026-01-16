@@ -73,6 +73,9 @@ interface ChatInputProps {
   userTier?: SubscriptionTier;
   onUpgradeClick?: () => void;
   projects?: Project[];
+  // Persistent files that stay pinned in the chat input
+  pinnedFiles?: File[];
+  onPinnedFilesChange?: (files: File[]) => void;
 }
 export function ChatInput({
   onSendMessage,
@@ -88,10 +91,17 @@ export function ChatInput({
   onExternalFilesProcessed,
   userTier = "starter",
   onUpgradeClick,
-  projects = []
+  projects = [],
+  pinnedFiles = [],
+  onPinnedFilesChange
 }: ChatInputProps) {
   const [message, setMessage] = useState("");
-  const [files, setFiles] = useState<File[]>([]);
+  // Use pinned files from parent if available, otherwise local state
+  const files = pinnedFiles;
+  const setFiles = (newFiles: File[] | ((prev: File[]) => File[])) => {
+    const updatedFiles = typeof newFiles === 'function' ? newFiles(files) : newFiles;
+    onPinnedFilesChange?.(updatedFiles);
+  };
   const [isDragging, setIsDragging] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [lineCount, setLineCount] = useState(1);
@@ -154,11 +164,12 @@ export function ChatInput({
       containerRef.current.style.animation = `${randomAnimation} ${randomDuration}s ease-in-out infinite`;
     }
   }, []);
-  // Handle external files from global drag and drop
+  // Handle external files from global drag and drop - add to pinned files
   useEffect(() => {
     if (externalFiles.length > 0 && onExternalFilesProcessed) {
-      setFiles(externalFiles);
-      // Don't clear external files here - just sync them
+      // Add external files to pinned files (don't replace)
+      const newFiles = [...files, ...externalFiles].slice(0, MAX_FILES);
+      setFiles(newFiles);
     }
   }, [externalFiles]);
 
@@ -174,9 +185,10 @@ export function ChatInput({
           aspectRatio: imageAspectRatio
         } : undefined;
         
+        // Send with current files - they stay pinned for the chat session
         await onSendMessage(message, files.length > 0 ? files : undefined, imageSettings);
         setMessage("");
-        // Don't clear files - they persist as context
+        // Files are NOT cleared - they stay pinned for the entire chat session
         setIsFullScreen(false);
         if (textareaRef.current) {
           textareaRef.current.style.height = "auto";
