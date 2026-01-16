@@ -370,7 +370,7 @@
 
   /* Markdown content styling */
   .markdown-content {
-    @apply text-sm leading-relaxed;
+    @apply text-base leading-relaxed;
   }
 
   .markdown-content h1,
