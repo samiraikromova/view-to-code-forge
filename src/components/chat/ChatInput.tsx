@@ -112,6 +112,30 @@ export function ChatInput({
   const containerRef = useRef<HTMLDivElement>(null);
 
   const MAX_FILES = 10;
+
+  // Handle paste events for images/files
+  const handlePaste = (e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    const pastedFiles: File[] = [];
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      if (item.kind === 'file') {
+        const file = item.getAsFile();
+        if (file) {
+          pastedFiles.push(file);
+        }
+      }
+    }
+
+    if (pastedFiles.length > 0) {
+      e.preventDefault(); // Prevent default paste behavior for files
+      const newFiles = [...files, ...pastedFiles].slice(0, MAX_FILES);
+      setFiles(newFiles);
+      onExternalFilesProcessed?.(newFiles);
+    }
+  };
   
   // Check if current project is Image Ad Generator
   const isImageGenerator = selectedProject?.name?.toLowerCase().includes('image') && 
@@ -334,11 +358,12 @@ export function ChatInput({
 
             {/* Text input area */}
             <div className="relative">
-              <Textarea
+            <Textarea
                 ref={textareaRef} 
                 value={message} 
                 onChange={e => setMessage(e.target.value)} 
                 onKeyDown={handleKeyDown} 
+                onPaste={handlePaste}
                 onFocus={() => setIsFocused(true)}
                 onBlur={() => setIsFocused(false)}
                 placeholder="How can I help you today?" 
