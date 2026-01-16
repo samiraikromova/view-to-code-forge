@@ -61,6 +61,7 @@ export interface ImageGenerationSettings {
 interface ChatInputProps {
   onSendMessage: (content: string, files?: File[], imageSettings?: ImageGenerationSettings) => void;
   disabled?: boolean;
+  isStreaming?: boolean; // Separate flag for when AI is generating
   selectedProject: Project | null;
   onSelectProject: (project: Project | null) => void;
   selectedModel: string;
@@ -73,13 +74,11 @@ interface ChatInputProps {
   userTier?: SubscriptionTier;
   onUpgradeClick?: () => void;
   projects?: Project[];
-  // Persistent files that stay pinned in the chat input
-  pinnedFiles?: File[];
-  onPinnedFilesChange?: (files: File[]) => void;
 }
 export function ChatInput({
   onSendMessage,
   disabled,
+  isStreaming = false,
   selectedProject,
   onSelectProject,
   selectedModel,
@@ -91,17 +90,11 @@ export function ChatInput({
   onExternalFilesProcessed,
   userTier = "starter",
   onUpgradeClick,
-  projects = [],
-  pinnedFiles = [],
-  onPinnedFilesChange
+  projects = []
 }: ChatInputProps) {
   const [message, setMessage] = useState("");
-  // Use pinned files from parent if available, otherwise local state
-  const files = pinnedFiles;
-  const setFiles = (newFiles: File[] | ((prev: File[]) => File[])) => {
-    const updatedFiles = typeof newFiles === 'function' ? newFiles(files) : newFiles;
-    onPinnedFilesChange?.(updatedFiles);
-  };
+  // Local files state - files are NOT pinned, they get cleared after sending
+  const [files, setFiles] = useState<File[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const [isFullScreen, setIsFullScreen] = useState(false);
   const [lineCount, setLineCount] = useState(1);
@@ -164,7 +157,7 @@ export function ChatInput({
       containerRef.current.style.animation = `${randomAnimation} ${randomDuration}s ease-in-out infinite`;
     }
   }, []);
-  // Handle external files from global drag and drop - add to pinned files
+  // Handle external files from global drag and drop
   // Track processed external files to prevent infinite loops
   const processedExternalFilesRef = useRef<File[]>([]);
   
@@ -180,16 +173,17 @@ export function ChatInput({
       if (newExternalFiles.length > 0) {
         // Mark these files as processed
         processedExternalFilesRef.current = [...processedExternalFilesRef.current, ...newExternalFiles];
-        // Add external files to pinned files (don't replace)
+        // Add external files to local files (don't replace)
         const updatedFiles = [...files, ...newExternalFiles].slice(0, MAX_FILES);
-        onPinnedFilesChange?.(updatedFiles);
+        setFiles(updatedFiles);
       }
     }
   }, [externalFiles]);
 
   const handleSend = async () => {
     const hasContent = message.trim() || files.length > 0;
-    if (hasContent && !disabled && !isUploading) {
+    // Can't send while streaming or uploading
+    if (hasContent && !disabled && !isUploading && !isStreaming) {
       setIsUploading(true);
       try {
         // Pass image generation settings if it's the image generator project
@@ -199,10 +193,11 @@ export function ChatInput({
           aspectRatio: imageAspectRatio
         } : undefined;
         
-        // Send with current files - they stay pinned for the chat session
+        // Send with current files
         await onSendMessage(message, files.length > 0 ? files : undefined, imageSettings);
         setMessage("");
-        // Files are NOT cleared - they stay pinned for the entire chat session
+        // Clear files after sending - don't pin them
+        setFiles([]);
         setIsFullScreen(false);
         if (textareaRef.current) {
           textareaRef.current.style.height = "auto";
@@ -253,7 +248,7 @@ export function ChatInput({
     }
   };
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey && !isStreaming) {
       e.preventDefault();
       handleSend();
     }
@@ -394,7 +389,7 @@ export function ChatInput({
                 onBlur={() => setIsFocused(false)}
                 placeholder="How can I help you today?" 
                 rows={1} 
-                disabled={disabled || isUploading} 
+                disabled={disabled} 
                 className="min-h-[3rem] max-h-96 resize-none border-0 bg-transparent px-0 py-0 text-sm focus-visible:ring-0 focus-visible:outline-none outline-none ring-0 placeholder:text-sm placeholder:text-muted-foreground overflow-y-auto" 
               />
             </div>
@@ -451,14 +446,14 @@ export function ChatInput({
                   size="icon" 
                   className={cn(
                     "h-8 w-8 shrink-0 rounded-lg transition-all flex items-center justify-center", 
-                    hasContent 
+                    hasContent && !isStreaming
                       ? "bg-accent text-accent-foreground hover:bg-accent-hover shadow-lg shadow-accent/20" 
                       : "bg-primary text-primary-foreground hover:bg-primary/90"
                   )} 
                   onClick={handleSend} 
-                  disabled={!hasContent || disabled || isUploading}
+                  disabled={!hasContent || disabled || isUploading || isStreaming}
                 >
-                  {isUploading ? (
+                  {isUploading || isStreaming ? (
                     <Loader2 className="h-4 w-4 animate-spin" />
                   ) : (
                     <ArrowUp className="h-4 w-4" />
