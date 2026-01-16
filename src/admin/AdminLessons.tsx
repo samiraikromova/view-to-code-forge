@@ -34,10 +34,11 @@ interface Module {
   id: string
   name: string
   category: 'course' | 'call_recording'
-  access_type: 'free' | 'tier_required' | 'purchase_required'
+  access_type: 'free' | 'tier_required' | 'purchase_required' | 'book_a_call'
   required_tier?: string
   fanbases_product_id?: string
   price_cents?: number
+  booking_url?: string
   order_index: number
 }
 
@@ -73,10 +74,11 @@ export default function AdminLessons() {
   const [showEditModuleModal, setShowEditModuleModal] = useState(false)
   const [moduleType, setModuleType] = useState<'course' | 'call_recording'>('course')
   const [newModuleName, setNewModuleName] = useState('')
-  const [newModuleAccessType, setNewModuleAccessType] = useState<'free' | 'tier_required' | 'purchase_required'>('free')
+  const [newModuleAccessType, setNewModuleAccessType] = useState<'free' | 'tier_required' | 'purchase_required' | 'book_a_call'>('free')
   const [newModuleRequiredTier, setNewModuleRequiredTier] = useState('')
   const [newModuleFanbasesId, setNewModuleFanbasesId] = useState('')
   const [newModulePrice, setNewModulePrice] = useState('')
+  const [newModuleBookingUrl, setNewModuleBookingUrl] = useState('')
   const [editingModule, setEditingModule] = useState<Module | null>(null)
   const [uploadingFiles, setUploadingFiles] = useState(false)
   const [pendingFiles, setPendingFiles] = useState<File[]>([])
@@ -229,6 +231,7 @@ export default function AdminLessons() {
     setNewModuleRequiredTier('')
     setNewModuleFanbasesId('')
     setNewModulePrice('')
+    setNewModuleBookingUrl('')
     setEditingModule(null)
   }
 
@@ -257,6 +260,7 @@ export default function AdminLessons() {
     setNewModuleRequiredTier(module.required_tier || '')
     setNewModuleFanbasesId(module.fanbases_product_id || '')
     setNewModulePrice(module.price_cents ? String(module.price_cents / 100) : '')
+    setNewModuleBookingUrl(module.booking_url || '')
     setModuleType(module.category)
     setShowEditModuleModal(true)
   }
@@ -273,7 +277,8 @@ export default function AdminLessons() {
       access_type: newModuleAccessType,
       required_tier: newModuleAccessType === 'tier_required' ? newModuleRequiredTier : null,
       fanbases_product_id: newModuleAccessType === 'purchase_required' ? newModuleFanbasesId : null,
-      price_cents: newModuleAccessType === 'purchase_required' && newModulePrice ? Math.round(parseFloat(newModulePrice) * 100) : null
+      price_cents: newModuleAccessType === 'purchase_required' && newModulePrice ? Math.round(parseFloat(newModulePrice) * 100) : null,
+      booking_url: newModuleAccessType === 'book_a_call' ? newModuleBookingUrl.trim() : null
     }
 
     // Update module
@@ -365,6 +370,7 @@ export default function AdminLessons() {
       required_tier: newModuleAccessType === 'tier_required' ? newModuleRequiredTier : null,
       fanbases_product_id: newModuleAccessType === 'purchase_required' ? newModuleFanbasesId : null,
       price_cents: newModuleAccessType === 'purchase_required' && newModulePrice ? Math.round(parseFloat(newModulePrice) * 100) : null,
+      booking_url: newModuleAccessType === 'book_a_call' ? newModuleBookingUrl.trim() : null,
       order_index: modules.filter(m => m.category === moduleType).length
     }
 
@@ -469,6 +475,8 @@ export default function AdminLessons() {
         return <Badge variant="outline" className="text-xs">🎖️ {module.required_tier}</Badge>
       case 'purchase_required':
         return <Badge className="text-xs bg-accent">💳 Purchase</Badge>
+      case 'book_a_call':
+        return <Badge variant="outline" className="text-xs border-primary text-primary">📞 Book a Call</Badge>
       default:
         return <Badge variant="secondary" className="text-xs">🆓 Free</Badge>
     }
@@ -985,6 +993,7 @@ export default function AdminLessons() {
                     <SelectItem value="free">🆓 Free</SelectItem>
                     <SelectItem value="tier_required">🎖️ Tier Required</SelectItem>
                     <SelectItem value="purchase_required">💳 Purchase Required</SelectItem>
+                    <SelectItem value="book_a_call">📞 Book a Call</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1025,6 +1034,21 @@ export default function AdminLessons() {
                     />
                   </div>
                 </>
+              )}
+
+              {newModuleAccessType === 'book_a_call' && (
+                <div>
+                  <Label>Booking URL or Email</Label>
+                  <Input
+                    className="mt-1"
+                    value={newModuleBookingUrl}
+                    onChange={(e) => setNewModuleBookingUrl(e.target.value)}
+                    placeholder="e.g., https://calendly.com/your-link or email@example.com"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Enter a Calendly/Google Meet link or email address
+                  </p>
+                </div>
               )}
 
               <div className="flex gap-3">
@@ -1069,6 +1093,7 @@ export default function AdminLessons() {
                     <SelectItem value="free">🆓 Free</SelectItem>
                     <SelectItem value="tier_required">🎖️ Tier Required</SelectItem>
                     <SelectItem value="purchase_required">💳 Purchase Required</SelectItem>
+                    <SelectItem value="book_a_call">📞 Book a Call</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1109,6 +1134,21 @@ export default function AdminLessons() {
                     />
                   </div>
                 </>
+              )}
+
+              {newModuleAccessType === 'book_a_call' && (
+                <div>
+                  <Label>Booking URL or Email</Label>
+                  <Input
+                    className="mt-1"
+                    value={newModuleBookingUrl}
+                    onChange={(e) => setNewModuleBookingUrl(e.target.value)}
+                    placeholder="e.g., https://calendly.com/your-link or email@example.com"
+                  />
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Enter a Calendly/Google Meet link or email address
+                  </p>
+                </div>
               )}
 
               <div className="flex gap-3">

@@ -180,10 +180,11 @@ const Main = () => {
     id: string;
     name: string;
     category: 'course' | 'call_recording';
-    access_type: 'free' | 'tier_required' | 'purchase_required';
+    access_type: 'free' | 'tier_required' | 'purchase_required' | 'book_a_call';
     required_tier: string | null;
     fanbases_product_id: string | null;
     price_cents: number | null;
+    booking_url: string | null;
     order_index: number;
   }
 
@@ -240,6 +241,7 @@ const Main = () => {
         productId: data.moduleInfo?.fanbases_product_id || undefined,
         priceCents: data.moduleInfo?.price_cents || undefined,
         fanbasesProductId: data.moduleInfo?.fanbases_product_id || undefined,
+        bookingUrl: data.moduleInfo?.booking_url || undefined,
       });
     });
     

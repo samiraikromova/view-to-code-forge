@@ -65,7 +65,7 @@ const mockProjects: Project[] = [
 ];
 
 export function ChatHeader() {
-  const [selectedProject, setSelectedProject] = useState<Project | null>(mockProjects[0]);
+  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [selectedModel, setSelectedModel] = useState("claude-opus-4");
   const [extendedThinking, setExtendedThinking] = useState(false);
 
