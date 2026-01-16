@@ -143,7 +143,7 @@ export function ChatInput({
       e.preventDefault(); // Prevent default paste behavior for files
       const newFiles = [...files, ...pastedFiles].slice(0, MAX_FILES);
       setFiles(newFiles);
-      onExternalFilesProcessed?.(newFiles);
+      // Don't call onExternalFilesProcessed - setFiles already updates via onPinnedFilesChange
     }
   };
   
@@ -249,7 +249,7 @@ export function ChatInput({
     if (droppedFiles.length > 0) {
       const newFiles = [...files, ...droppedFiles].slice(0, MAX_FILES);
       setFiles(newFiles);
-      onExternalFilesProcessed?.(newFiles);
+      // Don't call onExternalFilesProcessed - setFiles already updates via onPinnedFilesChange
     }
   };
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -262,13 +262,13 @@ export function ChatInput({
     if (e.target.files) {
       const newFiles = [...files, ...Array.from(e.target.files)].slice(0, MAX_FILES);
       setFiles(newFiles);
-      onExternalFilesProcessed?.(newFiles);
+      // Don't call onExternalFilesProcessed - setFiles already updates via onPinnedFilesChange
     }
   };
   const handleRemoveFile = (index: number) => {
     const newFiles = files.filter((_, i) => i !== index);
     setFiles(newFiles);
-    onExternalFilesProcessed?.(newFiles);
+    // Don't call onExternalFilesProcessed - setFiles already updates via onPinnedFilesChange
   };
 
   const getFileExtension = (filename: string) => {
