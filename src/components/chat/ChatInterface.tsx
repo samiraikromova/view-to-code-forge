@@ -69,6 +69,8 @@ export function ChatInterface({
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [chatFiles, setChatFiles] = useState<Record<string, File[]>>({});
+  // Store already-uploaded file attachments (URLs) to send with subsequent messages
+  const [uploadedAttachments, setUploadedAttachments] = useState<FileAttachment[]>([]);
   const [userTier, setUserTier] = useState<SubscriptionTier>("starter");
   const [showUpgradeDialog, setShowUpgradeDialog] = useState(false);
   const [showTrialModal, setShowTrialModal] = useState(false);
@@ -157,6 +159,8 @@ export function ChatInterface({
     } else {
       setMessages([]);
       setCurrentThreadId(null);
+      // Clear uploaded attachments when starting a new chat
+      setUploadedAttachments([]);
     }
     if (chatId && externalFiles.length > 0) {
       setExternalFiles([]);
@@ -502,11 +506,16 @@ export function ChatInterface({
       }
     }
 
-    // Upload files first (with thread_id, message_id will be updated after message is saved)
-    let fileObjs: FileAttachment[] = [];
+    // Upload new files first (with thread_id, message_id will be updated after message is saved)
+    let newFileObjs: FileAttachment[] = [];
     if (files && files.length > 0) {
-      fileObjs = await uploadFiles(files, activeThreadId);
+      newFileObjs = await uploadFiles(files, activeThreadId);
+      // Store newly uploaded attachments for future messages
+      setUploadedAttachments(prev => [...prev, ...newFileObjs]);
     }
+    
+    // Combine newly uploaded files with previously uploaded attachments for n8n
+    const allFileObjs = [...uploadedAttachments, ...newFileObjs];
 
     const newMessage: Message = {
       id: `temp-${Date.now()}`,
@@ -516,7 +525,7 @@ export function ChatInterface({
         hour: "numeric",
         minute: "2-digit"
       }),
-      files: fileObjs.length > 0 ? fileObjs : undefined
+      files: newFileObjs.length > 0 ? newFileObjs : undefined
     };
 
     // Add user message optimistically
@@ -572,9 +581,9 @@ export function ChatInterface({
         m.id === newMessage.id ? { ...m, id: savedUserMsg.id } : m
       ));
 
-      // Update file_uploads with the message_id now that we have it
-      if (fileObjs.length > 0 && savedUserMsg?.id) {
-        for (const fileObj of fileObjs) {
+      // Update file_uploads with the message_id now that we have it (only for newly uploaded files)
+      if (newFileObjs.length > 0 && savedUserMsg?.id) {
+        for (const fileObj of newFileObjs) {
           // Extract file_path from URL
           const urlParts = fileObj.url.split('/chat-files/');
           const filePath = urlParts.length > 1 ? decodeURIComponent(urlParts[1]) : null;
@@ -660,7 +669,7 @@ export function ChatInterface({
           projectSlug: effectiveProjectSlug,
           model: selectedModel,
           threadId: activeThreadId,
-          fileUrls: fileObjs,
+          fileUrls: allFileObjs,
           systemPrompt: systemPrompt || effectiveProject?.systemPrompt || '',
           conversationHistory,
           userContext: {

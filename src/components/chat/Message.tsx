@@ -6,6 +6,39 @@ import { useState } from "react";
 import { Check, Copy, Loader2, Download, Trash2, FileIcon, X } from "lucide-react";
 import { ImageModal } from "./ImageModal";
 
+// Thumbnail image with loading state for file attachments
+function ImageThumbnail({ url, name }: { url: string; name: string }) {
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
+
+  return (
+    <div className="aspect-square rounded bg-surface-hover flex items-center justify-center overflow-hidden relative">
+      {isLoading && !hasError && (
+        <div className="absolute inset-0 flex items-center justify-center bg-surface-hover z-10">
+          <Loader2 className="h-5 w-5 text-accent animate-spin" />
+        </div>
+      )}
+      {hasError ? (
+        <FileIcon className="h-6 w-6 text-muted-foreground" />
+      ) : (
+        <img
+          src={url}
+          alt={name}
+          className={cn(
+            "w-full h-full object-cover transition-opacity duration-300",
+            isLoading ? "opacity-0" : "opacity-100"
+          )}
+          onLoad={() => setIsLoading(false)}
+          onError={() => {
+            setIsLoading(false);
+            setHasError(true);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
 // Image component with loading state, hover actions, and modal view
 interface ImageWithLoadingProps {
   url: string;
@@ -300,13 +333,7 @@ export function Message({ message, onDeleteImage }: MessageProps) {
                   onClick={() => setPreviewFile(file)}
                 >
                   {isImageFile(file.type) ? (
-                    <div className="aspect-square rounded bg-surface-hover flex items-center justify-center overflow-hidden">
-                      <img
-                        src={file.url}
-                        alt={file.name}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
+                    <ImageThumbnail url={file.url} name={file.name} />
                   ) : (
                     <div className="aspect-square rounded bg-surface-hover flex items-center justify-center">
                       <FileIcon className="h-6 w-6 text-muted-foreground" />
