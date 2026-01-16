@@ -2,9 +2,10 @@ import { cn } from "@/lib/utils";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
-import { useState } from "react";
-import { Check, Copy, Loader2, Download, Trash2, FileIcon, X } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Check, Copy, Loader2, Download, Trash2, FileIcon, X, ChevronDown, ChevronUp, FileJson, FileText, FileCode } from "lucide-react";
 import { ImageModal } from "./ImageModal";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 // Thumbnail image with loading state for file attachments
 function ImageThumbnail({ url, name }: { url: string; name: string }) {
@@ -34,6 +35,140 @@ function ImageThumbnail({ url, name }: { url: string; name: string }) {
             setHasError(true);
           }}
         />
+      )}
+    </div>
+  );
+}
+
+// File content viewer for JSON, text, code files (Claude-like expandable preview)
+function FileContentViewer({ file }: { file: FileAttachment }) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [content, setContent] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const fileName = file.name.toLowerCase();
+  const isJson = fileName.endsWith('.json') || file.type === 'application/json';
+  const isPdf = fileName.endsWith('.pdf') || file.type === 'application/pdf';
+  const isText = fileName.endsWith('.txt') || file.type?.startsWith('text/');
+  const isCode = /\.(js|jsx|ts|tsx|py|rb|go|rs|java|c|cpp|h|hpp|cs|php|swift|kt|scala|sh|bash|yaml|yml|toml|ini|cfg|conf|xml|html|htm|css|scss|sass|less|sql|md|mdx)$/i.test(fileName);
+  
+  const canPreview = isJson || isPdf || isText || isCode;
+  
+  const getFileIcon = () => {
+    if (isJson) return <FileJson className="h-5 w-5 text-accent" />;
+    if (isCode) return <FileCode className="h-5 w-5 text-primary" />;
+    if (isText) return <FileText className="h-5 w-5 text-muted-foreground" />;
+    return <FileIcon className="h-5 w-5 text-muted-foreground" />;
+  };
+
+  useEffect(() => {
+    if (isExpanded && !content && !isPdf && canPreview) {
+      setIsLoading(true);
+      fetch(file.url)
+        .then(res => res.text())
+        .then(text => {
+          if (isJson) {
+            try {
+              // Pretty print JSON
+              const parsed = JSON.parse(text);
+              setContent(JSON.stringify(parsed, null, 2));
+            } catch {
+              setContent(text);
+            }
+          } else {
+            setContent(text);
+          }
+          setIsLoading(false);
+        })
+        .catch(err => {
+          setError('Failed to load file content');
+          setIsLoading(false);
+        });
+    }
+  }, [isExpanded, file.url, content, isPdf, isJson, canPreview]);
+
+  if (!canPreview) {
+    // Non-previewable file - just show download link
+    return (
+      <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-surface hover:bg-surface-hover transition-colors">
+        <FileIcon className="h-5 w-5 text-muted-foreground" />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-medium text-foreground truncate">{file.name}</p>
+          {file.size && (
+            <p className="text-xs text-muted-foreground">{(file.size / 1024).toFixed(1)} KB</p>
+          )}
+        </div>
+        <a
+          href={file.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="p-2 rounded-lg hover:bg-background transition-colors"
+        >
+          <Download className="h-4 w-4 text-muted-foreground" />
+        </a>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-lg border border-border bg-surface overflow-hidden">
+      {/* Header - always visible */}
+      <button
+        onClick={() => setIsExpanded(!isExpanded)}
+        className="w-full flex items-center gap-3 p-3 hover:bg-surface-hover transition-colors"
+      >
+        {getFileIcon()}
+        <div className="flex-1 min-w-0 text-left">
+          <p className="text-sm font-medium text-foreground truncate">{file.name}</p>
+          {file.size && (
+            <p className="text-xs text-muted-foreground">{(file.size / 1024).toFixed(1)} KB</p>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <a
+            href={file.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="p-1.5 rounded hover:bg-background transition-colors"
+          >
+            <Download className="h-4 w-4 text-muted-foreground" />
+          </a>
+          {isExpanded ? (
+            <ChevronUp className="h-4 w-4 text-muted-foreground" />
+          ) : (
+            <ChevronDown className="h-4 w-4 text-muted-foreground" />
+          )}
+        </div>
+      </button>
+
+      {/* Expanded content */}
+      {isExpanded && (
+        <div className="border-t border-border">
+          {isLoading ? (
+            <div className="flex items-center justify-center p-8">
+              <Loader2 className="h-6 w-6 text-accent animate-spin" />
+            </div>
+          ) : error ? (
+            <div className="p-4 text-sm text-muted-foreground text-center">{error}</div>
+          ) : isPdf ? (
+            <iframe
+              src={file.url}
+              className="w-full h-[400px]"
+              title={file.name}
+            />
+          ) : (
+            <ScrollArea className="max-h-[400px]">
+              <pre className={cn(
+                "p-4 text-xs font-mono whitespace-pre-wrap break-words overflow-x-auto",
+                isJson && "text-accent"
+              )}>
+                <code>{content}</code>
+              </pre>
+            </ScrollArea>
+          )}
+        </div>
       )}
     </div>
   );
@@ -315,34 +450,43 @@ export function Message({ message, onDeleteImage }: MessageProps) {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const isImageFile = (type?: string) => type?.startsWith('image/');
-
+  const isImageFile = (type?: string, name?: string) => {
+    if (type?.startsWith('image/')) return true;
+    if (name) {
+      return /\.(png|jpg|jpeg|gif|webp|svg|bmp)$/i.test(name);
+    }
+    return false;
+  };
+  
   if (isUser) {
-    const hasFiles = message.files && message.files.length > 0;
-    
+    const imageFiles = message.files?.filter(f => isImageFile(f.type, f.name)) || [];
+    const otherFiles = message.files?.filter(f => !isImageFile(f.type, f.name)) || [];
     return (
       <div className="flex justify-end">
         <div className="group flex max-w-[80%] flex-col items-end">
-          {/* File attachments */}
-          {hasFiles && (
+          {/* Image file attachments - thumbnails */}
+          {imageFiles.length > 0 && (
             <div className="flex flex-wrap gap-2 mb-2 justify-end">
-              {message.files!.map((file, idx) => (
+              {imageFiles.map((file, idx) => (
                 <div
                   key={idx}
                   className="relative flex-shrink-0 w-[100px] rounded-lg border border-border bg-surface hover:bg-surface-hover transition-all duration-200 p-1.5 cursor-pointer"
                   onClick={() => setPreviewFile(file)}
                 >
-                  {isImageFile(file.type) ? (
-                    <ImageThumbnail url={file.url} name={file.name} />
-                  ) : (
-                    <div className="aspect-square rounded bg-surface-hover flex items-center justify-center">
-                      <FileIcon className="h-6 w-6 text-muted-foreground" />
-                    </div>
-                  )}
+                  <ImageThumbnail url={file.url} name={file.name} />
                   <p className="text-[10px] font-medium text-foreground truncate mt-1 leading-tight" title={file.name}>
                     {file.name}
                   </p>
                 </div>
+              ))}
+            </div>
+          )}
+          
+          {/* Other files (JSON, PDF, text, code) - Claude-like expandable preview */}
+          {otherFiles.length > 0 && (
+            <div className="w-full space-y-2 mb-2">
+              {otherFiles.map((file, idx) => (
+                <FileContentViewer key={idx} file={file} />
               ))}
             </div>
           )}
@@ -385,7 +529,7 @@ export function Message({ message, onDeleteImage }: MessageProps) {
                 <X className="h-5 w-5 text-foreground" />
               </button>
               
-              {isImageFile(previewFile.type) ? (
+              {isImageFile(previewFile.type, previewFile.name) ? (
                 <img
                   src={previewFile.url}
                   alt={previewFile.name}

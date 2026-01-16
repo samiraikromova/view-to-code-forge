@@ -69,6 +69,8 @@ export function ChatInterface({
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
   const [chatFiles, setChatFiles] = useState<Record<string, File[]>>({});
+  // Pinned files that persist in the input for the entire chat session
+  const [pinnedFiles, setPinnedFiles] = useState<File[]>([]);
   // Store already-uploaded file attachments (URLs) to send with subsequent messages
   const [uploadedAttachments, setUploadedAttachments] = useState<FileAttachment[]>([]);
   const [userTier, setUserTier] = useState<SubscriptionTier>("starter");
@@ -159,8 +161,9 @@ export function ChatInterface({
     } else {
       setMessages([]);
       setCurrentThreadId(null);
-      // Clear uploaded attachments when starting a new chat
+      // Clear uploaded attachments and pinned files when starting a new chat
       setUploadedAttachments([]);
+      setPinnedFiles([]);
     }
     if (chatId && externalFiles.length > 0) {
       setExternalFiles([]);
@@ -822,6 +825,8 @@ export function ChatInterface({
               userTier={userTier}
               onUpgradeClick={() => setShowUpgradeDialog(true)}
               projects={projects}
+              pinnedFiles={pinnedFiles}
+              onPinnedFilesChange={setPinnedFiles}
             />
           </div>
 
@@ -868,6 +873,8 @@ export function ChatInterface({
                 userTier={userTier}
                 onUpgradeClick={() => setShowUpgradeDialog(true)}
                 projects={projects}
+                pinnedFiles={pinnedFiles}
+                onPinnedFilesChange={setPinnedFiles}
               />
             </div>
           </div>
@@ -912,6 +919,8 @@ export function ChatInterface({
               userTier={userTier}
               onUpgradeClick={() => setShowUpgradeDialog(true)}
               projects={projects}
+              pinnedFiles={pinnedFiles}
+              onPinnedFilesChange={setPinnedFiles}
             />
           </div>
         </div>}
