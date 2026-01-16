@@ -18,10 +18,11 @@ export interface Module {
   id: string;
   title: string;
   lessons: Lesson[];
-  accessType?: 'free' | 'tier_required' | 'purchase_required' | 'call_booking';
+  accessType?: 'free' | 'tier_required' | 'purchase_required' | 'book_a_call';
   productId?: string; // internal_reference in fanbases_products
   priceCents?: number; // Price in cents for purchase_required modules
   fanbasesProductId?: string; // Direct fanbases product ID for checkout
+  bookingUrl?: string; // For book_a_call modules
 }
 
 export interface LessonFileItem {
@@ -51,7 +52,7 @@ export interface Lesson {
   callDate?: string;
   speakerCount?: number;
   durationFormatted?: string;
-  accessType?: 'free' | 'tier_required' | 'purchase_required' | 'unlock_required';
+  accessType?: 'free' | 'tier_required' | 'purchase_required' | 'book_a_call';
   requiredTier?: string;
   productId?: string;
   files?: LessonFileItem[];

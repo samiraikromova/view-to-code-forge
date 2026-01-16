@@ -15,6 +15,8 @@ interface ModuleGridProps {
 export function ModuleGrid({ modules, onModuleSelect, isLoading, contentType }: ModuleGridProps) {
   const { checkModuleAccess, refreshAccess, hasDashboardAccess } = useAccess();
   const [showBookCallModal, setShowBookCallModal] = useState(false);
+  const [selectedBookingUrl, setSelectedBookingUrl] = useState<string | undefined>(undefined);
+  const [selectedModuleName, setSelectedModuleName] = useState<string>("");
 
   if (isLoading) {
     return (
@@ -47,10 +49,12 @@ export function ModuleGrid({ modules, onModuleSelect, isLoading, contentType }: 
     );
   }
 
-  const handleModuleClick = (module: ModuleCardData) => {
+  const handleModuleClick = (module: ModuleCardData & { bookingUrl?: string }) => {
     if (module.isLocked) {
       if (module.requiresCall) {
-        // Show book a call modal for call recordings
+        // Show book a call modal with the module's booking URL
+        setSelectedBookingUrl(module.bookingUrl);
+        setSelectedModuleName(module.title);
         setShowBookCallModal(true);
       } else if (module.fanbasesCheckoutUrl) {
         // Redirect to Fanbases checkout page
@@ -97,6 +101,7 @@ export function ModuleGrid({ modules, onModuleSelect, isLoading, contentType }: 
       requiresCall: accessInfo.requiresCall,
       fanbasesCheckoutUrl: checkoutUrl,
       priceCents: module.priceCents,
+      bookingUrl: module.bookingUrl,
     };
   });
 
@@ -130,8 +135,9 @@ export function ModuleGrid({ modules, onModuleSelect, isLoading, contentType }: 
       <BookCallModal
         isOpen={showBookCallModal}
         onClose={() => setShowBookCallModal(false)}
-        title="Unlock Call Recordings"
-        description="Call recordings are only available to coaching clients. Book a strategy call to get access to all recordings and coaching content."
+        title={`Unlock ${selectedModuleName}`}
+        description="This content is only available to coaching clients. Book a strategy call to get access."
+        bookingUrl={selectedBookingUrl}
       />
     </div>
   );

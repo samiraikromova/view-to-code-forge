@@ -14,6 +14,7 @@ export interface ModuleCardData {
   requiresCall?: boolean;
   priceCents?: number;
   fanbasesCheckoutUrl?: string;
+  bookingUrl?: string;
 }
 
 interface ModuleCardProps {

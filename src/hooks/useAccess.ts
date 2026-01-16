@@ -42,6 +42,7 @@ export interface FanbasesProduct {
 export interface ModuleAccessInfo {
   hasAccess: boolean;
   requiresCall: boolean;
+  bookingUrl?: string;
   price?: number;
   productId?: string;
   fanbasesProductId?: string;
@@ -186,8 +187,8 @@ export function useAccess() {
       return { hasAccess: true, requiresCall: false };
     }
 
-    // If access_type is 'call_booking', require a call
-    if (accessType === 'call_booking') {
+    // If access_type is 'book_a_call', require a call
+    if (accessType === 'book_a_call') {
       return {
         hasAccess: accessState.hasDashboardAccess,
         requiresCall: true,
