@@ -234,7 +234,7 @@ export function SingleFilePreviewModal({
         return (
           <ScrollArea className="h-[70vh] rounded-lg border border-border bg-surface">
             <pre className={cn(
-              "p-4 text-sm font-mono whitespace-pre-wrap break-words",
+              "p-4 text-sm font-mono whitespace-pre-wrap break-words text-foreground",
               fileType === 'json' && "text-accent"
             )}>
               <code>{fileContent || 'No content'}</code>

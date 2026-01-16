@@ -165,11 +165,25 @@ export function ChatInput({
     }
   }, []);
   // Handle external files from global drag and drop - add to pinned files
+  // Track processed external files to prevent infinite loops
+  const processedExternalFilesRef = useRef<File[]>([]);
+  
   useEffect(() => {
     if (externalFiles.length > 0 && onExternalFilesProcessed) {
-      // Add external files to pinned files (don't replace)
-      const newFiles = [...files, ...externalFiles].slice(0, MAX_FILES);
-      setFiles(newFiles);
+      // Check if these are new files we haven't processed yet
+      const newExternalFiles = externalFiles.filter(
+        extFile => !processedExternalFilesRef.current.some(
+          procFile => procFile.name === extFile.name && procFile.size === extFile.size && procFile.lastModified === extFile.lastModified
+        )
+      );
+      
+      if (newExternalFiles.length > 0) {
+        // Mark these files as processed
+        processedExternalFilesRef.current = [...processedExternalFilesRef.current, ...newExternalFiles];
+        // Add external files to pinned files (don't replace)
+        const updatedFiles = [...files, ...newExternalFiles].slice(0, MAX_FILES);
+        onPinnedFilesChange?.(updatedFiles);
+      }
     }
   }, [externalFiles]);
 

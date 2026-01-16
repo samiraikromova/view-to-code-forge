@@ -3,7 +3,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { useState, useEffect } from "react";
-import { Check, Copy, Loader2, Download, Trash2, FileIcon, X, ChevronDown, ChevronUp, FileJson, FileText, FileCode } from "lucide-react";
+import { Check, Copy, Loader2, Download, Trash2, FileIcon, X, FileJson, FileText, FileCode } from "lucide-react";
 import { ImageModal } from "./ImageModal";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -40,20 +40,12 @@ function ImageThumbnail({ url, name }: { url: string; name: string }) {
   );
 }
 
-// File content viewer for JSON, text, code files (Claude-like expandable preview)
-function FileContentViewer({ file }: { file: FileAttachment }) {
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [content, setContent] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
+// File preview button - opens file in a new window/modal
+function FilePreviewButton({ file, onClick }: { file: FileAttachment; onClick: () => void }) {
   const fileName = file.name.toLowerCase();
   const isJson = fileName.endsWith('.json') || file.type === 'application/json';
-  const isPdf = fileName.endsWith('.pdf') || file.type === 'application/pdf';
-  const isText = fileName.endsWith('.txt') || file.type?.startsWith('text/');
   const isCode = /\.(js|jsx|ts|tsx|py|rb|go|rs|java|c|cpp|h|hpp|cs|php|swift|kt|scala|sh|bash|yaml|yml|toml|ini|cfg|conf|xml|html|htm|css|scss|sass|less|sql|md|mdx)$/i.test(fileName);
-  
-  const canPreview = isJson || isPdf || isText || isCode;
+  const isText = fileName.endsWith('.txt') || file.type?.startsWith('text/');
   
   const getFileIcon = () => {
     if (isJson) return <FileJson className="h-5 w-5 text-accent" />;
@@ -62,114 +54,153 @@ function FileContentViewer({ file }: { file: FileAttachment }) {
     return <FileIcon className="h-5 w-5 text-muted-foreground" />;
   };
 
+  return (
+    <button
+      onClick={onClick}
+      className="flex items-center gap-3 p-3 rounded-lg border border-border bg-surface hover:bg-surface-hover transition-colors w-full text-left"
+    >
+      {getFileIcon()}
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-foreground truncate">{file.name}</p>
+        {file.size && (
+          <p className="text-xs text-muted-foreground">{(file.size / 1024).toFixed(1)} KB</p>
+        )}
+      </div>
+      <Download className="h-4 w-4 text-muted-foreground" />
+    </button>
+  );
+}
+
+// File preview modal for displaying file content in a new window
+function FilePreviewModal({ file, onClose }: { file: FileAttachment; onClose: () => void }) {
+  const [content, setContent] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fileName = file.name.toLowerCase();
+  const isJson = fileName.endsWith('.json') || file.type === 'application/json';
+  const isPdf = fileName.endsWith('.pdf') || file.type === 'application/pdf';
+  const isText = fileName.endsWith('.txt') || file.type?.startsWith('text/');
+  const isCode = /\.(js|jsx|ts|tsx|py|rb|go|rs|java|c|cpp|h|hpp|cs|php|swift|kt|scala|sh|bash|yaml|yml|toml|ini|cfg|conf|xml|html|htm|css|scss|sass|less|sql|md|mdx)$/i.test(fileName);
+
+  const getFileIcon = () => {
+    if (isJson) return <FileJson className="h-5 w-5 text-accent" />;
+    if (isCode) return <FileCode className="h-5 w-5 text-primary" />;
+    if (isText) return <FileText className="h-5 w-5 text-muted-foreground" />;
+    return <FileIcon className="h-5 w-5 text-muted-foreground" />;
+  };
+
   useEffect(() => {
-    if (isExpanded && !content && !isPdf && canPreview) {
-      setIsLoading(true);
-      fetch(file.url)
-        .then(res => res.text())
-        .then(text => {
-          if (isJson) {
-            try {
-              // Pretty print JSON
-              const parsed = JSON.parse(text);
-              setContent(JSON.stringify(parsed, null, 2));
-            } catch {
-              setContent(text);
-            }
-          } else {
+    if (isPdf) {
+      setIsLoading(false);
+      return;
+    }
+
+    fetch(file.url)
+      .then(res => res.text())
+      .then(text => {
+        if (isJson) {
+          try {
+            const parsed = JSON.parse(text);
+            setContent(JSON.stringify(parsed, null, 2));
+          } catch {
             setContent(text);
           }
-          setIsLoading(false);
-        })
-        .catch(err => {
-          setError('Failed to load file content');
-          setIsLoading(false);
-        });
-    }
-  }, [isExpanded, file.url, content, isPdf, isJson, canPreview]);
+        } else {
+          setContent(text);
+        }
+        setIsLoading(false);
+      })
+      .catch(() => {
+        setError('Failed to load file content');
+        setIsLoading(false);
+      });
+  }, [file.url, isJson, isPdf]);
 
-  if (!canPreview) {
-    // Non-previewable file - just show download link
-    return (
-      <div className="flex items-center gap-3 p-3 rounded-lg border border-border bg-surface hover:bg-surface-hover transition-colors">
-        <FileIcon className="h-5 w-5 text-muted-foreground" />
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-foreground truncate">{file.name}</p>
-          {file.size && (
-            <p className="text-xs text-muted-foreground">{(file.size / 1024).toFixed(1)} KB</p>
-          )}
-        </div>
-        <a
-          href={file.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="p-2 rounded-lg hover:bg-background transition-colors"
-        >
-          <Download className="h-4 w-4 text-muted-foreground" />
-        </a>
-      </div>
-    );
-  }
+  const handleDownload = async () => {
+    try {
+      const response = await fetch(file.url);
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = file.name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Error downloading file:', err);
+    }
+  };
 
   return (
-    <div className="rounded-lg border border-border bg-surface overflow-hidden">
-      {/* Header - always visible */}
-      <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center gap-3 p-3 hover:bg-surface-hover transition-colors"
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-md p-4"
+      onClick={onClose}
+    >
+      <div 
+        className="relative w-full max-w-4xl animate-scale-in"
+        onClick={(e) => e.stopPropagation()}
       >
-        {getFileIcon()}
-        <div className="flex-1 min-w-0 text-left">
-          <p className="text-sm font-medium text-foreground truncate">{file.name}</p>
-          {file.size && (
-            <p className="text-xs text-muted-foreground">{(file.size / 1024).toFixed(1)} KB</p>
-          )}
+        {/* Header bar */}
+        <div className="flex items-center justify-between mb-4 bg-surface rounded-lg border border-border p-3">
+          <div className="flex items-center gap-3">
+            {getFileIcon()}
+            <span className="font-medium text-foreground truncate max-w-[300px]">{file.name}</span>
+            {file.size && (
+              <span className="text-xs text-muted-foreground">
+                ({(file.size / 1024).toFixed(1)} KB)
+              </span>
+            )}
+          </div>
+          
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleDownload}
+              className="p-2 rounded-lg bg-surface-hover border border-border hover:bg-primary/20 hover:border-primary/50 transition-colors"
+              title="Download"
+            >
+              <Download className="h-4 w-4 text-foreground" />
+            </button>
+            <button
+              onClick={onClose}
+              className="p-2 rounded-lg bg-surface-hover border border-border hover:bg-surface transition-colors"
+              title="Close"
+            >
+              <X className="h-4 w-4 text-foreground" />
+            </button>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <a
-            href={file.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => e.stopPropagation()}
-            className="p-1.5 rounded hover:bg-background transition-colors"
-          >
-            <Download className="h-4 w-4 text-muted-foreground" />
-          </a>
-          {isExpanded ? (
-            <ChevronUp className="h-4 w-4 text-muted-foreground" />
-          ) : (
-            <ChevronDown className="h-4 w-4 text-muted-foreground" />
-          )}
-        </div>
-      </button>
 
-      {/* Expanded content */}
-      {isExpanded && (
-        <div className="border-t border-border">
+        {/* Content area */}
+        <div className="bg-background rounded-lg border border-border overflow-hidden">
           {isLoading ? (
-            <div className="flex items-center justify-center p-8">
-              <Loader2 className="h-6 w-6 text-accent animate-spin" />
+            <div className="flex items-center justify-center h-[70vh]">
+              <Loader2 className="h-8 w-8 text-primary animate-spin" />
             </div>
           ) : error ? (
-            <div className="p-4 text-sm text-muted-foreground text-center">{error}</div>
+            <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+              {error}
+            </div>
           ) : isPdf ? (
             <iframe
               src={file.url}
-              className="w-full h-[400px]"
+              className="w-full h-[70vh] rounded-lg border border-border"
               title={file.name}
             />
           ) : (
-            <ScrollArea className="max-h-[400px]">
+            <ScrollArea className="h-[70vh] rounded-lg border border-border bg-surface">
               <pre className={cn(
-                "p-4 text-xs font-mono whitespace-pre-wrap break-words overflow-x-auto",
+                "p-4 text-sm font-mono whitespace-pre-wrap break-words text-foreground",
                 isJson && "text-accent"
               )}>
-                <code>{content}</code>
+                <code>{content || 'No content'}</code>
               </pre>
             </ScrollArea>
           )}
         </div>
-      )}
+      </div>
     </div>
   );
 }
@@ -442,7 +473,8 @@ function isImageResponse(content: string): boolean {
 export function Message({ message, onDeleteImage }: MessageProps) {
   const isUser = message.role === "user";
   const [copied, setCopied] = useState(false);
-  const [previewFile, setPreviewFile] = useState<FileAttachment | null>(null);
+  const [previewImageFile, setPreviewImageFile] = useState<FileAttachment | null>(null);
+  const [previewOtherFile, setPreviewOtherFile] = useState<FileAttachment | null>(null);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(message.content);
@@ -471,7 +503,7 @@ export function Message({ message, onDeleteImage }: MessageProps) {
                 <div
                   key={idx}
                   className="relative flex-shrink-0 w-[100px] rounded-lg border border-border bg-surface hover:bg-surface-hover transition-all duration-200 p-1.5 cursor-pointer"
-                  onClick={() => setPreviewFile(file)}
+                  onClick={() => setPreviewImageFile(file)}
                 >
                   <ImageThumbnail url={file.url} name={file.name} />
                   <p className="text-[10px] font-medium text-foreground truncate mt-1 leading-tight" title={file.name}>
@@ -482,11 +514,11 @@ export function Message({ message, onDeleteImage }: MessageProps) {
             </div>
           )}
           
-          {/* Other files (JSON, PDF, text, code) - Claude-like expandable preview */}
+          {/* Other files (JSON, PDF, text, code) - opens in modal */}
           {otherFiles.length > 0 && (
             <div className="w-full space-y-2 mb-2">
               {otherFiles.map((file, idx) => (
-                <FileContentViewer key={idx} file={file} />
+                <FilePreviewButton key={idx} file={file} onClick={() => setPreviewOtherFile(file)} />
               ))}
             </div>
           )}
@@ -512,45 +544,34 @@ export function Message({ message, onDeleteImage }: MessageProps) {
           </div>
         </div>
         
-        {/* File preview modal */}
-        {previewFile && (
+        {/* Image file preview modal */}
+        {previewImageFile && (
           <div 
             className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-md"
-            onClick={() => setPreviewFile(null)}
+            onClick={() => setPreviewImageFile(null)}
           >
             <div 
               className="relative max-w-[90vw] max-h-[90vh] animate-scale-in"
               onClick={(e) => e.stopPropagation()}
             >
               <button
-                onClick={() => setPreviewFile(null)}
+                onClick={() => setPreviewImageFile(null)}
                 className="absolute -top-12 right-0 p-2 rounded-full bg-surface border border-border hover:bg-surface-hover transition-colors z-10"
               >
                 <X className="h-5 w-5 text-foreground" />
               </button>
-              
-              {isImageFile(previewFile.type, previewFile.name) ? (
-                <img
-                  src={previewFile.url}
-                  alt={previewFile.name}
-                  className="max-w-full max-h-[85vh] rounded-lg object-contain shadow-2xl"
-                />
-              ) : (
-                <div className="bg-surface border border-border rounded-lg p-8 max-w-lg">
-                  <FileIcon className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-foreground font-medium text-center">{previewFile.name}</p>
-                  <a 
-                    href={previewFile.url} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="mt-4 block text-center text-accent hover:underline"
-                  >
-                    Open file
-                  </a>
-                </div>
-              )}
+              <img
+                src={previewImageFile.url}
+                alt={previewImageFile.name}
+                className="max-w-full max-h-[85vh] rounded-lg object-contain shadow-2xl"
+              />
             </div>
           </div>
+        )}
+        
+        {/* Other file preview modal (JSON, PDF, text, code) */}
+        {previewOtherFile && (
+          <FilePreviewModal file={previewOtherFile} onClose={() => setPreviewOtherFile(null)} />
         )}
       </div>
     );
