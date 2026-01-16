@@ -3,7 +3,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { useState, useEffect } from "react";
-import { Check, Copy, Loader2, Download, Trash2, FileIcon, X, FileJson, FileText, FileCode } from "lucide-react";
+import { Check, Copy, Loader2, Download, Trash2, FileIcon, X, FileJson, FileText, FileCode, ExternalLink } from "lucide-react";
 import { ImageModal } from "./ImageModal";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -44,19 +44,30 @@ function ImageThumbnail({ url, name }: { url: string; name: string }) {
 function FilePreviewButton({ file, onClick }: { file: FileAttachment; onClick: () => void }) {
   const fileName = file.name.toLowerCase();
   const isJson = fileName.endsWith('.json') || file.type === 'application/json';
+  const isPdf = fileName.endsWith('.pdf') || file.type === 'application/pdf';
   const isCode = /\.(js|jsx|ts|tsx|py|rb|go|rs|java|c|cpp|h|hpp|cs|php|swift|kt|scala|sh|bash|yaml|yml|toml|ini|cfg|conf|xml|html|htm|css|scss|sass|less|sql|md|mdx)$/i.test(fileName);
   const isText = fileName.endsWith('.txt') || file.type?.startsWith('text/');
   
   const getFileIcon = () => {
+    if (isPdf) return <FileIcon className="h-5 w-5 text-destructive" />;
     if (isJson) return <FileJson className="h-5 w-5 text-accent" />;
     if (isCode) return <FileCode className="h-5 w-5 text-primary" />;
     if (isText) return <FileText className="h-5 w-5 text-muted-foreground" />;
     return <FileIcon className="h-5 w-5 text-muted-foreground" />;
   };
 
+  const handleClick = () => {
+    // PDFs open in new tab directly - avoids Chrome iframe blocking
+    if (isPdf) {
+      window.open(file.url, '_blank');
+    } else {
+      onClick();
+    }
+  };
+
   return (
     <button
-      onClick={onClick}
+      onClick={handleClick}
       className="flex items-center gap-3 p-3 rounded-lg border border-border bg-surface hover:bg-surface-hover transition-colors w-full text-left"
     >
       {getFileIcon()}
@@ -66,20 +77,23 @@ function FilePreviewButton({ file, onClick }: { file: FileAttachment; onClick: (
           <p className="text-xs text-muted-foreground">{(file.size / 1024).toFixed(1)} KB</p>
         )}
       </div>
-      <Download className="h-4 w-4 text-muted-foreground" />
+      {isPdf ? (
+        <ExternalLink className="h-4 w-4 text-muted-foreground" />
+      ) : (
+        <Download className="h-4 w-4 text-muted-foreground" />
+      )}
     </button>
   );
 }
 
-// File preview modal for displaying file content in a new window
+// File preview modal for displaying file content in a new window (text files only - PDFs open in new tab)
 function FilePreviewModal({ file, onClose }: { file: FileAttachment; onClose: () => void }) {
   const [content, setContent] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fileName = file.name.toLowerCase();
   const isJson = fileName.endsWith('.json') || file.type === 'application/json';
-  const isPdf = fileName.endsWith('.pdf') || file.type === 'application/pdf';
   const isText = fileName.endsWith('.txt') || file.type?.startsWith('text/');
   const isCode = /\.(js|jsx|ts|tsx|py|rb|go|rs|java|c|cpp|h|hpp|cs|php|swift|kt|scala|sh|bash|yaml|yml|toml|ini|cfg|conf|xml|html|htm|css|scss|sass|less|sql|md|mdx)$/i.test(fileName);
 
@@ -91,11 +105,10 @@ function FilePreviewModal({ file, onClose }: { file: FileAttachment; onClose: ()
   };
 
   useEffect(() => {
-    if (isPdf) {
-      setIsLoading(false);
-      return;
-    }
-
+    // Only load if content not already loaded
+    if (content !== null) return;
+    
+    setIsLoading(true);
     fetch(file.url)
       .then(res => res.text())
       .then(text => {
@@ -115,23 +128,15 @@ function FilePreviewModal({ file, onClose }: { file: FileAttachment; onClose: ()
         setError('Failed to load file content');
         setIsLoading(false);
       });
-  }, [file.url, isJson, isPdf]);
+  }, [file.url, isJson, content]);
 
-  const handleDownload = async () => {
-    try {
-      const response = await fetch(file.url);
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = file.name;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error('Error downloading file:', err);
-    }
+  const handleDownload = () => {
+    const a = document.createElement('a');
+    a.href = file.url;
+    a.download = file.name;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   };
 
   return (
@@ -183,12 +188,6 @@ function FilePreviewModal({ file, onClose }: { file: FileAttachment; onClose: ()
             <div className="flex items-center justify-center h-[300px] text-muted-foreground">
               {error}
             </div>
-          ) : isPdf ? (
-            <iframe
-              src={file.url}
-              className="w-full h-[70vh] rounded-lg border border-border"
-              title={file.name}
-            />
           ) : (
             <ScrollArea className="h-[70vh] rounded-lg border border-border bg-surface">
               <pre className={cn(
