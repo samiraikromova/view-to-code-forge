@@ -30,8 +30,7 @@ interface Message {
   files?: FileAttachment[];
 }
 
-// Default project slug - CB4
-const DEFAULT_PROJECT_SLUG = 'cb4';
+// No default project - user must select one to use project-specific features
 
 interface ChatInterfaceProps {
   chatId: string | null;
@@ -124,14 +123,7 @@ export function ChatInterface({
         }));
         setProjects(mappedProjects);
         
-        // Set default project to CB4 if no project is currently selected
-        if (!selectedProject) {
-          const cb4Project = mappedProjects.find(p => p.slug === DEFAULT_PROJECT_SLUG);
-          if (cb4Project) {
-            setSelectedProject(cb4Project);
-            setSystemPrompt(cb4Project.systemPrompt || "");
-          }
-        }
+        // No default project selection - user chats with Claude directly unless they choose a project
       } else {
         console.log('No projects found in database');
         setProjects([]);
@@ -604,10 +596,10 @@ export function ChatInterface({
       let aiReply = '';
       let cost = 0;
 
-      // Get the effective project - use selected or find cb4 as default
-      const effectiveProject = selectedProject || projects.find(p => p.slug === DEFAULT_PROJECT_SLUG);
-      const effectiveProjectId = effectiveProject?.id || projects[0]?.id || '';
-      const effectiveProjectSlug = effectiveProject?.slug || DEFAULT_PROJECT_SLUG;
+      // Get the effective project - use selected project or empty (direct Claude chat)
+      const effectiveProject = selectedProject;
+      const effectiveProjectId = effectiveProject?.id || '';
+      const effectiveProjectSlug = effectiveProject?.slug || '';
 
       if (isImageGeneration && imageSettings) {
         // Handle image generation - API handles saving to DB
