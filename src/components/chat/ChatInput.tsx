@@ -181,9 +181,20 @@ export function ChatInput({
   }, [externalFiles]);
 
   const handleSend = async () => {
-    const hasContent = message.trim() || files.length > 0;
+    const currentMessage = message.trim();
+    const currentFiles = [...files];
+    const hasContent = currentMessage || currentFiles.length > 0;
+    
     // Can't send while streaming or uploading
     if (hasContent && !disabled && !isUploading && !isStreaming) {
+      // Clear input immediately before sending
+      setMessage("");
+      setFiles([]);
+      setIsFullScreen(false);
+      if (textareaRef.current) {
+        textareaRef.current.style.height = "auto";
+      }
+      
       setIsUploading(true);
       try {
         // Pass image generation settings if it's the image generator project
@@ -193,15 +204,8 @@ export function ChatInput({
           aspectRatio: imageAspectRatio
         } : undefined;
         
-        // Send with current files
-        await onSendMessage(message, files.length > 0 ? files : undefined, imageSettings);
-        setMessage("");
-        // Clear files after sending - don't pin them
-        setFiles([]);
-        setIsFullScreen(false);
-        if (textareaRef.current) {
-          textareaRef.current.style.height = "auto";
-        }
+        // Send with captured values
+        await onSendMessage(currentMessage, currentFiles.length > 0 ? currentFiles : undefined, imageSettings);
       } finally {
         setIsUploading(false);
       }
