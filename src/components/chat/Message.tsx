@@ -3,7 +3,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import { useState, useEffect } from "react";
-import { Check, Copy, Loader2, Download, Trash2, FileIcon, X, FileJson, FileText, FileCode, ExternalLink } from "lucide-react";
+import { Check, Copy, Loader2, Download, Trash2, FileIcon, X, FileJson, FileText, FileCode } from "lucide-react";
 import { ImageModal } from "./ImageModal";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
@@ -57,12 +57,8 @@ function FilePreviewButton({ file, onClick }: { file: FileAttachment; onClick: (
   };
 
   const handleClick = () => {
-    // PDFs: open directly using the public Supabase URL
-    if (isPdf) {
-      window.open(file.url, '_blank', 'noopener,noreferrer');
-    } else {
-      onClick();
-    }
+    // All files open in modal (PDFs will be fetched as blob and displayed)
+    onClick();
   };
 
   return (
@@ -77,27 +73,30 @@ function FilePreviewButton({ file, onClick }: { file: FileAttachment; onClick: (
           <p className="text-xs text-muted-foreground">{(file.size / 1024).toFixed(1)} KB</p>
         )}
       </div>
-      {isPdf ? (
-        <ExternalLink className="h-4 w-4 text-muted-foreground" />
-      ) : (
-        <Download className="h-4 w-4 text-muted-foreground" />
-      )}
+      <Download className="h-4 w-4 text-muted-foreground" />
     </button>
   );
 }
 
-// File preview modal for displaying file content in a new window (text files only - PDFs open in new tab)
+// File preview modal for displaying file content (including PDFs)
 function FilePreviewModal({ file, onClose }: { file: FileAttachment; onClose: () => void }) {
   const [content, setContent] = useState<string | null>(null);
+  const [pdfBlobUrl, setPdfBlobUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const fileName = file.name.toLowerCase();
   const isJson = fileName.endsWith('.json') || file.type === 'application/json';
+  const isPdf = fileName.endsWith('.pdf') || file.type === 'application/pdf';
   const isText = fileName.endsWith('.txt') || file.type?.startsWith('text/');
   const isCode = /\.(js|jsx|ts|tsx|py|rb|go|rs|java|c|cpp|h|hpp|cs|php|swift|kt|scala|sh|bash|yaml|yml|toml|ini|cfg|conf|xml|html|htm|css|scss|sass|less|sql|md|mdx)$/i.test(fileName);
+  const isWord = /\.(doc|docx)$/i.test(fileName);
+  const isExcel = /\.(xls|xlsx)$/i.test(fileName);
+  const isPowerPoint = /\.(ppt|pptx)$/i.test(fileName);
+  const isOfficeDoc = isWord || isExcel || isPowerPoint;
 
   const getFileIcon = () => {
+    if (isPdf) return <FileIcon className="h-5 w-5 text-destructive" />;
     if (isJson) return <FileJson className="h-5 w-5 text-accent" />;
     if (isCode) return <FileCode className="h-5 w-5 text-primary" />;
     if (isText) return <FileText className="h-5 w-5 text-muted-foreground" />;
@@ -105,7 +104,30 @@ function FilePreviewModal({ file, onClose }: { file: FileAttachment; onClose: ()
   };
 
   useEffect(() => {
-    // Only load if content not already loaded
+    // PDF files - fetch as blob
+    if (isPdf) {
+      setIsLoading(true);
+      fetch(file.url)
+        .then(res => res.blob())
+        .then(blob => {
+          const url = URL.createObjectURL(blob);
+          setPdfBlobUrl(url);
+          setIsLoading(false);
+        })
+        .catch(() => {
+          setError('Failed to load PDF');
+          setIsLoading(false);
+        });
+      return;
+    }
+
+    // Office documents - can't preview, just show download option
+    if (isOfficeDoc) {
+      setContent(null);
+      return;
+    }
+
+    // Text-based files
     if (content !== null) return;
     
     setIsLoading(true);
@@ -128,15 +150,82 @@ function FilePreviewModal({ file, onClose }: { file: FileAttachment; onClose: ()
         setError('Failed to load file content');
         setIsLoading(false);
       });
-  }, [file.url, isJson, content]);
+  }, [file.url, isJson, isPdf, isOfficeDoc, content]);
 
-  const handleDownload = () => {
-    const a = document.createElement('a');
-    a.href = file.url;
-    a.download = file.name;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+  // Cleanup blob URL on unmount
+  useEffect(() => {
+    return () => {
+      if (pdfBlobUrl) {
+        URL.revokeObjectURL(pdfBlobUrl);
+      }
+    };
+  }, [pdfBlobUrl]);
+
+  const handleDownload = async () => {
+    try {
+      const response = await fetch(file.url);
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = file.name;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error('Download failed:', err);
+    }
+  };
+
+  const renderContent = () => {
+    if (isLoading) {
+      return (
+        <div className="flex items-center justify-center h-[70vh]">
+          <Loader2 className="h-8 w-8 text-primary animate-spin" />
+        </div>
+      );
+    }
+
+    if (error) {
+      return (
+        <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+          {error}
+        </div>
+      );
+    }
+
+    if (isPdf && pdfBlobUrl) {
+      return (
+        <iframe
+          src={pdfBlobUrl}
+          className="w-full h-[70vh] rounded-lg"
+          title={file.name}
+        />
+      );
+    }
+
+    if (isOfficeDoc) {
+      return (
+        <div className="flex flex-col items-center justify-center h-[300px] text-muted-foreground gap-4">
+          {getFileIcon()}
+          <p className="text-center">
+            Preview not available for {isWord ? 'Word' : isExcel ? 'Excel' : 'PowerPoint'} documents.
+            <br />
+            Click download to view the file.
+          </p>
+        </div>
+      );
+    }
+
+    return (
+      <ScrollArea className="h-[70vh] rounded-lg border border-border bg-surface">
+        <pre className="p-4 text-sm whitespace-pre-wrap break-words text-foreground"
+             style={{ fontFamily: "'JetBrains Mono', Consolas, Monaco, monospace" }}>
+          <code className="text-foreground">{content || 'No content'}</code>
+        </pre>
+      </ScrollArea>
+    );
   };
 
   return (
@@ -180,22 +269,7 @@ function FilePreviewModal({ file, onClose }: { file: FileAttachment; onClose: ()
 
         {/* Content area */}
         <div className="bg-background rounded-lg border border-border overflow-hidden">
-          {isLoading ? (
-            <div className="flex items-center justify-center h-[70vh]">
-              <Loader2 className="h-8 w-8 text-primary animate-spin" />
-            </div>
-          ) : error ? (
-            <div className="flex items-center justify-center h-[300px] text-muted-foreground">
-              {error}
-            </div>
-          ) : (
-          <ScrollArea className="h-[70vh] rounded-lg border border-border bg-surface">
-              <pre className="p-4 text-sm whitespace-pre-wrap break-words text-foreground"
-                   style={{ fontFamily: "'JetBrains Mono', Consolas, Monaco, monospace" }}>
-                <code className="text-foreground">{content || 'No content'}</code>
-              </pre>
-            </ScrollArea>
-          )}
+          {renderContent()}
         </div>
       </div>
     </div>
