@@ -86,7 +86,7 @@ export function SingleFilePreviewModal({
   const fileName = file?.name || fileUrl?.split('/').pop() || 'file';
   const FileIconComponent = getFileIcon(fileType);
 
-  // Load file content for text-based files
+  // Load file content for text-based files and PDFs
   useEffect(() => {
     if (!isOpen) {
       setFileContent(null);
@@ -101,12 +101,12 @@ export function SingleFilePreviewModal({
       return;
     }
 
+    // Handle local File objects
     if (file && (fileType === 'text' || fileType === 'code' || fileType === 'json')) {
       setIsLoadingContent(true);
       const reader = new FileReader();
       reader.onload = (e) => {
         let content = e.target?.result as string;
-        // Pretty print JSON
         if (fileType === 'json') {
           try {
             content = JSON.stringify(JSON.parse(content), null, 2);
@@ -124,6 +124,29 @@ export function SingleFilePreviewModal({
       reader.readAsText(file);
     }
 
+    // Handle remote URLs for text/code/json files
+    if (!file && fileUrl && (fileType === 'text' || fileType === 'code' || fileType === 'json')) {
+      setIsLoadingContent(true);
+      fetch(fileUrl)
+        .then(res => res.text())
+        .then(text => {
+          let content = text;
+          if (fileType === 'json') {
+            try {
+              content = JSON.stringify(JSON.parse(text), null, 2);
+            } catch {
+              // Keep original
+            }
+          }
+          setFileContent(content);
+          setIsLoadingContent(false);
+        })
+        .catch(() => {
+          setFileContent('Error loading file');
+          setIsLoadingContent(false);
+        });
+    }
+
     if (file && fileType === 'image') {
       const url = URL.createObjectURL(file);
       setImageObjectUrl(url);
@@ -133,7 +156,35 @@ export function SingleFilePreviewModal({
       const url = URL.createObjectURL(file);
       setPdfObjectUrl(url);
     }
-  }, [isOpen, file, fileType]);
+
+    // Handle remote PDF URLs - fetch as blob to avoid CORS/blocking issues
+    if (!file && fileUrl && fileType === 'pdf') {
+      setIsLoadingContent(true);
+      fetch(fileUrl)
+        .then(res => res.blob())
+        .then(blob => {
+          const url = URL.createObjectURL(blob);
+          setPdfObjectUrl(url);
+          setIsLoadingContent(false);
+        })
+        .catch(() => {
+          setIsLoadingContent(false);
+        });
+    }
+
+    // Handle remote image URLs - fetch as blob
+    if (!file && fileUrl && fileType === 'image') {
+      fetch(fileUrl)
+        .then(res => res.blob())
+        .then(blob => {
+          const url = URL.createObjectURL(blob);
+          setImageObjectUrl(url);
+        })
+        .catch(() => {
+          // Fall back to direct URL
+        });
+    }
+  }, [isOpen, file, fileUrl, fileType]);
 
   // Cleanup on unmount
   useEffect(() => {
