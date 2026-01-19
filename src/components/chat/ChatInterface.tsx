@@ -666,7 +666,7 @@ export function ChatInterface({
         setIsStreaming(false);
         return; // Exit early - don't duplicate DB saves
       } else {
-        // Handle regular chat
+        // Handle regular chat - only send files attached to current message
         const n8nResult = await sendChatMessage({
           message: content,
           userId: user.id,
@@ -674,7 +674,7 @@ export function ChatInterface({
           projectSlug: effectiveProjectSlug,
           model: selectedModel,
           threadId: activeThreadId,
-          fileUrls: allFileObjs,
+          fileUrls: newFileObjs, // Only send newly attached files, not history
           systemPrompt: systemPrompt || effectiveProject?.systemPrompt || '',
           conversationHistory,
           userContext: {
