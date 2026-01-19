@@ -606,7 +606,7 @@ export function ChatInterface({
       // Get the effective project - use selected project or empty (direct Claude chat)
       const effectiveProject = selectedProject;
       const effectiveProjectId = effectiveProject?.id || '';
-      const effectiveProjectSlug = effectiveProject?.slug || '';
+      const effectiveProjectSlug = effectiveProject?.slug || 'You are helpful AI Assistant';
       
       console.log('📤 Sending message with project:', { 
         selectedProject: selectedProject?.name, 
