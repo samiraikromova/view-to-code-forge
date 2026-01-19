@@ -626,7 +626,7 @@ export function ChatInterface({
           aspectRatio: imageSettings.aspectRatio,
           threadId: activeThreadId,
           isImageGeneration: true,
-          fileUrls: allFileObjs
+          fileUrls: newFileObjs // Only send newly attached files, not history
         });
 
         if (imageResult.error) {
