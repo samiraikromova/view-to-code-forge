@@ -125,7 +125,14 @@ export function ChatInterface({
         }));
         setProjects(mappedProjects);
         
-        // No default project selection - user chats with Claude directly unless they choose a project
+        // Set CB4 as default project if user hasn't selected one
+        if (!selectedProject) {
+          const cb4Project = mappedProjects.find(p => p.slug === 'cb4');
+          if (cb4Project) {
+            setSelectedProject(cb4Project);
+            setSystemPrompt(cb4Project.systemPrompt || "");
+          }
+        }
       } else {
         console.log('No projects found in database');
         setProjects([]);
