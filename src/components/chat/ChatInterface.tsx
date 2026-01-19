@@ -124,15 +124,6 @@ export function ChatInterface({
           systemPrompt: p.system_prompt
         }));
         setProjects(mappedProjects);
-        
-        // Set CB4 as default project if user hasn't selected one
-        if (!selectedProject) {
-          const cb4Project = mappedProjects.find(p => p.slug === 'cb4');
-          if (cb4Project) {
-            setSelectedProject(cb4Project);
-            setSystemPrompt(cb4Project.systemPrompt || "");
-          }
-        }
       } else {
         console.log('No projects found in database');
         setProjects([]);
@@ -616,6 +607,12 @@ export function ChatInterface({
       const effectiveProject = selectedProject;
       const effectiveProjectId = effectiveProject?.id || '';
       const effectiveProjectSlug = effectiveProject?.slug || '';
+      
+      console.log('📤 Sending message with project:', { 
+        selectedProject: selectedProject?.name, 
+        effectiveProjectSlug, 
+        effectiveProjectId 
+      });
 
       if (isImageGeneration && imageSettings) {
         // Handle image generation - API handles saving to DB
