@@ -18,6 +18,7 @@ export interface ImageGenerationPayload {
   aspectRatio: string
   threadId: string | null
   isImageGeneration: boolean
+  fileUrls?: Array<{ url: string; name: string; type?: string; size?: number }>
 }
 
 export interface ImageGenerationResponse {
@@ -111,7 +112,8 @@ export async function generateImageViaAPI(payload: ImageGenerationPayload): Prom
       numImages: payload.numImages,
       aspectRatio: payload.aspectRatio,
       threadId: currentThreadId,
-      isImageGeneration: true
+      isImageGeneration: true,
+      fileUrls: payload.fileUrls || []
     }
 
     console.log('🔄 Calling N8N image webhook with payload:', n8nPayload)

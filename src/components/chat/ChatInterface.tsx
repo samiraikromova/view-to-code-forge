@@ -625,7 +625,8 @@ export function ChatInterface({
           numImages: imageSettings.numImages,
           aspectRatio: imageSettings.aspectRatio,
           threadId: activeThreadId,
-          isImageGeneration: true
+          isImageGeneration: true,
+          fileUrls: allFileObjs
         });
 
         if (imageResult.error) {
