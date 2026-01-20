@@ -135,7 +135,17 @@ export async function generateImageViaAPI(payload: ImageGenerationPayload): Prom
     console.log('📥 Webhook response:', result)
 
     // Extract imageUrls from various possible response formats
-    const imageUrls: string[] = result?.imageUrls || result?.output || result?.reply || []
+    // Priority: imageUrls array > output array > reply array
+    // Only use arrays, ignore string error messages
+    let imageUrls: string[] = []
+    
+    if (Array.isArray(result?.imageUrls) && result.imageUrls.length > 0) {
+      imageUrls = result.imageUrls
+    } else if (Array.isArray(result?.output) && result.output.length > 0) {
+      imageUrls = result.output
+    } else if (Array.isArray(result?.reply) && result.reply.length > 0) {
+      imageUrls = result.reply
+    }
     
     console.log('🖼️ Extracted image URLs:', imageUrls)
 
