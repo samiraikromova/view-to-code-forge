@@ -646,11 +646,14 @@ export function ChatInterface({
         if (imageResult.imageUrls && Array.isArray(imageResult.imageUrls) && imageResult.imageUrls.length > 0) {
           aiReply = imageResult.imageUrls.join('\n');
           console.log('✅ Setting aiReply to image URLs:', aiReply);
-        } else if (imageResult.isTextResponse && imageResult.message) {
+        } else if (imageResult.message) {
+          // Show any message from the API (including errors)
           aiReply = imageResult.message;
+        } else if (imageResult.error) {
+          aiReply = imageResult.error;
         } else {
           console.warn('⚠️ No imageUrls found in result:', imageResult);
-          aiReply = 'Image generation in progress...';
+          aiReply = 'Image generation failed. Please try again.';
         }
 
         // Cost already deducted by API - just update UI
