@@ -127,7 +127,17 @@ export async function generateImageViaAPI(payload: ImageGenerationPayload): Prom
       return { error: 'Image generation failed' }
     }
 
-    const result = await response.json()
+    const rawResult = await response.json()
+    
+    // Handle array response format from n8n (webhook returns array)
+    const result = Array.isArray(rawResult) ? rawResult[0] : rawResult
+    
+    console.log('📥 Webhook response:', result)
+
+    // Extract imageUrls from various possible response formats
+    const imageUrls: string[] = result?.imageUrls || result?.output || result?.reply || []
+    
+    console.log('🖼️ Extracted image URLs:', imageUrls)
 
     // Deduct credits
     const newCredits = Number(user.credits) - totalCost
@@ -154,8 +164,8 @@ export async function generateImageViaAPI(payload: ImageGenerationPayload): Prom
     }
 
     // Save assistant message with all images (one message with all URLs)
-    if (result.imageUrls && result.imageUrls.length > 0) {
-      const uniqueUrls = [...new Set(result.imageUrls)]; // Deduplicate
+    if (imageUrls && imageUrls.length > 0) {
+      const uniqueUrls = [...new Set(imageUrls)]; // Deduplicate
       await supabase.from('messages').insert({
         thread_id: currentThreadId,
         role: 'assistant',
@@ -165,12 +175,12 @@ export async function generateImageViaAPI(payload: ImageGenerationPayload): Prom
     }
 
     return {
-      imageUrls: result.imageUrls || [],
+      imageUrls: imageUrls,
       cost: totalCost,
       remainingCredits: newCredits,
       threadId: currentThreadId,
-      isTextResponse: result.isTextResponse || false,
-      message: result.message || result.reply
+      isTextResponse: result?.isTextResponse || false,
+      message: result?.message || (Array.isArray(result?.reply) ? undefined : result?.reply)
     }
   } catch (error) {
     console.error('Image generation exception:', error)
