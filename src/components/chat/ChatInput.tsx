@@ -296,17 +296,6 @@ export function ChatInput({
           >
           {/* Content wrapper with m-3.5 padding and gap-3.5 */}
           <div className="m-3.5 flex flex-col gap-3.5">
-            {/* Image generation selectors - only show for Image Ad Generator */}
-            {isImageGenerator && (
-              <ImageGenerationSelectors
-                quality={imageQuality}
-                onQualityChange={setImageQuality}
-                numImages={imageNumImages}
-                onNumImagesChange={setImageNumImages}
-                aspectRatio={imageAspectRatio}
-                onAspectRatioChange={setImageAspectRatio}
-              />
-            )}
             
             {/* File attachments */}
             {files.length > 0 && (
@@ -423,29 +412,44 @@ export function ChatInput({
                     onUpgradeClick={onUpgradeClick}
                   />
                   
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button 
-                        className={cn(
-                          "h-8 min-w-8 px-1.5 rounded-lg border border-border/30 flex items-center justify-center transition-colors",
-                          extendedThinking ? "text-accent hover:text-accent" : "text-muted-foreground hover:text-accent"
-                        )} 
-                        onClick={onToggleExtendedThinking} 
-                        disabled={disabled}
-                      >
-                        <Clock className="h-4 w-4" />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Extended thinking</p>
-                    </TooltipContent>
-                  </Tooltip>
+                  {/* Extended thinking - hide for image generator */}
+                  {!isImageGenerator && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button 
+                          className={cn(
+                            "h-8 min-w-8 px-1.5 rounded-lg border border-border/30 flex items-center justify-center transition-colors",
+                            extendedThinking ? "text-accent hover:text-accent" : "text-muted-foreground hover:text-accent"
+                          )} 
+                          onClick={onToggleExtendedThinking} 
+                          disabled={disabled}
+                        >
+                          <Clock className="h-4 w-4" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Extended thinking</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
                 </div>
               </TooltipProvider>
 
               {/* Right controls */}
               <div className="flex items-center gap-2">
-                <ModelThinkingSelector selectedModel={selectedModel} onSelectModel={onSelectModel} extendedThinking={extendedThinking} onToggleExtendedThinking={onToggleExtendedThinking} />
+                {/* Show image generation selectors instead of model selector for image generator */}
+                {isImageGenerator ? (
+                  <ImageGenerationSelectors
+                    quality={imageQuality}
+                    onQualityChange={setImageQuality}
+                    numImages={imageNumImages}
+                    onNumImagesChange={setImageNumImages}
+                    aspectRatio={imageAspectRatio}
+                    onAspectRatioChange={setImageAspectRatio}
+                  />
+                ) : (
+                  <ModelThinkingSelector selectedModel={selectedModel} onSelectModel={onSelectModel} extendedThinking={extendedThinking} onToggleExtendedThinking={onToggleExtendedThinking} />
+                )}
                 <Button 
                   size="icon" 
                   className={cn(

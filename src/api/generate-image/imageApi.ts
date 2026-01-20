@@ -94,13 +94,8 @@ export async function generateImageViaAPI(payload: ImageGenerationPayload): Prom
       }
     }
 
-    // Save user message
-    await supabase.from('messages').insert({
-      thread_id: currentThreadId,
-      role: 'user',
-      content: payload.message,
-      model: `Ideogram - ${payload.quality}`
-    })
+    // User message is already saved by ChatInterface before calling this API
+    // Don't duplicate the save here
 
     // Build n8n payload matching the route.ts structure
     const n8nPayload = {

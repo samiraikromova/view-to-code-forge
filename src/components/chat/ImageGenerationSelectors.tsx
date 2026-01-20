@@ -70,16 +70,15 @@ export function ImageGenerationSelectors({
     return option?.label || 'Square HD (1:1)';
   };
 
-  return (
-    <div className="flex flex-wrap gap-2 mb-3">
+return (
+    <div className="flex flex-wrap gap-2">
       {/* Quality Selector */}
       <div className="relative" ref={qualityRef}>
         <button
           type="button"
           onClick={() => setQualityOpen(!qualityOpen)}
-          className="flex items-center gap-2 px-3 py-1.5 bg-surface border border-border rounded-lg text-xs text-foreground hover:bg-surface-hover transition-all"
+          className="h-8 px-3 rounded-md flex items-center gap-2 text-sm text-muted-foreground transition-all hover:bg-surface-hover hover:text-foreground"
         >
-          <span>⚡</span>
           <span>{getQualityLabel()}</span>
           <ChevronDown className={cn("h-3 w-3 transition-transform", qualityOpen && "rotate-180")} />
         </button>
@@ -111,9 +110,8 @@ export function ImageGenerationSelectors({
         <button
           type="button"
           onClick={() => setNumImagesOpen(!numImagesOpen)}
-          className="flex items-center gap-2 px-3 py-1.5 bg-surface border border-border rounded-lg text-xs text-foreground hover:bg-surface-hover transition-all"
+          className="h-8 px-3 rounded-md flex items-center gap-2 text-sm text-muted-foreground transition-all hover:bg-surface-hover hover:text-foreground"
         >
-          <span>📸</span>
           <span>{numImages} {numImages === 1 ? 'Image' : 'Images'}</span>
           <ChevronDown className={cn("h-3 w-3 transition-transform", numImagesOpen && "rotate-180")} />
         </button>
@@ -144,9 +142,8 @@ export function ImageGenerationSelectors({
         <button
           type="button"
           onClick={() => setAspectRatioOpen(!aspectRatioOpen)}
-          className="flex items-center gap-2 px-3 py-1.5 bg-surface border border-border rounded-lg text-xs text-foreground hover:bg-surface-hover transition-all"
+          className="h-8 px-3 rounded-md flex items-center gap-2 text-sm text-muted-foreground transition-all hover:bg-surface-hover hover:text-foreground"
         >
-          <span>🖼️</span>
           <span>{getAspectRatioLabel()}</span>
           <ChevronDown className={cn("h-3 w-3 transition-transform", aspectRatioOpen && "rotate-180")} />
         </button>
