@@ -640,12 +640,17 @@ export function ChatInterface({
         }
 
         // Build response with image URLs - API already saved to DB
-        if (imageResult.imageUrls && imageResult.imageUrls.length > 0) {
+        console.log('🎨 Image generation result:', imageResult);
+        console.log('🖼️ Image URLs received:', imageResult.imageUrls);
+        
+        if (imageResult.imageUrls && Array.isArray(imageResult.imageUrls) && imageResult.imageUrls.length > 0) {
           aiReply = imageResult.imageUrls.join('\n');
+          console.log('✅ Setting aiReply to image URLs:', aiReply);
         } else if (imageResult.isTextResponse && imageResult.message) {
           aiReply = imageResult.message;
         } else {
-          aiReply = 'Image generation completed but no images were returned.';
+          console.warn('⚠️ No imageUrls found in result:', imageResult);
+          aiReply = 'Image generation in progress...';
         }
 
         // Cost already deducted by API - just update UI
