@@ -528,17 +528,19 @@ function CodeBlock({ language, value }: { language: string; value: string }) {
 
 // Helper function to extract image URLs from text content
 function extractImageUrls(content: string): string[] {
-  // Match standard image extensions
+  // Match standard image extensions (png, jpg, etc.)
   const extensionRegex = /(https?:\/\/[^\s<>"{}|\\^`\[\]]+\.(?:png|jpg|jpeg|gif|webp|svg)(?:\?[^\s<>"{}|\\^`\[\]]*)?)/gi;
   const extensionMatches = content.match(extensionRegex) || [];
   
-  // Also match common image CDN/AI patterns without extensions (ideogram, replicate, etc.)
+  // Also match common image CDN/AI patterns without extensions
   const cdnPatterns = [
     /https?:\/\/ideogram\.ai\/[^\s<>"{}|\\^`\[\]]+/gi,
     /https?:\/\/replicate\.delivery\/[^\s<>"{}|\\^`\[\]]+/gi,
     /https?:\/\/oaidalleapiprodscus\.blob\.core\.windows\.net\/[^\s<>"{}|\\^`\[\]]+/gi,
     /https?:\/\/[^\s<>"{}|\\^`\[\]]*cloudinary[^\s<>"{}|\\^`\[\]]+/gi,
     /https?:\/\/[^\s<>"{}|\\^`\[\]]*imgix[^\s<>"{}|\\^`\[\]]+/gi,
+    /https?:\/\/[^\s<>"{}|\\^`\[\]]*fal\.media[^\s<>"{}|\\^`\[\]]+/gi, // FAL AI CDN
+    /https?:\/\/v3b\.fal\.media\/[^\s<>"{}|\\^`\[\]]+/gi, // FAL v3b subdomain
   ];
   
   const cdnMatches: string[] = [];
@@ -548,7 +550,9 @@ function extractImageUrls(content: string): string[] {
   }
   
   // Combine and deduplicate
-  return [...new Set([...extensionMatches, ...cdnMatches])];
+  const allUrls = [...new Set([...extensionMatches, ...cdnMatches])];
+  console.log('🖼️ Extracted image URLs from content:', allUrls);
+  return allUrls;
 }
 
 // Helper to check if content is primarily image URLs
