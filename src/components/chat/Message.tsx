@@ -528,8 +528,27 @@ function CodeBlock({ language, value }: { language: string; value: string }) {
 
 // Helper function to extract image URLs from text content
 function extractImageUrls(content: string): string[] {
-  const urlRegex = /(https?:\/\/[^\s<>"{}|\\^`\[\]]+\.(?:png|jpg|jpeg|gif|webp|svg)(?:\?[^\s<>"{}|\\^`\[\]]*)?)/gi;
-  return content.match(urlRegex) || [];
+  // Match standard image extensions
+  const extensionRegex = /(https?:\/\/[^\s<>"{}|\\^`\[\]]+\.(?:png|jpg|jpeg|gif|webp|svg)(?:\?[^\s<>"{}|\\^`\[\]]*)?)/gi;
+  const extensionMatches = content.match(extensionRegex) || [];
+  
+  // Also match common image CDN/AI patterns without extensions (ideogram, replicate, etc.)
+  const cdnPatterns = [
+    /https?:\/\/ideogram\.ai\/[^\s<>"{}|\\^`\[\]]+/gi,
+    /https?:\/\/replicate\.delivery\/[^\s<>"{}|\\^`\[\]]+/gi,
+    /https?:\/\/oaidalleapiprodscus\.blob\.core\.windows\.net\/[^\s<>"{}|\\^`\[\]]+/gi,
+    /https?:\/\/[^\s<>"{}|\\^`\[\]]*cloudinary[^\s<>"{}|\\^`\[\]]+/gi,
+    /https?:\/\/[^\s<>"{}|\\^`\[\]]*imgix[^\s<>"{}|\\^`\[\]]+/gi,
+  ];
+  
+  const cdnMatches: string[] = [];
+  for (const pattern of cdnPatterns) {
+    const matches = content.match(pattern) || [];
+    cdnMatches.push(...matches);
+  }
+  
+  // Combine and deduplicate
+  return [...new Set([...extensionMatches, ...cdnMatches])];
 }
 
 // Helper to check if content is primarily image URLs
