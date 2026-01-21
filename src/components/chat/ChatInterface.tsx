@@ -393,11 +393,15 @@ export function ChatInterface({
 
   const uploadFiles = async (files: File[], threadId?: string, messageId?: string): Promise<FileAttachment[]> => {
     if (!user) return [];
-    const uploaded: FileAttachment[] = [];
     
-    for (const file of files) {
-      const filePath = `${user.id}/${Date.now()}-${file.name}`;
+    // Generate unique paths upfront with index to prevent collision
+    const uploadPromises = files.map(async (file, index) => {
+      // Use timestamp + random string + index to ensure unique paths
+      const uniqueId = `${Date.now()}-${Math.random().toString(36).substring(2, 8)}-${index}`;
+      const filePath = `${user.id}/${uniqueId}-${file.name}`;
       const mimeType = getMimeType(file);
+      
+      console.log(`📤 Uploading file ${index + 1}/${files.length}: ${file.name}`);
       
       const { error: uploadErr } = await supabase.storage
         .from('chat-files')
@@ -408,8 +412,8 @@ export function ChatInterface({
         });
 
       if (uploadErr) {
-        console.error('Upload error:', uploadErr);
-        continue;
+        console.error(`❌ Upload error for ${file.name}:`, uploadErr);
+        return null;
       }
 
       const { data } = supabase.storage.from('chat-files').getPublicUrl(filePath);
@@ -424,14 +428,25 @@ export function ChatInterface({
           file_size: file.size,
         });
 
-        uploaded.push({
+        console.log(`✅ Uploaded ${file.name}: ${data.publicUrl}`);
+        
+        return {
           url: data.publicUrl,
           name: file.name,
           type: mimeType,
           size: file.size
-        });
+        } as FileAttachment;
       }
-    }
+      return null;
+    });
+    
+    // Wait for all uploads to complete
+    const results = await Promise.all(uploadPromises);
+    
+    // Filter out failed uploads and return successful ones
+    const uploaded = results.filter((result): result is FileAttachment => result !== null);
+    console.log(`📁 Total files uploaded: ${uploaded.length}/${files.length}`);
+    
     return uploaded;
   };
 
