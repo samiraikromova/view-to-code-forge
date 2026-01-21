@@ -367,14 +367,6 @@ function ImageWithLoading({ url, idx, onDelete }: ImageWithLoadingProps) {
                 <Download className="h-5 w-5 text-foreground" />
               )}
             </button>
-            {onDelete && (
-              <button
-                onClick={handleDelete}
-                className="p-2 rounded-full bg-surface border border-border hover:bg-destructive hover:border-destructive transition-colors"
-              >
-                <Trash2 className="h-5 w-5 text-foreground" />
-              </button>
-            )}
             <span className="px-3 py-1.5 rounded-lg bg-primary text-primary-foreground text-sm font-medium">
               View Full Size
             </span>
