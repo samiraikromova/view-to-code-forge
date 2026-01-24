@@ -203,12 +203,12 @@ export default function AdminUsage() {
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div>
                 <label className="block text-sm font-medium text-muted-foreground mb-2">Time Period</label>
-                <div className="flex gap-0.5 bg-muted rounded-md p-0.5">
+                <div className="flex gap-1 bg-muted rounded-lg p-1">
                   {(['daily', 'weekly', 'monthly', 'all'] as TimeFilter[]).map(filter => (
                     <button
                       key={filter}
                       onClick={() => setTimeFilter(filter)}
-                      className={`px-2 py-1 rounded text-xs font-medium transition-colors ${
+                      className={`flex-1 px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
                         timeFilter === filter
                           ? 'bg-primary text-primary-foreground'
                           : 'text-muted-foreground hover:text-foreground'
