@@ -200,7 +200,7 @@ export default function AdminUsage() {
         {/* Filters */}
         <Card className="mb-6">
           <CardContent className="p-4">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
               <div>
                 <label className="block text-sm font-medium text-muted-foreground mb-2">Time Period</label>
                 <div className="flex gap-1 bg-muted rounded-lg p-1">
@@ -220,33 +220,34 @@ export default function AdminUsage() {
                 </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-muted-foreground mb-2">Filter by User</label>
-                <Select value={userFilter || "all"} onValueChange={(val) => setUserFilter(val === "all" ? "" : val)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="All Users" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Users</SelectItem>
-                    {users.filter(user => user.email).map((user) => (
-                      <SelectItem key={user.id} value={user.email}>
-                        {user.name || user.email}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <div className="flex flex-col md:flex-row md:items-end gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">Filter by User</label>
+                  <Select value={userFilter || "all"} onValueChange={(val) => setUserFilter(val === "all" ? "" : val)}>
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="All Users" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Users</SelectItem>
+                      {users.filter(user => user.email).map((user) => (
+                        <SelectItem key={user.id} value={user.email}>
+                          {user.name || user.email}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium text-muted-foreground mb-2">Search</label>
-                <Input
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Name, email, model..."
-                />
-              </div>
+                <div>
+                  <label className="block text-sm font-medium text-muted-foreground mb-2">Search</label>
+                  <Input
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Name, email, model..."
+                    className="w-[180px]"
+                  />
+                </div>
 
-              <div className="flex items-end">
                 <Button onClick={exportToCSV} size="sm" variant="outline">
                   <Download className="h-4 w-4 mr-1" />
                   CSV
