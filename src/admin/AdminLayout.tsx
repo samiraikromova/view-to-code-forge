@@ -93,7 +93,7 @@ export function AdminLayout({ children, currentPage }: AdminLayoutProps) {
       {/* Sidebar */}
       <div className={cn(
         "border-r border-border bg-surface flex flex-col theme-light-purple transition-all duration-300",
-        isCollapsed ? "w-16" : "w-64"
+        isCollapsed ? "w-14" : "w-52"
       )}>
         <div className="p-4 border-b border-border flex items-center justify-between">
           <div className={cn("flex items-center gap-2", isCollapsed && "justify-center w-full")}>
