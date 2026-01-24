@@ -20,6 +20,16 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -85,6 +95,11 @@ export default function AdminLessons() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const [editingLessonId, setEditingLessonId] = useState<string | null>(null)
   const [existingFiles, setExistingFiles] = useState<LessonFileItem[]>([])
+  
+  // Delete confirmation state
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
+  const [deleteType, setDeleteType] = useState<'lesson' | 'module' | null>(null)
+  const [itemToDelete, setItemToDelete] = useState<{ id: string; name: string; lessonsCount?: number } | null>(null)
   
   const [formData, setFormData] = useState({
     title: '',
@@ -313,12 +328,21 @@ export default function AdminLessons() {
 
   const handleDeleteModule = async (module: Module) => {
     const lessonsInModule = lessons.filter(l => l.module_id === module.id)
+    setItemToDelete({ 
+      id: module.id, 
+      name: module.name, 
+      lessonsCount: lessonsInModule.length 
+    })
+    setDeleteType('module')
+    setDeleteConfirmOpen(true)
+  }
+
+  const confirmDeleteModule = async () => {
+    if (!itemToDelete) return
+    
+    const lessonsInModule = lessons.filter(l => l.module_id === itemToDelete.id)
     
     if (lessonsInModule.length > 0) {
-      if (!confirm(`This module contains ${lessonsInModule.length} lesson(s). Delete all lessons and the module?`)) {
-        return
-      }
-      
       // Delete all lessons in this module
       for (const lesson of lessonsInModule) {
         if (lesson.files) {
@@ -334,20 +358,20 @@ export default function AdminLessons() {
       const { error: lessonsError } = await supabase
         .from('course_videos')
         .delete()
-        .eq('module_id', module.id)
+        .eq('module_id', itemToDelete.id)
 
       if (lessonsError) {
         toast.error('Failed to delete lessons: ' + lessonsError.message)
+        setDeleteConfirmOpen(false)
+        setItemToDelete(null)
         return
       }
-    } else {
-      if (!confirm('Delete this empty module?')) return
     }
 
     const { error } = await supabase
       .from('modules')
       .delete()
-      .eq('id', module.id)
+      .eq('id', itemToDelete.id)
 
     if (error) {
       toast.error('Failed to delete module: ' + error.message)
@@ -355,6 +379,9 @@ export default function AdminLessons() {
       toast.success('Module deleted')
       loadData()
     }
+    
+    setDeleteConfirmOpen(false)
+    setItemToDelete(null)
   }
 
   const handleCreateModule = async () => {
@@ -397,11 +424,17 @@ export default function AdminLessons() {
     setExistingFiles(prev => prev.filter((_, i) => i !== index))
   }
 
-  const deleteLesson = async (id: string) => {
-    if (!confirm('Delete this lesson and all its files?')) return
+  const openDeleteLessonConfirm = (lesson: Lesson) => {
+    setItemToDelete({ id: lesson.id, name: lesson.title })
+    setDeleteType('lesson')
+    setDeleteConfirmOpen(true)
+  }
+
+  const confirmDeleteLesson = async () => {
+    if (!itemToDelete) return
 
     // Find the lesson and delete its files from storage
-    const lesson = lessons.find(l => l.id === id)
+    const lesson = lessons.find(l => l.id === itemToDelete.id)
     if (lesson?.files) {
       for (const file of lesson.files) {
         const pathParts = file.url.split('/lesson-files/')
@@ -414,13 +447,23 @@ export default function AdminLessons() {
     const { error } = await supabase
       .from('course_videos')
       .delete()
-      .eq('id', id)
+      .eq('id', itemToDelete.id)
 
     if (error) {
       toast.error('Failed to delete')
     } else {
       toast.success('Lesson deleted')
       loadData()
+    }
+    
+    setDeleteConfirmOpen(false)
+    setItemToDelete(null)
+  }
+
+  const deleteLesson = async (id: string) => {
+    const lesson = lessons.find(l => l.id === id)
+    if (lesson) {
+      openDeleteLessonConfirm(lesson)
     }
   }
 
@@ -1160,6 +1203,41 @@ export default function AdminLessons() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                {deleteType === 'module' && itemToDelete?.lessonsCount && itemToDelete.lessonsCount > 0 ? (
+                  <>
+                    This will permanently delete the module "<strong>{itemToDelete?.name}</strong>" and all {itemToDelete.lessonsCount} lesson(s) inside it. This action cannot be undone.
+                  </>
+                ) : deleteType === 'module' ? (
+                  <>
+                    This will permanently delete the empty module "<strong>{itemToDelete?.name}</strong>". This action cannot be undone.
+                  </>
+                ) : (
+                  <>
+                    This will permanently delete the lesson "<strong>{itemToDelete?.name}</strong>" and all its associated files. This action cannot be undone.
+                  </>
+                )}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel onClick={() => { setDeleteConfirmOpen(false); setItemToDelete(null); }}>
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={deleteType === 'module' ? confirmDeleteModule : confirmDeleteLesson}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Delete
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </AdminLayout>
   )
