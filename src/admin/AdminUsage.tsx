@@ -247,9 +247,9 @@ export default function AdminUsage() {
               </div>
 
               <div className="flex items-end">
-                <Button onClick={exportToCSV} className="w-full">
-                  <Download className="h-4 w-4 mr-2" />
-                  Export CSV
+                <Button onClick={exportToCSV} size="sm" variant="outline">
+                  <Download className="h-4 w-4 mr-1" />
+                  CSV
                 </Button>
               </div>
             </div>
