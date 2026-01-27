@@ -7,7 +7,7 @@ const corsHeaders = {
 
 // Fanbases API base URL
 // SANDBOX (for testing):
-const FANBASES_API_URL = "https://qa.dev-fan-basis.com";
+const FANBASES_API_URL = "https://qa.dev-fan-basis.com/public-api";
 // PRODUCTION (for live):
 // const FANBASES_API_URL = 'https://www.fanbasis.com/public-api';
 
