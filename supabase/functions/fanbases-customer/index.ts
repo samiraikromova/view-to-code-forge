@@ -159,10 +159,15 @@ Deno.serve(async (req) => {
       const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
       const webhookUrl = `${supabaseUrl}/functions/v1/fanbases-webhook`;
 
-      // Create a checkout session for saving a card using the card setup product
-      // Product ID: Rop7q (Card Setup Fee - $1)
+      // Create a checkout session for saving a card
+      // Sandbox requires product.title, amount_cents, and type instead of product_id
       const setupPayload = {
-        product_id: "Rop7q", // Fanbases product ID for card setup fee
+        product: {
+          title: "Card Setup Fee",
+          description: "One-time card setup fee",
+        },
+        amount_cents: 100, // $1 setup fee
+        type: "onetime_reusable",
         metadata: {
           user_id: user.id,
           action: "setup_card",
