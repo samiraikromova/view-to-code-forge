@@ -57,6 +57,34 @@ export async function setupPaymentMethod(): Promise<{ success: boolean; checkout
 }
 
 /**
+ * Fetch payment methods for the current user
+ * Call this after returning from checkout to sync payment methods
+ */
+export async function fetchPaymentMethods(checkoutSessionId?: string): Promise<{
+  success: boolean;
+  customer_id?: string;
+  payment_methods?: Array<{ id: string; type: string; last4?: string; brand?: string }>;
+  has_payment_method: boolean;
+  error?: string;
+}> {
+  const { data, error } = await supabase.functions.invoke('fanbases-customer', {
+    body: { action: 'fetch_payment_methods', checkout_session_id: checkoutSessionId },
+  });
+
+  if (error) {
+    console.error('Error fetching payment methods:', error);
+    return { success: false, has_payment_method: false, error: error.message };
+  }
+
+  return {
+    success: true,
+    customer_id: data.customer_id,
+    payment_methods: data.payment_methods,
+    has_payment_method: data.has_payment_method,
+  };
+}
+
+/**
  * Charge the current user for a product purchase
  */
 export async function chargeCustomer(
