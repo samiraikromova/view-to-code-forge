@@ -5,8 +5,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Fanbases API base URL - Production
-const FANBASES_API_URL = "https://qa.dev-fan-basis.com/public-api";
+// Fanbases API base URL - Production (NOT sandbox qa.dev-fan-basis.com)
+const FANBASES_API_URL = "https://www.fanbasis.com/public-api";
 
 Deno.serve(async (req) => {
   // Handle CORS preflight
