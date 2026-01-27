@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Zap, Check, Loader2, CreditCard, AlertCircle } from 'lucide-react';
-import { startSubscription, fetchPaymentMethods, setupPaymentMethod } from '@/api/fanbases/fanbasesApi';
+import { Zap, Check, Loader2 } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 import { toast } from 'sonner';
 
 interface SubscriptionModalProps {
@@ -17,6 +17,7 @@ const PLANS = {
     name: 'Starter',
     price: 29,
     credits: 10000,
+    internalRef: 'tier1',
     features: [
       '10,000 monthly credits',
       'AI Chat access',
@@ -28,6 +29,7 @@ const PLANS = {
     name: 'Pro',
     price: 99,
     credits: 40000,
+    internalRef: 'tier2',
     features: [
       '40,000 monthly credits',
       'AI Chat access',
@@ -45,66 +47,37 @@ export function SubscriptionModal({
   currentTier,
 }: SubscriptionModalProps) {
   const [loading, setLoading] = useState<'starter' | 'pro' | null>(null);
-  const [hasPaymentMethod, setHasPaymentMethod] = useState<boolean | null>(null);
-  const [checkingPayment, setCheckingPayment] = useState(false);
-  const [settingUpCard, setSettingUpCard] = useState(false);
-
-  useEffect(() => {
-    if (isOpen) {
-      checkPaymentMethod();
-    }
-  }, [isOpen]);
-
-  const checkPaymentMethod = async () => {
-    setCheckingPayment(true);
-    try {
-      // Use fetchPaymentMethods which actually checks Fanbases API
-      const result = await fetchPaymentMethods();
-      console.log('[SubscriptionModal] fetchPaymentMethods result:', result);
-      setHasPaymentMethod(result.has_payment_method);
-    } catch (error) {
-      console.error('Error checking payment method:', error);
-      setHasPaymentMethod(false);
-    } finally {
-      setCheckingPayment(false);
-    }
-  };
-
-  const handleAddCard = async () => {
-    setSettingUpCard(true);
-    try {
-      const result = await setupPaymentMethod();
-      if (result.success && result.checkout_url) {
-        window.open(result.checkout_url, '_blank');
-        toast.info('Complete the payment in the new tab, then return here and reopen this dialog');
-      } else {
-        toast.error(result.error || 'Failed to set up payment method');
-      }
-    } catch (error) {
-      console.error('Error setting up card:', error);
-      toast.error('Failed to set up payment method');
-    } finally {
-      setSettingUpCard(false);
-    }
-  };
 
   const handleSubscribe = async (tier: 'starter' | 'pro') => {
     setLoading(tier);
     try {
-      const result = await startSubscription(tier);
+      const plan = PLANS[tier];
+      
+      // Use fanbases-checkout to create a checkout session
+      const { data, error } = await supabase.functions.invoke('fanbases-checkout', {
+        body: {
+          action: 'create_checkout',
+          product_type: 'subscription',
+          product_id: plan.internalRef,
+          amount_cents: plan.price * 100,
+          title: `${plan.name} Plan Subscription`,
+          description: `${plan.credits.toLocaleString()} monthly credits with AI access`,
+          success_url: `${window.location.origin}/settings?subscription=success&tier=${tier}`,
+          base_url: window.location.origin,
+        },
+      });
 
-      if (result.success) {
-        toast.success(`${PLANS[tier].name} plan activated!`);
-        onSuccess?.();
-        onClose();
+      if (error) {
+        console.error('Checkout error:', error);
+        toast.error(error.message || 'Failed to create checkout');
+        return;
+      }
+
+      if (data?.payment_link) {
+        // Redirect to Fanbases checkout
+        window.location.href = data.payment_link;
       } else {
-        // Check if it's a payment method error
-        if (result.error?.toLowerCase().includes('no payment method')) {
-          setHasPaymentMethod(false);
-          toast.error('Please add a payment method first');
-        } else {
-          toast.error(result.error || 'Subscription failed');
-        }
+        toast.error('Failed to get checkout link');
       }
     } catch (error) {
       console.error('Subscription error:', error);
@@ -129,39 +102,10 @@ export function SubscriptionModal({
           </DialogDescription>
         </DialogHeader>
 
-        {/* Payment Method Warning */}
-        {checkingPayment ? (
-          <div className="flex items-center justify-center py-4">
-            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
-            <span className="ml-2 text-muted-foreground">Checking payment method...</span>
-          </div>
-        ) : hasPaymentMethod === false ? (
-          <div className="flex items-center gap-3 p-4 rounded-lg border border-destructive/50 bg-destructive/10">
-            <AlertCircle className="h-5 w-5 text-destructive flex-shrink-0" />
-            <div className="flex-1">
-              <p className="text-sm font-medium text-foreground">Payment method required</p>
-              <p className="text-sm text-muted-foreground">Please add a card to subscribe</p>
-            </div>
-            <Button
-              size="sm"
-              onClick={handleAddCard}
-              disabled={settingUpCard}
-              className="gap-2 bg-accent hover:bg-accent-hover text-accent-foreground"
-            >
-              {settingUpCard ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <CreditCard className="h-4 w-4" />
-              )}
-              Add Card
-            </Button>
-          </div>
-        ) : null}
-
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 py-4">
           {(Object.entries(PLANS) as [('starter' | 'pro'), typeof PLANS.starter][]).map(([tier, plan]) => {
-            const isCurrent = currentTier === tier || currentTier === (tier === 'starter' ? 'tier1' : 'tier2');
-            const isDisabled = loading !== null || isCurrent || hasPaymentMethod !== true;
+            const isCurrent = currentTier === tier || currentTier === plan.internalRef;
+            const isDisabled = loading !== null || isCurrent;
             
             return (
               <div
@@ -199,7 +143,7 @@ export function SubscriptionModal({
                   {loading === tier ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      Processing...
+                      Redirecting...
                     </>
                   ) : isCurrent ? (
                     'Current Plan'
