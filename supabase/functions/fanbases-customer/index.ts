@@ -167,6 +167,7 @@ Deno.serve(async (req) => {
 
       // Create a checkout session for saving a card
       // Sandbox requires product.title, amount_cents, and type instead of product_id
+      // Customer prefill uses: name, email, phone (not first_name/last_name)
       const setupPayload = {
         product: {
           title: "Card Setup Fee",
@@ -174,11 +175,20 @@ Deno.serve(async (req) => {
         },
         amount_cents: 100, // $1 setup fee
         type: "onetime_reusable",
-        // Prefill customer information
+        // Prefill customer information - Fanbases uses 'name' not first_name/last_name
+        name: fullName || firstName,
+        email: email,
+        // Also try the customer object format
         customer: {
+          name: fullName || firstName,
           email: email,
           first_name: firstName,
           last_name: lastName,
+        },
+        // Pre-fill fields for the checkout form
+        prefill: {
+          name: fullName || firstName,
+          email: email,
         },
         metadata: {
           user_id: user.id,
@@ -253,6 +263,106 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    } else if (action === "fetch_payment_methods") {
+      // Fetch payment methods from Fanbases for a specific checkout session or customer
+      const { checkout_session_id } = body;
+
+      // First get the customer record
+      const { data: customer } = await supabase
+        .from("fanbases_customers")
+        .select("*")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      let paymentMethods: Array<{ id: string; type: string; last4?: string; brand?: string }> = [];
+      let customerId = customer?.fanbases_customer_id;
+
+      // If we have a checkout session, get transaction details to find customer/payment method
+      if (checkout_session_id) {
+        console.log(`[Fanbases Customer] Fetching transactions for session: ${checkout_session_id}`);
+        try {
+          const txnResponse = await fetch(
+            `${FANBASES_API_URL}/checkout-sessions/${checkout_session_id}/transactions`,
+            {
+              method: "GET",
+              headers: {
+                Accept: "application/json",
+                "x-api-key": FANBASES_API_KEY,
+              },
+            },
+          );
+
+          if (txnResponse.ok) {
+            const txnData = await txnResponse.json();
+            console.log("[Fanbases Customer] Transactions:", JSON.stringify(txnData));
+
+            const transactions = txnData.data?.transactions || [];
+            if (transactions.length > 0) {
+              const txn = transactions[0];
+              // Extract customer ID from transaction
+              const fanCustomerId = txn.fan?.id || txn.customer_id;
+              if (fanCustomerId && !customerId) {
+                customerId = fanCustomerId;
+                // Update our database with the customer ID
+                await supabase
+                  .from("fanbases_customers")
+                  .update({
+                    fanbases_customer_id: customerId,
+                    updated_at: new Date().toISOString(),
+                  })
+                  .eq("user_id", user.id);
+              }
+            }
+          }
+        } catch (txnError) {
+          console.error("[Fanbases Customer] Error fetching transactions:", txnError);
+        }
+      }
+
+      // Now fetch payment methods if we have a customer ID
+      if (customerId) {
+        console.log(`[Fanbases Customer] Fetching payment methods for customer: ${customerId}`);
+        try {
+          const pmResponse = await fetch(`${FANBASES_API_URL}/customers/${customerId}/payment-methods`, {
+            method: "GET",
+            headers: {
+              Accept: "application/json",
+              "x-api-key": FANBASES_API_KEY,
+            },
+          });
+
+          if (pmResponse.ok) {
+            const pmData = await pmResponse.json();
+            console.log("[Fanbases Customer] Payment methods:", JSON.stringify(pmData));
+            paymentMethods = pmData.data?.payment_methods || [];
+
+            // Update our database with the first payment method
+            if (paymentMethods.length > 0 && !customer?.payment_method_id) {
+              await supabase
+                .from("fanbases_customers")
+                .update({
+                  payment_method_id: paymentMethods[0].id,
+                  updated_at: new Date().toISOString(),
+                })
+                .eq("user_id", user.id);
+            }
+          } else {
+            console.error("[Fanbases Customer] Payment methods error:", await pmResponse.text());
+          }
+        } catch (pmError) {
+          console.error("[Fanbases Customer] Error fetching payment methods:", pmError);
+        }
+      }
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          customer_id: customerId,
+          payment_methods: paymentMethods,
+          has_payment_method: paymentMethods.length > 0,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
     return new Response(JSON.stringify({ error: "Invalid action" }), {
