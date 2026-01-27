@@ -159,6 +159,12 @@ Deno.serve(async (req) => {
       const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
       const webhookUrl = `${supabaseUrl}/functions/v1/fanbases-webhook`;
 
+      // Parse user's full name into first and last name
+      const fullName = userProfile?.name || "";
+      const nameParts = fullName.trim().split(" ");
+      const firstName = nameParts[0] || "";
+      const lastName = nameParts.slice(1).join(" ") || "";
+
       // Create a checkout session for saving a card
       // Sandbox requires product.title, amount_cents, and type instead of product_id
       const setupPayload = {
@@ -168,6 +174,12 @@ Deno.serve(async (req) => {
         },
         amount_cents: 100, // $1 setup fee
         type: "onetime_reusable",
+        // Prefill customer information
+        customer: {
+          email: email,
+          first_name: firstName,
+          last_name: lastName,
+        },
         metadata: {
           user_id: user.id,
           action: "setup_card",
