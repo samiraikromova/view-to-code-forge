@@ -156,10 +156,15 @@ Deno.serve(async (req) => {
       );
     } else if (action === "setup_payment_method") {
       // Use the fanbases-checkout function for card setup
-      // Get user profile for email
+      // Get user profile for email and name
       const { data: userProfile } = await supabase.from("users").select("email, name").eq("id", user.id).single();
 
+      // Use profile email, fallback to auth email
       const email = userProfile?.email || user.email;
+      // Use profile name, fallback to auth metadata
+      const fullName = userProfile?.name || user.user_metadata?.full_name || user.user_metadata?.name || "";
+
+      console.log(`[Fanbases Customer] Setting up payment method for: ${email}, name: ${fullName}`);
 
       // Get current origin for redirect
       const origin = req.headers.get("origin") || "https://app.example.com";
@@ -168,15 +173,9 @@ Deno.serve(async (req) => {
       const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
       const webhookUrl = `${supabaseUrl}/functions/v1/fanbases-webhook`;
 
-      // Parse user's full name into first and last name
-      const fullName = userProfile?.name || "";
-      const nameParts = fullName.trim().split(" ");
-      const firstName = nameParts[0] || "";
-      const lastName = nameParts.slice(1).join(" ") || "";
-
       // Create a checkout session for saving a card
       // Sandbox requires product.title, amount_cents, and type instead of product_id
-      // Fanbases uses "fan" object for customer prefill (name, email, phone)
+      // Fanbases checkout API pre-fill fields
       const setupPayload = {
         product: {
           title: "Card Setup Fee",
@@ -186,16 +185,22 @@ Deno.serve(async (req) => {
         type: "onetime_reusable",
         // Fanbases uses "fan" object for prefilling customer details
         fan: {
-          name: fullName || firstName || "Customer",
-          email: email,
+          name: fullName || "Customer",
+          email: email || "",
         },
-        // Also include as root-level for compatibility
+        // Also include as root-level for broader API compatibility
         customer_email: email,
-        customer_name: fullName || firstName,
+        customer_name: fullName,
+        // Some APIs use first_name/last_name
+        first_name: fullName.split(" ")[0] || "",
+        last_name: fullName.split(" ").slice(1).join(" ") || "",
+        email: email,
+        name: fullName,
         metadata: {
           user_id: user.id,
           action: "setup_card",
           email,
+          name: fullName,
         },
         // Include session ID in success URL for syncing
         success_url: `${origin}/settings?setup=complete`,
