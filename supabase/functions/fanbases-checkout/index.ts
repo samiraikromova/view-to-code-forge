@@ -5,11 +5,8 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Fanbases API base URL
-// SANDBOX (for testing):
-const FANBASES_API_URL = "https://qa.dev-fan-basis.com/public-api";
-// PRODUCTION (for live):
-// const FANBASES_API_URL = 'https://www.fanbasis.com/public-api';
+// Fanbases API base URL - Production
+const FANBASES_API_URL = "https://www.fanbasis.com/public-api";
 
 Deno.serve(async (req) => {
   // Handle CORS preflight
@@ -69,24 +66,20 @@ Deno.serve(async (req) => {
 
       const isSubscription = product_type === "subscription";
 
+      // Build payload according to Fanbases API docs - only documented fields
       const checkoutPayload: Record<string, unknown> = {
         product: {
           title: title || `${product_type}: ${product_id}`,
-          description: description || "",
+          description: description || `Purchase for ${email}`,
         },
         amount_cents: amount_cents,
         type: isSubscription ? "subscription" : "onetime_non_reusable",
-        // Fanbases uses "fan" object for prefilling customer details
-        fan: {
-          name: fullName || "Customer",
-          email: email,
-        },
-        customer_email: email,
-        customer_name: fullName,
         metadata: {
           user_id: user.id,
           product_type,
           product_id,
+          email: email,
+          name: fullName,
         },
         success_url: success_url || `${body.base_url || "https://app.example.com"}/payment-success`,
         webhook_url: webhookUrl,
@@ -166,24 +159,20 @@ Deno.serve(async (req) => {
       const email = userProfile?.email || user.email;
       const fullName = userProfile?.name || "";
 
+      // Build payload according to Fanbases API docs - only documented fields
       const embeddedPayload: Record<string, unknown> = {
         product: {
           title: title || `${product_type}: ${product_id}`,
-          description: description || "",
+          description: description || `Purchase for ${email}`,
         },
         amount_cents: amount_cents,
         type: product_type === "subscription" ? "subscription" : "onetime_non_reusable",
-        // Fanbases uses "fan" object for prefilling customer details
-        fan: {
-          name: fullName || "Customer",
-          email: email,
-        },
-        customer_email: email,
-        customer_name: fullName,
         metadata: {
           user_id: user.id,
           product_type,
           product_id,
+          email: email,
+          name: fullName,
         },
         webhook_url: webhookUrl,
       };
@@ -242,24 +231,19 @@ Deno.serve(async (req) => {
       const email = userProfile?.email || user.email;
       const fullName = userProfile?.name || "";
 
+      // Build payload according to Fanbases API docs - only documented fields
       const setupPayload = {
         product: {
           title: "Save Payment Method",
-          description: "Securely save your card for future purchases",
+          description: `Card setup for ${email}`,
         },
-        amount_cents: 0, // Zero amount for card setup
+        amount_cents: 100, // Small amount for card validation
         type: "onetime_reusable", // Reusable for future charges
-        // Fanbases uses "fan" object for prefilling customer details
-        fan: {
-          name: fullName || "Customer",
-          email: email,
-        },
-        customer_email: email,
-        customer_name: fullName,
         metadata: {
           user_id: user.id,
           action: "setup_card",
           email: email,
+          name: fullName,
         },
         success_url: success_url || `${body.base_url || "https://app.example.com"}/card-saved`,
         webhook_url: webhookUrl,
