@@ -66,14 +66,14 @@ export default function Settings() {
     }
   };
 
-  const loadPaymentMethods = async (paymentId?: string, email?: string) => {
+  const loadPaymentMethods = async (paymentId?: string, email?: string, showToast = false) => {
     setLoadingPaymentMethods(true);
     try {
       const result = await fetchPaymentMethods(paymentId, email);
       console.log('[Settings] fetchPaymentMethods result:', result);
       if (result.success && result.payment_methods) {
         setPaymentMethods(result.payment_methods);
-        if (result.payment_methods.length > 0) {
+        if (showToast && result.payment_methods.length > 0) {
           toast.success('Payment method loaded successfully');
         }
       }
@@ -95,9 +95,9 @@ export default function Settings() {
       // Clear URL params
       setSearchParams({});
       
-      // Fetch payment methods with the payment ID and email from redirect
-      loadPaymentMethods(paymentId || undefined, email || undefined);
-      toast.success('Card setup complete! Loading your payment method...');
+      // Fetch payment methods with the payment ID and email from redirect - show toast for this case
+      loadPaymentMethods(paymentId || undefined, email || undefined, true);
+      toast.success('Card setup complete!');
     } else if (setup === 'cancelled') {
       setSearchParams({});
       toast.error('Card setup was cancelled');

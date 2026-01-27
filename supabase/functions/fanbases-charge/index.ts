@@ -114,7 +114,63 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (!customer || !customer.fanbases_customer_id) {
+    let fanbasesCustomerId = customer?.fanbases_customer_id;
+    let paymentMethodId = customer?.payment_method_id;
+
+    // If no fanbases_customer_id, try to find by email
+    if (!fanbasesCustomerId) {
+      console.log("[Fanbases Charge] No stored customer ID, looking up by email...");
+      
+      // Get user email
+      const { data: userProfile } = await supabase.from("users").select("email").eq("id", user.id).single();
+      const userEmail = userProfile?.email || user.email;
+      
+      if (userEmail) {
+        try {
+          const customersResponse = await fetch(`${FANBASES_API_URL}/customers?per_page=200`, {
+            method: "GET",
+            headers: {
+              Accept: "application/json",
+              "x-api-key": FANBASES_API_KEY,
+            },
+          });
+
+          if (customersResponse.ok) {
+            const customersData = await customersResponse.json();
+            let customers: Array<{ id: string; email?: string }> = [];
+            if (Array.isArray(customersData)) {
+              customers = customersData;
+            } else if (customersData.data?.customers) {
+              customers = customersData.data.customers;
+            } else if (customersData.customers) {
+              customers = customersData.customers;
+            } else if (customersData.data && Array.isArray(customersData.data)) {
+              customers = customersData.data;
+            }
+            
+            const matchedCustomer = customers.find((c) => c.email?.toLowerCase() === userEmail.toLowerCase());
+            
+            if (matchedCustomer) {
+              fanbasesCustomerId = matchedCustomer.id;
+              console.log(`[Fanbases Charge] Found customer by email: ${fanbasesCustomerId}`);
+              
+              // Update our database
+              await supabase
+                .from("fanbases_customers")
+                .update({
+                  fanbases_customer_id: fanbasesCustomerId,
+                  updated_at: new Date().toISOString(),
+                })
+                .eq("user_id", user.id);
+            }
+          }
+        } catch (e) {
+          console.error("[Fanbases Charge] Error looking up customer:", e);
+        }
+      }
+    }
+
+    if (!fanbasesCustomerId) {
       console.log("No Fanbases customer found for user:", user.id);
       return new Response(
         JSON.stringify({ error: "No payment method on file. Please add a card first.", needs_payment_method: true }),
@@ -123,13 +179,11 @@ Deno.serve(async (req) => {
     }
 
     // Try to fetch payment methods from Fanbases if we don't have one stored
-    let paymentMethodId = customer.payment_method_id;
-
     if (!paymentMethodId) {
       console.log("[Fanbases Charge] No stored payment method, fetching from Fanbases...");
       try {
         const pmResponse = await fetch(
-          `${FANBASES_API_URL}/customers/${customer.fanbases_customer_id}/payment-methods`,
+          `${FANBASES_API_URL}/customers/${fanbasesCustomerId}/payment-methods`,
           {
             method: "GET",
             headers: {
@@ -168,7 +222,7 @@ Deno.serve(async (req) => {
 
     // Charge customer via Fanbases API
     console.log(
-      `[Fanbases Charge] Charging customer ${customer.fanbases_customer_id} with payment method ${paymentMethodId}`,
+      `[Fanbases Charge] Charging customer ${fanbasesCustomerId} with payment method ${paymentMethodId}`,
     );
 
     const chargePayload = {
@@ -183,7 +237,7 @@ Deno.serve(async (req) => {
     };
     console.log("[Fanbases Charge] Request payload:", JSON.stringify(chargePayload));
 
-    const chargeResponse = await fetch(`${FANBASES_API_URL}/customers/${customer.fanbases_customer_id}/charge`, {
+    const chargeResponse = await fetch(`${FANBASES_API_URL}/customers/${fanbasesCustomerId}/charge`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
