@@ -40,7 +40,7 @@ export async function getOrCreateCustomer(): Promise<CustomerResult> {
  * Add a payment method for the current user
  * This will redirect to Fanbases checkout to collect card details
  */
-export async function setupPaymentMethod(): Promise<{ success: boolean; checkout_url?: string; error?: string }> {
+export async function setupPaymentMethod(): Promise<{ success: boolean; checkout_url?: string; checkout_session_id?: string; error?: string }> {
   const { data, error } = await supabase.functions.invoke('fanbases-customer', {
     body: { action: 'setup_payment_method' },
   });
@@ -53,6 +53,7 @@ export async function setupPaymentMethod(): Promise<{ success: boolean; checkout
   return {
     success: true,
     checkout_url: data.checkout_url,
+    checkout_session_id: data.checkout_session_id,
   };
 }
 
@@ -60,15 +61,15 @@ export async function setupPaymentMethod(): Promise<{ success: boolean; checkout
  * Fetch payment methods for the current user
  * Call this after returning from checkout to sync payment methods
  */
-export async function fetchPaymentMethods(checkoutSessionId?: string): Promise<{
+export async function fetchPaymentMethods(paymentId?: string): Promise<{
   success: boolean;
   customer_id?: string;
-  payment_methods?: Array<{ id: string; type: string; last4?: string; brand?: string }>;
+  payment_methods?: Array<{ id: string; type: string; last4?: string; brand?: string; exp_month?: number; exp_year?: number; is_default?: boolean }>;
   has_payment_method: boolean;
   error?: string;
 }> {
   const { data, error } = await supabase.functions.invoke('fanbases-customer', {
-    body: { action: 'fetch_payment_methods', checkout_session_id: checkoutSessionId },
+    body: { action: 'fetch_payment_methods', payment_id: paymentId },
   });
 
   if (error) {

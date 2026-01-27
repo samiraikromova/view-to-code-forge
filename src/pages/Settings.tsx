@@ -4,13 +4,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, CreditCard, Download, Check, Zap, Loader2 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { ArrowLeft, CreditCard, Download, Check, Zap, Loader2, RefreshCw } from "lucide-react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { PLANS, SubscriptionTier } from "@/types/subscription";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
 import { SubscriptionModal, TopUpModal } from "@/components/payments";
-import { setupPaymentMethod } from "@/api/fanbases/fanbasesApi";
+import { setupPaymentMethod, fetchPaymentMethods, getOrCreateCustomer } from "@/api/fanbases/fanbasesApi";
 import { toast } from "sonner";
 
 interface BillingRecord {
@@ -21,8 +21,19 @@ interface BillingRecord {
   type: string;
 }
 
+interface PaymentMethod {
+  id: string;
+  type: string;
+  last4?: string;
+  brand?: string;
+  exp_month?: number;
+  exp_year?: number;
+  is_default?: boolean;
+}
+
 export default function Settings() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user, profile, refreshProfile } = useAuth();
   const [currentTier, setCurrentTier] = useState<SubscriptionTier>("free");
   const [billingHistory, setBillingHistory] = useState<BillingRecord[]>([]);
@@ -30,14 +41,20 @@ export default function Settings() {
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [showTopUpModal, setShowTopUpModal] = useState(false);
   const [settingUpCard, setSettingUpCard] = useState(false);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
+  const [loadingPaymentMethods, setLoadingPaymentMethods] = useState(false);
 
   const handleAddCard = async () => {
     setSettingUpCard(true);
     try {
       const result = await setupPaymentMethod();
       if (result.success && result.checkout_url) {
+        // Store session ID for later sync
+        if (result.checkout_session_id) {
+          localStorage.setItem('fanbases_checkout_session', result.checkout_session_id);
+        }
         window.open(result.checkout_url, '_blank');
-        toast.info('Complete the payment in the new tab, then return here');
+        toast.info('Complete the payment in the new tab, then return here and click "Refresh" to see your card');
       } else {
         toast.error(result.error || 'Failed to set up payment method');
       }
@@ -48,6 +65,56 @@ export default function Settings() {
       setSettingUpCard(false);
     }
   };
+
+  const loadPaymentMethods = async (paymentId?: string) => {
+    setLoadingPaymentMethods(true);
+    try {
+      const result = await fetchPaymentMethods(paymentId);
+      if (result.success && result.payment_methods) {
+        setPaymentMethods(result.payment_methods);
+        if (result.payment_methods.length > 0) {
+          toast.success('Payment method loaded successfully');
+        }
+      }
+    } catch (error) {
+      console.error('Error loading payment methods:', error);
+    } finally {
+      setLoadingPaymentMethods(false);
+    }
+  };
+
+  // Handle return from Fanbases checkout
+  useEffect(() => {
+    const setup = searchParams.get('setup');
+    const paymentId = searchParams.get('payment_id');
+    
+    if (setup === 'complete') {
+      console.log('[Settings] Returned from checkout with payment_id:', paymentId);
+      // Clear URL params
+      setSearchParams({});
+      
+      // Fetch payment methods with the payment ID
+      loadPaymentMethods(paymentId || undefined);
+      toast.success('Card setup complete! Loading your payment method...');
+    } else if (setup === 'cancelled') {
+      setSearchParams({});
+      toast.error('Card setup was cancelled');
+    }
+  }, [searchParams, setSearchParams]);
+
+  // Load payment methods on mount
+  useEffect(() => {
+    const loadInitialPaymentMethods = async () => {
+      const result = await getOrCreateCustomer();
+      if (result.has_payment_method) {
+        loadPaymentMethods();
+      }
+    };
+    
+    if (user) {
+      loadInitialPaymentMethods();
+    }
+  }, [user]);
 
   useEffect(() => {
     if (profile) {
@@ -97,6 +164,11 @@ export default function Settings() {
       setLoading(false);
     }
   }
+
+  const formatCardBrand = (brand?: string) => {
+    if (!brand) return 'Card';
+    return brand.charAt(0).toUpperCase() + brand.slice(1).toLowerCase();
+  };
 
   if (loading && billingHistory.length === 0) {
     return (
@@ -300,28 +372,90 @@ export default function Settings() {
         {/* Payment Methods */}
         <Card>
           <CardHeader>
-            <CardTitle>Payment Methods</CardTitle>
-            <CardDescription>Your card on file for one-click purchases</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="text-center py-6">
-              <CreditCard className="h-12 w-12 text-accent mx-auto mb-4" />
-              <p className="text-muted-foreground mb-4">
-                Payment methods are securely stored via Fanbases.
-              </p>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle>Payment Methods</CardTitle>
+                <CardDescription>Your card on file for one-click purchases</CardDescription>
+              </div>
               <Button 
-                className="bg-accent hover:bg-accent-hover text-accent-foreground gap-2" 
-                onClick={handleAddCard}
-                disabled={settingUpCard}
+                variant="ghost" 
+                size="sm"
+                onClick={() => loadPaymentMethods()}
+                disabled={loadingPaymentMethods}
               >
-                {settingUpCard ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <CreditCard className="h-4 w-4" />
-                )}
-                Add Card
+                <RefreshCw className={`h-4 w-4 ${loadingPaymentMethods ? 'animate-spin' : ''}`} />
               </Button>
             </div>
+          </CardHeader>
+          <CardContent>
+            {loadingPaymentMethods ? (
+              <div className="flex items-center justify-center py-6">
+                <Loader2 className="h-8 w-8 text-primary animate-spin" />
+                <span className="ml-2 text-muted-foreground">Loading payment methods...</span>
+              </div>
+            ) : paymentMethods.length > 0 ? (
+              <div className="space-y-3">
+                {paymentMethods.map((pm) => (
+                  <div 
+                    key={pm.id} 
+                    className="flex items-center justify-between p-4 border border-border rounded-lg bg-surface/30"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <CreditCard className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-foreground">
+                          {formatCardBrand(pm.brand)} •••• {pm.last4 || '****'}
+                        </p>
+                        {pm.exp_month && pm.exp_year && (
+                          <p className="text-sm text-muted-foreground">
+                            Expires {pm.exp_month.toString().padStart(2, '0')}/{pm.exp_year.toString().slice(-2)}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    {pm.is_default && (
+                      <Badge variant="outline" className="bg-accent/10 text-accent border-accent/30">
+                        Default
+                      </Badge>
+                    )}
+                  </div>
+                ))}
+                <Button 
+                  variant="outline"
+                  className="w-full mt-4 gap-2" 
+                  onClick={handleAddCard}
+                  disabled={settingUpCard}
+                >
+                  {settingUpCard ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <CreditCard className="h-4 w-4" />
+                  )}
+                  Add Another Card
+                </Button>
+              </div>
+            ) : (
+              <div className="text-center py-6">
+                <CreditCard className="h-12 w-12 text-accent mx-auto mb-4" />
+                <p className="text-muted-foreground mb-4">
+                  No payment method on file. Add a card to enable one-click purchases.
+                </p>
+                <Button 
+                  className="bg-accent hover:bg-accent-hover text-accent-foreground gap-2" 
+                  onClick={handleAddCard}
+                  disabled={settingUpCard}
+                >
+                  {settingUpCard ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <CreditCard className="h-4 w-4" />
+                  )}
+                  Add Card
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

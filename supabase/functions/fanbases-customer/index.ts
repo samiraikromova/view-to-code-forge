@@ -163,7 +163,6 @@ Deno.serve(async (req) => {
 
       // Get current origin for redirect
       const origin = req.headers.get("origin") || "https://app.example.com";
-      const returnUrl = `${origin}/pricing/top-up?setup=complete`;
 
       // Get base URL for webhooks
       const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
@@ -198,8 +197,9 @@ Deno.serve(async (req) => {
           action: "setup_card",
           email,
         },
-        success_url: returnUrl,
-        cancel_url: `${origin}/pricing/top-up?setup=cancelled`,
+        // Include session ID in success URL for syncing
+        success_url: `${origin}/settings?setup=complete`,
+        cancel_url: `${origin}/settings?setup=cancelled`,
         webhook_url: webhookUrl,
       };
 
@@ -232,16 +232,20 @@ Deno.serve(async (req) => {
       }
 
       const checkoutUrl = data.data?.payment_link || data.data?.url || data.payment_link || data.url;
+      const checkoutSessionId = data.data?.id || data.id;
 
       if (!checkoutUrl) {
         console.error("No checkout URL in response:", data);
         throw new Error("No checkout URL returned from Fanbases");
       }
 
+      console.log(`[Fanbases Customer] Checkout session created: ${checkoutSessionId}`);
+
       return new Response(
         JSON.stringify({
           success: true,
           checkout_url: checkoutUrl,
+          checkout_session_id: checkoutSessionId,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
@@ -268,7 +272,7 @@ Deno.serve(async (req) => {
       });
     } else if (action === "fetch_payment_methods") {
       // Fetch payment methods from Fanbases for a specific checkout session or customer
-      const { checkout_session_id } = body;
+      const { payment_id } = body;
 
       // First get the customer record
       const { data: customer } = await supabase
@@ -280,45 +284,50 @@ Deno.serve(async (req) => {
       let paymentMethods: Array<{ id: string; type: string; last4?: string; brand?: string; exp_month?: number; exp_year?: number; is_default?: boolean }> = [];
       let customerId = customer?.fanbases_customer_id;
 
-      // If we have a checkout session, get transaction details to find customer/payment method
-      if (checkout_session_id) {
-        console.log(`[Fanbases Customer] Fetching transactions for session: ${checkout_session_id}`);
+      // If we have a payment_id from the redirect, use it to find the customer
+      // Fanbases may return customer info in the transaction
+      if (payment_id && !customerId) {
+        console.log(`[Fanbases Customer] Looking up customer from payment: ${payment_id}`);
+        
+        // Try to find customer by querying transactions with this payment ID
+        // or we can use the /transactions endpoint with payment_id filter
         try {
-          const txnResponse = await fetch(
-            `${FANBASES_API_URL}/checkout-sessions/${checkout_session_id}/transactions`,
-            {
-              method: "GET",
-              headers: {
-                Accept: "application/json",
-                "x-api-key": FANBASES_API_KEY,
-              },
+          // Get unique customers to find the one associated with this user
+          const customersResponse = await fetch(`${FANBASES_API_URL}/customers`, {
+            method: "GET",
+            headers: {
+              Accept: "application/json",
+              "x-api-key": FANBASES_API_KEY,
             },
-          );
+          });
 
-          if (txnResponse.ok) {
-            const txnData = await txnResponse.json();
-            console.log("[Fanbases Customer] Transactions:", JSON.stringify(txnData));
-
-            const transactions = txnData.data?.transactions || [];
-            if (transactions.length > 0) {
-              const txn = transactions[0];
-              // Extract customer ID from transaction
-              const fanCustomerId = txn.fan?.id || txn.customer_id;
-              if (fanCustomerId && !customerId) {
-                customerId = fanCustomerId;
-                // Update our database with the customer ID
-                await supabase
-                  .from("fanbases_customers")
-                  .update({
-                    fanbases_customer_id: customerId,
-                    updated_at: new Date().toISOString(),
-                  })
-                  .eq("user_id", user.id);
-              }
+          if (customersResponse.ok) {
+            const customersData = await customersResponse.json();
+            console.log("[Fanbases Customer] Customers list:", JSON.stringify(customersData).substring(0, 500));
+            
+            // Find customer by email
+            const { data: userProfile } = await supabase.from("users").select("email").eq("id", user.id).single();
+            const userEmail = userProfile?.email || user.email;
+            
+            const customers = customersData.data?.customers || [];
+            const matchedCustomer = customers.find((c: { email?: string }) => c.email?.toLowerCase() === userEmail?.toLowerCase());
+            
+            if (matchedCustomer) {
+              customerId = matchedCustomer.id;
+              console.log(`[Fanbases Customer] Found customer by email: ${customerId}`);
+              
+              // Update our database
+              await supabase
+                .from("fanbases_customers")
+                .update({
+                  fanbases_customer_id: customerId,
+                  updated_at: new Date().toISOString(),
+                })
+                .eq("user_id", user.id);
             }
           }
-        } catch (txnError) {
-          console.error("[Fanbases Customer] Error fetching transactions:", txnError);
+        } catch (e) {
+          console.error("[Fanbases Customer] Error looking up customer:", e);
         }
       }
 
@@ -379,6 +388,8 @@ Deno.serve(async (req) => {
         } catch (pmError) {
           console.error("[Fanbases Customer] Error fetching payment methods:", pmError);
         }
+      } else {
+        console.log("[Fanbases Customer] No customer ID found, cannot fetch payment methods");
       }
 
       return new Response(
