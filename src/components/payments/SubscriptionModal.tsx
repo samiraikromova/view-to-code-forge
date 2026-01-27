@@ -60,6 +60,7 @@ export function SubscriptionModal({
     try {
       // Use fetchPaymentMethods which actually checks Fanbases API
       const result = await fetchPaymentMethods();
+      console.log('[SubscriptionModal] fetchPaymentMethods result:', result);
       setHasPaymentMethod(result.has_payment_method);
     } catch (error) {
       console.error('Error checking payment method:', error);

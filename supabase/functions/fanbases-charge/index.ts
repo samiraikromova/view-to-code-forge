@@ -126,7 +126,8 @@ Deno.serve(async (req) => {
       console.log("[Fanbases Charge] No stored customer ID, looking up by email:", userEmail);
       
       try {
-        const customersResponse = await fetch(`${FANBASES_API_URL}/customers?per_page=200`, {
+        // Use search parameter as per API docs: GET /customers?search=email
+        let customersResponse = await fetch(`${FANBASES_API_URL}/customers?search=${encodeURIComponent(userEmail)}`, {
           method: "GET",
           headers: {
             Accept: "application/json",
@@ -134,8 +135,22 @@ Deno.serve(async (req) => {
           },
         });
 
+        // Fallback to getting all customers if search doesn't work
+        if (!customersResponse.ok || customersResponse.status === 400) {
+          console.log("[Fanbases Charge] Search filter not supported, fetching all customers");
+          customersResponse = await fetch(`${FANBASES_API_URL}/customers?per_page=200`, {
+            method: "GET",
+            headers: {
+              Accept: "application/json",
+              "x-api-key": FANBASES_API_KEY,
+            },
+          });
+        }
+
         if (customersResponse.ok) {
           const customersData = await customersResponse.json();
+          console.log("[Fanbases Charge] Customers response keys:", Object.keys(customersData));
+          
           let customers: Array<{ id: string; email?: string }> = [];
           if (Array.isArray(customersData)) {
             customers = customersData;
@@ -148,6 +163,10 @@ Deno.serve(async (req) => {
           }
           
           console.log(`[Fanbases Charge] Found ${customers.length} total customers`);
+          if (customers.length > 0) {
+            console.log("[Fanbases Charge] Sample customer:", JSON.stringify(customers[0]));
+          }
+          
           const matchedCustomer = customers.find((c) => c.email?.toLowerCase() === userEmail.toLowerCase());
           
           if (matchedCustomer) {
@@ -172,7 +191,12 @@ Deno.serve(async (req) => {
                 updated_at: new Date().toISOString(),
               });
             }
+          } else {
+            console.log(`[Fanbases Charge] No customer found with email: ${userEmail}`);
           }
+        } else {
+          const errorText = await customersResponse.text();
+          console.error("[Fanbases Charge] Customers API error:", customersResponse.status, errorText);
         }
       } catch (e) {
         console.error("[Fanbases Charge] Error looking up customer:", e);
