@@ -10,7 +10,7 @@ import { PLANS, SubscriptionTier } from "@/types/subscription";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
 import { SubscriptionModal, TopUpModal } from "@/components/payments";
-import { setupPaymentMethod, fetchPaymentMethods, getOrCreateCustomer } from "@/api/fanbases/fanbasesApi";
+import { setupPaymentMethod, fetchPaymentMethods } from "@/api/fanbases/fanbasesApi";
 import { toast } from "sonner";
 
 interface BillingRecord {
@@ -104,17 +104,10 @@ export default function Settings() {
     }
   }, [searchParams, setSearchParams]);
 
-  // Load payment methods on mount
+  // Load payment methods on mount - always fetch to check Fanbases API
   useEffect(() => {
-    const loadInitialPaymentMethods = async () => {
-      const result = await getOrCreateCustomer();
-      if (result.has_payment_method) {
-        loadPaymentMethods();
-      }
-    };
-    
     if (user) {
-      loadInitialPaymentMethods();
+      loadPaymentMethods();
     }
   }, [user]);
 
@@ -403,8 +396,8 @@ export default function Settings() {
                     className="flex items-center justify-between p-4 border border-border rounded-lg bg-surface/30"
                   >
                     <div className="flex items-center gap-4">
-                      <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                        <CreditCard className="h-5 w-5 text-primary" />
+                      <div className="h-10 w-10 rounded-lg bg-[#8e4b9b]/10 flex items-center justify-center">
+                        <CreditCard className="h-5 w-5 text-[#8e4b9b]" />
                       </div>
                       <div>
                         <p className="font-medium text-foreground">
