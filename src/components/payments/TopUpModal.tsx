@@ -40,7 +40,9 @@ export function TopUpModal({
     setCheckingPayment(true);
     try {
       // Use fetchPaymentMethods which actually checks Fanbases API
+      // Pass email to help with customer lookup
       const result = await fetchPaymentMethods();
+      console.log('[TopUpModal] fetchPaymentMethods result:', result);
       setHasPaymentMethod(result.has_payment_method);
     } catch (error) {
       console.error('Error checking payment method:', error);

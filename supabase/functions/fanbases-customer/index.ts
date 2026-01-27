@@ -174,13 +174,8 @@ Deno.serve(async (req) => {
       const webhookUrl = `${supabaseUrl}/functions/v1/fanbases-webhook`;
 
       // Create a checkout session for saving a card
-      // Sandbox requires product.title, amount_cents, and type instead of product_id
-      // Fanbases checkout API pre-fill fields
-      // Split name for first/last name fields
-      const nameParts = (fullName || "").trim().split(" ");
-      const firstName = nameParts[0] || "";
-      const lastName = nameParts.slice(1).join(" ") || "";
-
+      // According to API docs, checkout-sessions takes: product, amount_cents, type, metadata, success_url, webhook_url
+      // Customer info is passed via metadata - the checkout page should pick this up
       const setupPayload = {
         product: {
           title: "Card Setup Fee",
@@ -188,36 +183,15 @@ Deno.serve(async (req) => {
         },
         amount_cents: 100, // $1 setup fee
         type: "onetime_reusable",
-        // Fanbases uses "fan" object for prefilling customer details
-        fan: {
-          name: fullName || "Customer",
-          email: email || "",
-          first_name: firstName,
-          last_name: lastName,
-        },
-        // Also include as root-level for broader API compatibility
-        customer_email: email,
-        customer_name: fullName,
-        // Some APIs use first_name/last_name at root level
-        first_name: firstName,
-        last_name: lastName,
-        email: email,
-        name: fullName,
-        // prefill object used by some checkout implementations
-        prefill: {
-          email: email,
-          name: fullName,
-          first_name: firstName,
-          last_name: lastName,
-        },
         metadata: {
           user_id: user.id,
           action: "setup_card",
-          email,
-          name: fullName,
+          email: email || "",
+          name: fullName || "",
+          first_name: (fullName || "").split(" ")[0] || "",
+          last_name: (fullName || "").split(" ").slice(1).join(" ") || "",
         },
-        // Include session ID in success URL for syncing
-        success_url: `${origin}/settings?setup=complete`,
+        success_url: `${origin}/settings?setup=complete&email=${encodeURIComponent(email || "")}`,
         cancel_url: `${origin}/settings?setup=cancelled`,
         webhook_url: webhookUrl,
       };
@@ -309,13 +283,13 @@ Deno.serve(async (req) => {
       
       console.log(`[Fanbases Customer] fetch_payment_methods - User: ${user.id}, Email: ${userEmail}, Payment ID: ${payment_id}, Existing Customer ID: ${customerId}`);
 
-      // If no customer ID, try to find by email
+      // If no customer ID, try to find by email using search parameter
       if (!customerId) {
         console.log(`[Fanbases Customer] Looking up customer by email: ${userEmail}`);
         
         try {
-          // Try with email query parameter first
-          let customersResponse = await fetch(`${FANBASES_API_URL}/customers?email=${encodeURIComponent(userEmail || '')}`, {
+          // Use search parameter as per API docs: GET /customers?search=email
+          let customersResponse = await fetch(`${FANBASES_API_URL}/customers?search=${encodeURIComponent(userEmail || '')}`, {
             method: "GET",
             headers: {
               Accept: "application/json",
@@ -323,9 +297,9 @@ Deno.serve(async (req) => {
             },
           });
 
-          // If email filter doesn't work, get all and filter client-side
+          // If search filter doesn't work, get all and filter client-side
           if (!customersResponse.ok || customersResponse.status === 400) {
-            console.log("[Fanbases Customer] Email filter not supported, fetching all customers");
+            console.log("[Fanbases Customer] Search filter not supported, fetching all customers");
             customersResponse = await fetch(`${FANBASES_API_URL}/customers?per_page=200`, {
               method: "GET",
               headers: {
