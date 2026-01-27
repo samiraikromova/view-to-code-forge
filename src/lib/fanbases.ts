@@ -5,9 +5,9 @@
 // are stored in the `fanbases_products` Supabase table.
 // The table maps Fanbases product IDs to internal references.
 // SANDBOX (for testing):
-// export const FANBASES_API_URL = 'https://qa.dev-fan-basis.com/public-api';
+export const FANBASES_API_URL = 'https://qa.dev-fan-basis.com';
 // PRODUCTION (for live):
-export const FANBASES_API_URL = 'https://www.fanbasis.com/public-api';
+// export const FANBASES_API_URL = 'https://www.fanbasis.com/public-api';
 
 // Fanbases Product ID mappings (for reference - authoritative data is in fanbases_products table)
 // Card Setup: Rop7q
