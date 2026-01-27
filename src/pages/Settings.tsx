@@ -248,7 +248,7 @@ export default function Settings() {
                 <div>
                   <div className="flex items-center gap-3">
                     <h3 className="text-lg font-semibold text-foreground">{PLANS[currentTier].name} Plan</h3>
-                    <Badge variant="outline" className="bg-primary/20 text-primary border-primary/30">
+                    <Badge variant="outline" className="bg-[#8e4b9b]/20 text-[#8e4b9b] border-[#8e4b9b]/30">
                       Current Plan
                     </Badge>
                   </div>
