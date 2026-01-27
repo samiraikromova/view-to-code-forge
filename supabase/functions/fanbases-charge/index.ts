@@ -129,7 +129,7 @@ Deno.serve(async (req) => {
       console.log("[Fanbases Charge] No stored payment method, fetching from Fanbases...");
       try {
         const pmResponse = await fetch(
-          `${FANBASES_API_URL}/customers/${customer.fanbases_customer_id}/payment-methods`,
+          `${FANBASES_API_URL}/public-api/customers/${customer.fanbases_customer_id}/payment-methods`,
           {
             method: "GET",
             headers: {
@@ -183,7 +183,7 @@ Deno.serve(async (req) => {
     };
     console.log("[Fanbases Charge] Request payload:", JSON.stringify(chargePayload));
 
-    const chargeResponse = await fetch(`${FANBASES_API_URL}/customers/${customer.fanbases_customer_id}/charge`, {
+    const chargeResponse = await fetch(`${FANBASES_API_URL}/public-api/customers/${customer.fanbases_customer_id}/charge`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
