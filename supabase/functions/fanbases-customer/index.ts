@@ -76,7 +76,7 @@ Deno.serve(async (req) => {
 
         try {
           const pmResponse = await fetch(
-            `${FANBASES_API_URL}/customers/${existingCustomer.fanbases_customer_id}/payment-methods`,
+            `${FANBASES_API_URL}/public-api/customers/${existingCustomer.fanbases_customer_id}/payment-methods`,
             {
               method: "GET",
               headers: {
@@ -175,7 +175,7 @@ Deno.serve(async (req) => {
 
       console.log("[Fanbases Customer] Creating card setup session:", JSON.stringify(setupPayload));
 
-      const response = await fetch(`${FANBASES_API_URL}/checkout-sessions`, {
+      const response = await fetch(`${FANBASES_API_URL}/public-api/checkout-sessions`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

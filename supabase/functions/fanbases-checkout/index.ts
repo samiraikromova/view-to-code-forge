@@ -90,7 +90,7 @@ Deno.serve(async (req) => {
 
       console.log("[Fanbases Checkout] Creating checkout session:", JSON.stringify(checkoutPayload));
 
-      const response = await fetch(`${FANBASES_API_URL}/checkout-sessions`, {
+      const response = await fetch(`${FANBASES_API_URL}/public-api/checkout-sessions`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -172,7 +172,7 @@ Deno.serve(async (req) => {
 
       console.log("[Fanbases Checkout] Creating embedded checkout:", JSON.stringify(embeddedPayload));
 
-      const response = await fetch(`${FANBASES_API_URL}/checkout-sessions/embedded`, {
+      const response = await fetch(`${FANBASES_API_URL}/public-api/checkout-sessions/embedded`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -234,7 +234,7 @@ Deno.serve(async (req) => {
 
       console.log("[Fanbases Checkout] Creating card setup session:", JSON.stringify(setupPayload));
 
-      const response = await fetch(`${FANBASES_API_URL}/checkout-sessions`, {
+      const response = await fetch(`${FANBASES_API_URL}/public-api/checkout-sessions`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
