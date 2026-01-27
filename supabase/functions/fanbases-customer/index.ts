@@ -6,8 +6,10 @@ const corsHeaders = {
 };
 
 // Fanbases API base URL
-// Sandbox for testing, Production for live
+// SANDBOX (for testing):
 const FANBASES_API_URL = 'https://qa.dev-fan-basis.com/public-api';
+// PRODUCTION (for live):
+// const FANBASES_API_URL = 'https://www.fanbasis.com/public-api';
 
 Deno.serve(async (req) => {
   // Handle CORS preflight
