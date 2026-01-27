@@ -61,6 +61,11 @@ Deno.serve(async (req) => {
 
     if (action === "create_checkout") {
       // Create a checkout session for one-time or subscription purchase
+      
+      // Get user profile for prefilling
+      const { data: userProfile } = await supabase.from("users").select("email, name").eq("id", user.id).single();
+      const email = userProfile?.email || user.email;
+      const fullName = userProfile?.name || "";
 
       const isSubscription = product_type === "subscription";
 
@@ -71,6 +76,13 @@ Deno.serve(async (req) => {
         },
         amount_cents: amount_cents,
         type: isSubscription ? "subscription" : "onetime_non_reusable",
+        // Fanbases uses "fan" object for prefilling customer details
+        fan: {
+          name: fullName || "Customer",
+          email: email,
+        },
+        customer_email: email,
+        customer_name: fullName,
         metadata: {
           user_id: user.id,
           product_type,
@@ -148,14 +160,26 @@ Deno.serve(async (req) => {
       );
     } else if (action === "create_embedded_checkout") {
       // Create an embedded checkout session
+      
+      // Get user profile for prefilling
+      const { data: userProfile } = await supabase.from("users").select("email, name").eq("id", user.id).single();
+      const email = userProfile?.email || user.email;
+      const fullName = userProfile?.name || "";
 
-      const embeddedPayload = {
+      const embeddedPayload: Record<string, unknown> = {
         product: {
           title: title || `${product_type}: ${product_id}`,
           description: description || "",
         },
         amount_cents: amount_cents,
         type: product_type === "subscription" ? "subscription" : "onetime_non_reusable",
+        // Fanbases uses "fan" object for prefilling customer details
+        fan: {
+          name: fullName || "Customer",
+          email: email,
+        },
+        customer_email: email,
+        customer_name: fullName,
         metadata: {
           user_id: user.id,
           product_type,
@@ -215,6 +239,8 @@ Deno.serve(async (req) => {
       // Create a checkout session specifically for saving a card (card-on-file)
 
       const { data: userProfile } = await supabase.from("users").select("email, name").eq("id", user.id).single();
+      const email = userProfile?.email || user.email;
+      const fullName = userProfile?.name || "";
 
       const setupPayload = {
         product: {
@@ -223,10 +249,17 @@ Deno.serve(async (req) => {
         },
         amount_cents: 0, // Zero amount for card setup
         type: "onetime_reusable", // Reusable for future charges
+        // Fanbases uses "fan" object for prefilling customer details
+        fan: {
+          name: fullName || "Customer",
+          email: email,
+        },
+        customer_email: email,
+        customer_name: fullName,
         metadata: {
           user_id: user.id,
           action: "setup_card",
-          email: userProfile?.email || user.email,
+          email: email,
         },
         success_url: success_url || `${body.base_url || "https://app.example.com"}/card-saved`,
         webhook_url: webhookUrl,
