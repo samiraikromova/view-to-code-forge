@@ -176,6 +176,11 @@ Deno.serve(async (req) => {
       // Create a checkout session for saving a card
       // Sandbox requires product.title, amount_cents, and type instead of product_id
       // Fanbases checkout API pre-fill fields
+      // Split name for first/last name fields
+      const nameParts = (fullName || "").trim().split(" ");
+      const firstName = nameParts[0] || "";
+      const lastName = nameParts.slice(1).join(" ") || "";
+
       const setupPayload = {
         product: {
           title: "Card Setup Fee",
@@ -187,15 +192,24 @@ Deno.serve(async (req) => {
         fan: {
           name: fullName || "Customer",
           email: email || "",
+          first_name: firstName,
+          last_name: lastName,
         },
         // Also include as root-level for broader API compatibility
         customer_email: email,
         customer_name: fullName,
-        // Some APIs use first_name/last_name
-        first_name: fullName.split(" ")[0] || "",
-        last_name: fullName.split(" ").slice(1).join(" ") || "",
+        // Some APIs use first_name/last_name at root level
+        first_name: firstName,
+        last_name: lastName,
         email: email,
         name: fullName,
+        // prefill object used by some checkout implementations
+        prefill: {
+          email: email,
+          name: fullName,
+          first_name: firstName,
+          last_name: lastName,
+        },
         metadata: {
           user_id: user.id,
           action: "setup_card",
