@@ -270,9 +270,9 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
-    } else if (action === "fetch_payment_methods") {
+  } else if (action === "fetch_payment_methods") {
       // Fetch payment methods from Fanbases for a specific checkout session or customer
-      const { payment_id } = body;
+      const { payment_id, email: providedEmail } = body;
 
       // First get the customer record
       const { data: customer } = await supabase
@@ -284,16 +284,19 @@ Deno.serve(async (req) => {
       let paymentMethods: Array<{ id: string; type: string; last4?: string; brand?: string; exp_month?: number; exp_year?: number; is_default?: boolean }> = [];
       let customerId = customer?.fanbases_customer_id;
 
-      // If we have a payment_id from the redirect, use it to find the customer
-      // Fanbases may return customer info in the transaction
-      if (payment_id && !customerId) {
-        console.log(`[Fanbases Customer] Looking up customer from payment: ${payment_id}`);
+      // Get user email - prefer provided email from redirect, then profile, then auth
+      const { data: userProfile } = await supabase.from("users").select("email").eq("id", user.id).single();
+      const userEmail = providedEmail || userProfile?.email || user.email;
+      
+      console.log(`[Fanbases Customer] fetch_payment_methods - User: ${user.id}, Email: ${userEmail}, Payment ID: ${payment_id}, Existing Customer ID: ${customerId}`);
+
+      // If no customer ID, try to find by email
+      if (!customerId) {
+        console.log(`[Fanbases Customer] Looking up customer by email: ${userEmail}`);
         
-        // Try to find customer by querying transactions with this payment ID
-        // or we can use the /transactions endpoint with payment_id filter
         try {
-          // Get unique customers to find the one associated with this user
-          const customersResponse = await fetch(`${FANBASES_API_URL}/customers`, {
+          // Try with email query parameter first
+          let customersResponse = await fetch(`${FANBASES_API_URL}/customers?email=${encodeURIComponent(userEmail || '')}`, {
             method: "GET",
             headers: {
               Accept: "application/json",
@@ -301,22 +304,45 @@ Deno.serve(async (req) => {
             },
           });
 
+          // If email filter doesn't work, get all and filter client-side
+          if (!customersResponse.ok || customersResponse.status === 400) {
+            console.log("[Fanbases Customer] Email filter not supported, fetching all customers");
+            customersResponse = await fetch(`${FANBASES_API_URL}/customers?per_page=200`, {
+              method: "GET",
+              headers: {
+                Accept: "application/json",
+                "x-api-key": FANBASES_API_KEY,
+              },
+            });
+          }
+
           if (customersResponse.ok) {
             const customersData = await customersResponse.json();
-            console.log("[Fanbases Customer] Customers list:", JSON.stringify(customersData).substring(0, 500));
+            console.log("[Fanbases Customer] Customers response status:", customersResponse.status);
+            console.log("[Fanbases Customer] Customers data keys:", Object.keys(customersData));
             
-            // Find customer by email
-            const { data: userProfile } = await supabase.from("users").select("email").eq("id", user.id).single();
-            const userEmail = userProfile?.email || user.email;
+            // Parse customers array - handle different response structures
+            let customers: Array<{ id: string; email?: string }> = [];
+            if (Array.isArray(customersData)) {
+              customers = customersData;
+            } else if (customersData.data?.customers) {
+              customers = customersData.data.customers;
+            } else if (customersData.customers) {
+              customers = customersData.customers;
+            } else if (customersData.data && Array.isArray(customersData.data)) {
+              customers = customersData.data;
+            }
             
-            const customers = customersData.data?.customers || [];
-            const matchedCustomer = customers.find((c: { email?: string }) => c.email?.toLowerCase() === userEmail?.toLowerCase());
+            console.log(`[Fanbases Customer] Found ${customers.length} total customers`);
+            
+            // Find by email match
+            const matchedCustomer = customers.find((c) => c.email?.toLowerCase() === userEmail?.toLowerCase());
             
             if (matchedCustomer) {
               customerId = matchedCustomer.id;
               console.log(`[Fanbases Customer] Found customer by email: ${customerId}`);
               
-              // Update our database
+              // Update our database with the found customer ID
               await supabase
                 .from("fanbases_customers")
                 .update({
@@ -324,7 +350,14 @@ Deno.serve(async (req) => {
                   updated_at: new Date().toISOString(),
                 })
                 .eq("user_id", user.id);
+            } else {
+              console.log(`[Fanbases Customer] No customer found matching email: ${userEmail}`);
+              // Log first few customers for debugging
+              console.log("[Fanbases Customer] Sample customers:", JSON.stringify(customers.slice(0, 3)));
             }
+          } else {
+            const errorText = await customersResponse.text();
+            console.error("[Fanbases Customer] Customers API error:", customersResponse.status, errorText);
           }
         } catch (e) {
           console.error("[Fanbases Customer] Error looking up customer:", e);

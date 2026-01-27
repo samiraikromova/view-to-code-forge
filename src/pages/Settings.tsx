@@ -66,10 +66,11 @@ export default function Settings() {
     }
   };
 
-  const loadPaymentMethods = async (paymentId?: string) => {
+  const loadPaymentMethods = async (paymentId?: string, email?: string) => {
     setLoadingPaymentMethods(true);
     try {
-      const result = await fetchPaymentMethods(paymentId);
+      const result = await fetchPaymentMethods(paymentId, email);
+      console.log('[Settings] fetchPaymentMethods result:', result);
       if (result.success && result.payment_methods) {
         setPaymentMethods(result.payment_methods);
         if (result.payment_methods.length > 0) {
@@ -87,14 +88,15 @@ export default function Settings() {
   useEffect(() => {
     const setup = searchParams.get('setup');
     const paymentId = searchParams.get('payment_id');
+    const email = searchParams.get('email');
     
     if (setup === 'complete') {
-      console.log('[Settings] Returned from checkout with payment_id:', paymentId);
+      console.log('[Settings] Returned from checkout with payment_id:', paymentId, 'email:', email);
       // Clear URL params
       setSearchParams({});
       
-      // Fetch payment methods with the payment ID
-      loadPaymentMethods(paymentId || undefined);
+      // Fetch payment methods with the payment ID and email from redirect
+      loadPaymentMethods(paymentId || undefined, email || undefined);
       toast.success('Card setup complete! Loading your payment method...');
     } else if (setup === 'cancelled') {
       setSearchParams({});
