@@ -177,7 +177,7 @@ Deno.serve(async (req) => {
 
       // Create a checkout session for saving a card
       // Sandbox requires product.title, amount_cents, and type instead of product_id
-      // Customer prefill uses: name, email, phone (not first_name/last_name)
+      // Fanbases uses "fan" object for customer prefill (name, email, phone)
       const setupPayload = {
         product: {
           title: "Card Setup Fee",
@@ -185,21 +185,14 @@ Deno.serve(async (req) => {
         },
         amount_cents: 100, // $1 setup fee
         type: "onetime_reusable",
-        // Prefill customer information - Fanbases uses 'name' not first_name/last_name
-        name: fullName || firstName,
-        email: email,
-        // Also try the customer object format
-        customer: {
-          name: fullName || firstName,
-          email: email,
-          first_name: firstName,
-          last_name: lastName,
-        },
-        // Pre-fill fields for the checkout form
-        prefill: {
-          name: fullName || firstName,
+        // Fanbases uses "fan" object for prefilling customer details
+        fan: {
+          name: fullName || firstName || "Customer",
           email: email,
         },
+        // Also include as root-level for compatibility
+        customer_email: email,
+        customer_name: fullName || firstName,
         metadata: {
           user_id: user.id,
           action: "setup_card",
