@@ -88,19 +88,29 @@ Deno.serve(async (req) => {
 
           if (pmResponse.ok) {
             const pmData = await pmResponse.json();
+            console.log("[Fanbases Customer] Payment methods response:", JSON.stringify(pmData));
+            
+            // Parse according to API schema: data.payment_methods[]
             const paymentMethods = pmData.data?.payment_methods || [];
             hasPaymentMethod = paymentMethods.length > 0;
 
+            console.log(`[Fanbases Customer] Found ${paymentMethods.length} payment methods`);
+
             // Update our database with the first payment method if we don't have one stored
             if (hasPaymentMethod && !existingCustomer.payment_method_id) {
+              const defaultMethod = paymentMethods.find((pm: { is_default?: boolean }) => pm.is_default) || paymentMethods[0];
               await supabase
                 .from("fanbases_customers")
                 .update({
-                  payment_method_id: paymentMethods[0].id,
+                  payment_method_id: defaultMethod.id,
                   updated_at: new Date().toISOString(),
                 })
                 .eq("user_id", user.id);
+              console.log(`[Fanbases Customer] Stored payment method: ${defaultMethod.id}`);
             }
+          } else {
+            const errorText = await pmResponse.text();
+            console.log("[Fanbases Customer] Payment methods error:", errorText);
           }
         } catch (pmError) {
           console.log("[Fanbases Customer] Could not fetch payment methods:", pmError);
@@ -274,7 +284,7 @@ Deno.serve(async (req) => {
         .eq("user_id", user.id)
         .maybeSingle();
 
-      let paymentMethods: Array<{ id: string; type: string; last4?: string; brand?: string }> = [];
+      let paymentMethods: Array<{ id: string; type: string; last4?: string; brand?: string; exp_month?: number; exp_year?: number; is_default?: boolean }> = [];
       let customerId = customer?.fanbases_customer_id;
 
       // If we have a checkout session, get transaction details to find customer/payment method
@@ -331,23 +341,47 @@ Deno.serve(async (req) => {
             },
           });
 
-          if (pmResponse.ok) {
-            const pmData = await pmResponse.json();
-            console.log("[Fanbases Customer] Payment methods:", JSON.stringify(pmData));
-            paymentMethods = pmData.data?.payment_methods || [];
+          const pmResponseText = await pmResponse.text();
+          console.log("[Fanbases Customer] Payment methods raw response:", pmResponseText);
 
-            // Update our database with the first payment method
-            if (paymentMethods.length > 0 && !customer?.payment_method_id) {
+          if (pmResponse.ok) {
+            const pmData = JSON.parse(pmResponseText);
+            // Parse according to API schema: data.payment_methods[] with id, type, last4, brand, exp_month, exp_year, is_default
+            paymentMethods = (pmData.data?.payment_methods || []).map((pm: {
+              id: string;
+              type: string;
+              last4?: string;
+              brand?: string;
+              exp_month?: number;
+              exp_year?: number;
+              is_default?: boolean;
+            }) => ({
+              id: pm.id,
+              type: pm.type,
+              last4: pm.last4,
+              brand: pm.brand,
+              exp_month: pm.exp_month,
+              exp_year: pm.exp_year,
+              is_default: pm.is_default,
+            }));
+
+            console.log(`[Fanbases Customer] Found ${paymentMethods.length} payment methods:`, JSON.stringify(paymentMethods));
+
+            // Update our database with the default or first payment method
+            if (paymentMethods.length > 0) {
+              const defaultMethod = paymentMethods.find((pm: { is_default?: boolean }) => pm.is_default) || paymentMethods[0];
               await supabase
                 .from("fanbases_customers")
                 .update({
-                  payment_method_id: paymentMethods[0].id,
+                  fanbases_customer_id: customerId,
+                  payment_method_id: defaultMethod.id,
                   updated_at: new Date().toISOString(),
                 })
                 .eq("user_id", user.id);
+              console.log(`[Fanbases Customer] Stored payment method: ${defaultMethod.id}`);
             }
           } else {
-            console.error("[Fanbases Customer] Payment methods error:", await pmResponse.text());
+            console.error("[Fanbases Customer] Payment methods error:", pmResponseText);
           }
         } catch (pmError) {
           console.error("[Fanbases Customer] Error fetching payment methods:", pmError);
