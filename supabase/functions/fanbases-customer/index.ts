@@ -7,9 +7,9 @@ const corsHeaders = {
 
 // Fanbases API base URL
 // SANDBOX (for testing):
-const FANBASES_API_URL = "https://qa.dev-fan-basis.com";
+const FANBASES_API_URL = "https://qa.dev-fan-basis.com/public-api";
 // PRODUCTION (for live):
-// const FANBASES_API_URL = 'https://www.fanbasis.com/public-api';
+//const FANBASES_API_URL = 'https://www.fanbasis.com/public-api';
 
 Deno.serve(async (req) => {
   // Handle CORS preflight
@@ -76,7 +76,7 @@ Deno.serve(async (req) => {
 
         try {
           const pmResponse = await fetch(
-            `${FANBASES_API_URL}/public-api/customers/${existingCustomer.fanbases_customer_id}/payment-methods`,
+            `${FANBASES_API_URL}/customers/${existingCustomer.fanbases_customer_id}/payment-methods`,
             {
               method: "GET",
               headers: {
@@ -175,7 +175,7 @@ Deno.serve(async (req) => {
 
       console.log("[Fanbases Customer] Creating card setup session:", JSON.stringify(setupPayload));
 
-      const response = await fetch(`${FANBASES_API_URL}/public-api/checkout-sessions`, {
+      const response = await fetch(`${FANBASES_API_URL}/checkout-sessions`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

@@ -7,7 +7,7 @@ const corsHeaders = {
 
 // Fanbases API base URL
 // SANDBOX (for testing):
-const FANBASES_API_URL = "https://qa.dev-fan-basis.com";
+const FANBASES_API_URL = "https://qa.dev-fan-basis.com/public-api";
 // PRODUCTION (for live):
 // const FANBASES_API_URL = 'https://www.fanbasis.com/public-api';
 
@@ -129,7 +129,7 @@ Deno.serve(async (req) => {
       console.log("[Fanbases Charge] No stored payment method, fetching from Fanbases...");
       try {
         const pmResponse = await fetch(
-          `${FANBASES_API_URL}/public-api/customers/${customer.fanbases_customer_id}/payment-methods`,
+          `${FANBASES_API_URL}/customers/${customer.fanbases_customer_id}/payment-methods`,
           {
             method: "GET",
             headers: {
@@ -183,7 +183,7 @@ Deno.serve(async (req) => {
     };
     console.log("[Fanbases Charge] Request payload:", JSON.stringify(chargePayload));
 
-    const chargeResponse = await fetch(`${FANBASES_API_URL}/public-api/customers/${customer.fanbases_customer_id}/charge`, {
+    const chargeResponse = await fetch(`${FANBASES_API_URL}/customers/${customer.fanbases_customer_id}/charge`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
