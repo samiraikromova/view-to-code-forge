@@ -6,7 +6,7 @@ const corsHeaders = {
 };
 
 // Fanbases API base URL - Production
-const FANBASES_API_URL = "https://www.fanbasis.com/public-api";
+const FANBASES_API_URL = "https://qa.dev-fan-basis.com/public-api";
 
 Deno.serve(async (req) => {
   // Handle CORS preflight
@@ -58,7 +58,7 @@ Deno.serve(async (req) => {
 
     if (action === "create_checkout") {
       // Create a checkout session for one-time or subscription purchase
-      
+
       // Get user profile for prefilling
       const { data: userProfile } = await supabase.from("users").select("email, name").eq("id", user.id).single();
       const email = userProfile?.email || user.email;
@@ -153,7 +153,7 @@ Deno.serve(async (req) => {
       );
     } else if (action === "create_embedded_checkout") {
       // Create an embedded checkout session
-      
+
       // Get user profile for prefilling
       const { data: userProfile } = await supabase.from("users").select("email, name").eq("id", user.id).single();
       const email = userProfile?.email || user.email;
