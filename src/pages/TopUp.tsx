@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { ArrowLeft, Zap, Check, CreditCard, Loader2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { purchaseCredits, getOrCreateCustomer, setupPaymentMethod } from "@/api/fanbases/fanbasesApi";
+import { purchaseCredits, fetchPaymentMethods, setupPaymentMethod } from "@/api/fanbases/fanbasesApi";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 
@@ -20,12 +20,22 @@ export default function TopUp() {
   const currentCredits = profile?.credits || 0;
   const [loading, setLoading] = useState<number | null>(null);
   const [hasPaymentMethod, setHasPaymentMethod] = useState<boolean | null>(null);
+  const [checkingPaymentMethod, setCheckingPaymentMethod] = useState(true);
   const [settingUpCard, setSettingUpCard] = useState(false);
 
   useEffect(() => {
     const checkPaymentMethod = async () => {
-      const result = await getOrCreateCustomer();
-      setHasPaymentMethod(result.has_payment_method);
+      setCheckingPaymentMethod(true);
+      try {
+        // Use fetchPaymentMethods which actually checks Fanbases API
+        const result = await fetchPaymentMethods();
+        setHasPaymentMethod(result.has_payment_method);
+      } catch (error) {
+        console.error('Error checking payment method:', error);
+        setHasPaymentMethod(false);
+      } finally {
+        setCheckingPaymentMethod(false);
+      }
     };
     checkPaymentMethod();
   }, []);
@@ -37,7 +47,7 @@ export default function TopUp() {
       if (result.success && result.checkout_url) {
         // Open in new tab - Fanbases doesn't allow iframe embedding
         window.open(result.checkout_url, '_blank');
-        toast.info('Complete the payment in the new tab, then return here');
+        toast.info('Complete the payment in the new tab, then return here and refresh');
       } else {
         toast.error(result.error || 'Failed to set up payment method');
       }
@@ -85,7 +95,16 @@ export default function TopUp() {
         </div>
 
         {/* Payment Method Status */}
-        {hasPaymentMethod === false && (
+        {checkingPaymentMethod ? (
+          <Card className="mb-6 border-border">
+            <CardContent className="py-4">
+              <div className="flex items-center gap-3">
+                <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
+                <p className="text-muted-foreground">Checking payment method...</p>
+              </div>
+            </CardContent>
+          </Card>
+        ) : hasPaymentMethod === false ? (
           <Card className="mb-6 border-warning bg-warning/10">
             <CardContent className="py-4">
               <div className="flex items-center justify-between">
@@ -109,7 +128,7 @@ export default function TopUp() {
               </div>
             </CardContent>
           </Card>
-        )}
+        ) : null}
 
         {/* Current Balance */}
         <Card className="mb-8">
@@ -171,7 +190,7 @@ export default function TopUp() {
                   className="w-full"
                   variant={option.popular ? "default" : "outline"}
                   onClick={() => handlePurchase(option.credits, option.price * 100)}
-                  disabled={loading !== null}
+                  disabled={loading !== null || checkingPaymentMethod || !hasPaymentMethod}
                 >
                   {loading === option.credits ? (
                     <>

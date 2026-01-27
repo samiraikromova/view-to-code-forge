@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Zap, Check, Loader2, CreditCard, AlertCircle } from 'lucide-react';
-import { startSubscription, getOrCreateCustomer, setupPaymentMethod } from '@/api/fanbases/fanbasesApi';
+import { startSubscription, fetchPaymentMethods, setupPaymentMethod } from '@/api/fanbases/fanbasesApi';
 import { toast } from 'sonner';
 
 interface SubscriptionModalProps {
@@ -58,7 +58,8 @@ export function SubscriptionModal({
   const checkPaymentMethod = async () => {
     setCheckingPayment(true);
     try {
-      const result = await getOrCreateCustomer();
+      // Use fetchPaymentMethods which actually checks Fanbases API
+      const result = await fetchPaymentMethods();
       setHasPaymentMethod(result.has_payment_method);
     } catch (error) {
       console.error('Error checking payment method:', error);
@@ -74,7 +75,7 @@ export function SubscriptionModal({
       const result = await setupPaymentMethod();
       if (result.success && result.checkout_url) {
         window.open(result.checkout_url, '_blank');
-        toast.info('Complete the payment in the new tab, then return here');
+        toast.info('Complete the payment in the new tab, then return here and reopen this dialog');
       } else {
         toast.error(result.error || 'Failed to set up payment method');
       }
