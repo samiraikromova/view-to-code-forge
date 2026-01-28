@@ -1,3 +1,7 @@
+// FANBASES CHECKOUT FUNCTION v3.0
+// Uses existing product payment_link - NEVER calls POST /checkout-sessions
+// This function does NOT send amount_cents or type to Fanbases
+// All pricing comes from Fanbases product configuration
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
