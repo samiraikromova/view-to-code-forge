@@ -6,7 +6,8 @@ const corsHeaders = {
 };
 
 // Fanbases API base URL - Production (NOT sandbox)
-const FANBASES_API_URL = "https://www.fanbasis.com/public-api";
+//const FANBASES_API_URL = "https://www.fanbasis.com/public-api";
+const FANBASES_API_URL = "https://qa.dev-fan-basis.com/public-api";
 
 Deno.serve(async (req) => {
   // Handle CORS preflight
@@ -15,10 +16,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-    );
+    const supabase = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "");
 
     const FANBASES_API_KEY = Deno.env.get("FANBASES_API_KEY");
     if (!FANBASES_API_KEY) {
@@ -83,7 +81,7 @@ Deno.serve(async (req) => {
                 Accept: "application/json",
                 "x-api-key": FANBASES_API_KEY,
               },
-            }
+            },
           );
 
           if (pmResponse.ok) {
@@ -95,7 +93,8 @@ Deno.serve(async (req) => {
 
             // Update our database with the default payment method
             if (hasPaymentMethod && !existingCustomer.payment_method_id) {
-              const defaultMethod = paymentMethods.find((pm: { is_default?: boolean }) => pm.is_default) || paymentMethods[0];
+              const defaultMethod =
+                paymentMethods.find((pm: { is_default?: boolean }) => pm.is_default) || paymentMethods[0];
               await supabase
                 .from("fanbases_customers")
                 .update({
@@ -116,16 +115,12 @@ Deno.serve(async (req) => {
             customer_id: existingCustomer.fanbases_customer_id,
             has_payment_method: hasPaymentMethod,
           }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
 
       // No customer record yet - create a placeholder
-      const { data: userProfile } = await supabase
-        .from("users")
-        .select("email, name")
-        .eq("id", user.id)
-        .maybeSingle();
+      const { data: userProfile } = await supabase.from("users").select("email, name").eq("id", user.id).maybeSingle();
 
       const email = userProfile?.email || user.email;
 
@@ -136,7 +131,7 @@ Deno.serve(async (req) => {
             email,
             fanbases_customer_id: null,
           },
-          { onConflict: "user_id" }
+          { onConflict: "user_id" },
         );
       }
 
@@ -148,9 +143,8 @@ Deno.serve(async (req) => {
           customer_id: null,
           has_payment_method: false,
         }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
-
     } else if (action === "fetch_payment_methods") {
       const { email: providedEmail } = body;
 
@@ -173,14 +167,12 @@ Deno.serve(async (req) => {
       let customerId = customer?.fanbases_customer_id;
 
       // Get user email
-      const { data: userProfile } = await supabase
-        .from("users")
-        .select("email")
-        .eq("id", user.id)
-        .maybeSingle();
+      const { data: userProfile } = await supabase.from("users").select("email").eq("id", user.id).maybeSingle();
       const userEmail = providedEmail || userProfile?.email || user.email;
 
-      console.log(`[Fanbases Customer] fetch_payment_methods - User: ${user.id}, Email: ${userEmail}, Customer ID: ${customerId}`);
+      console.log(
+        `[Fanbases Customer] fetch_payment_methods - User: ${user.id}, Email: ${userEmail}, Customer ID: ${customerId}`,
+      );
 
       // If no customer ID, try to find by email
       if (!customerId && userEmail) {
@@ -188,16 +180,13 @@ Deno.serve(async (req) => {
 
         try {
           // Try search first
-          let customersResponse = await fetch(
-            `${FANBASES_API_URL}/customers?search=${encodeURIComponent(userEmail)}`,
-            {
-              method: "GET",
-              headers: {
-                Accept: "application/json",
-                "x-api-key": FANBASES_API_KEY,
-              },
-            }
-          );
+          let customersResponse = await fetch(`${FANBASES_API_URL}/customers?search=${encodeURIComponent(userEmail)}`, {
+            method: "GET",
+            headers: {
+              Accept: "application/json",
+              "x-api-key": FANBASES_API_KEY,
+            },
+          });
 
           // Fallback to getting all customers
           if (!customersResponse.ok || customersResponse.status === 400) {
@@ -224,9 +213,7 @@ Deno.serve(async (req) => {
               customers = customersData.data;
             }
 
-            const matchedCustomer = customers.find(
-              (c) => c.email?.toLowerCase() === userEmail.toLowerCase()
-            );
+            const matchedCustomer = customers.find((c) => c.email?.toLowerCase() === userEmail.toLowerCase());
 
             if (matchedCustomer) {
               customerId = matchedCustomer.id;
@@ -251,16 +238,13 @@ Deno.serve(async (req) => {
       if (customerId) {
         console.log(`[Fanbases Customer] Fetching payment methods for customer: ${customerId}`);
         try {
-          const pmResponse = await fetch(
-            `${FANBASES_API_URL}/customers/${customerId}/payment-methods`,
-            {
-              method: "GET",
-              headers: {
-                Accept: "application/json",
-                "x-api-key": FANBASES_API_KEY,
-              },
-            }
-          );
+          const pmResponse = await fetch(`${FANBASES_API_URL}/customers/${customerId}/payment-methods`, {
+            method: "GET",
+            headers: {
+              Accept: "application/json",
+              "x-api-key": FANBASES_API_KEY,
+            },
+          });
 
           if (pmResponse.ok) {
             const pmData = await pmResponse.json();
@@ -281,15 +265,14 @@ Deno.serve(async (req) => {
                 exp_month: pm.exp_month,
                 exp_year: pm.exp_year,
                 is_default: pm.is_default,
-              })
+              }),
             );
 
             console.log(`[Fanbases Customer] Found ${paymentMethods.length} payment methods`);
 
             // Update database with default payment method
             if (paymentMethods.length > 0) {
-              const defaultMethod =
-                paymentMethods.find((pm) => pm.is_default) || paymentMethods[0];
+              const defaultMethod = paymentMethods.find((pm) => pm.is_default) || paymentMethods[0];
               await supabase
                 .from("fanbases_customers")
                 .update({
@@ -312,9 +295,8 @@ Deno.serve(async (req) => {
           payment_methods: paymentMethods,
           has_payment_method: paymentMethods.length > 0,
         }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
-
     } else if (action === "update_customer") {
       const { fanbases_customer_id, payment_method_id } = body;
 

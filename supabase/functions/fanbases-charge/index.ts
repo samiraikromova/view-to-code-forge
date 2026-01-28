@@ -6,7 +6,8 @@ const corsHeaders = {
 };
 
 // Fanbases API base URL - Production
-const FANBASES_API_URL = "https://www.fanbasis.com/public-api";
+//const FANBASES_API_URL = "https://www.fanbasis.com/public-api";
+const FANBASES_API_URL = "https://qa.dev-fan-basis.com/public-api";
 
 // Product mapping interface
 interface FanbasesProduct {
@@ -18,10 +19,7 @@ interface FanbasesProduct {
 
 // Look up product from fanbases_products table by internal_reference
 // deno-lint-ignore no-explicit-any
-async function lookupProductByInternalRef(
-  supabase: any,
-  internalReference: string
-): Promise<FanbasesProduct | null> {
+async function lookupProductByInternalRef(supabase: any, internalReference: string): Promise<FanbasesProduct | null> {
   const { data, error } = await supabase
     .from("fanbases_products")
     .select("fanbases_product_id, product_type, internal_reference, price_cents")
@@ -59,10 +57,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-    );
+    const supabase = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "");
 
     const FANBASES_API_KEY = Deno.env.get("FANBASES_API_KEY");
     if (!FANBASES_API_KEY) {
@@ -104,10 +99,10 @@ Deno.serve(async (req) => {
 
     if (!product) {
       console.error(`[Fanbases Charge] Product not found: ${internal_reference}`);
-      return new Response(
-        JSON.stringify({ error: `Product not found: ${internal_reference}` }),
-        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: `Product not found: ${internal_reference}` }), {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     console.log(`[Fanbases Charge] Found product: ${product.fanbases_product_id} (${product.product_type})`);
@@ -132,27 +127,20 @@ Deno.serve(async (req) => {
 
     // If no fanbases_customer_id, try to find by email in Fanbases API
     if (!fanbasesCustomerId) {
-      const { data: userProfile } = await supabase
-        .from("users")
-        .select("email, name")
-        .eq("id", user.id)
-        .maybeSingle();
+      const { data: userProfile } = await supabase.from("users").select("email, name").eq("id", user.id).maybeSingle();
       const userEmail = userProfile?.email || user.email;
 
       if (userEmail) {
         console.log("[Fanbases Charge] No stored customer ID, looking up by email:", userEmail);
 
         try {
-          let customersResponse = await fetch(
-            `${FANBASES_API_URL}/customers?search=${encodeURIComponent(userEmail)}`,
-            {
-              method: "GET",
-              headers: {
-                Accept: "application/json",
-                "x-api-key": FANBASES_API_KEY,
-              },
-            }
-          );
+          let customersResponse = await fetch(`${FANBASES_API_URL}/customers?search=${encodeURIComponent(userEmail)}`, {
+            method: "GET",
+            headers: {
+              Accept: "application/json",
+              "x-api-key": FANBASES_API_KEY,
+            },
+          });
 
           if (!customersResponse.ok || customersResponse.status === 400) {
             customersResponse = await fetch(`${FANBASES_API_URL}/customers?per_page=200`, {
@@ -178,9 +166,7 @@ Deno.serve(async (req) => {
               customers = customersData.data;
             }
 
-            const matchedCustomer = customers.find(
-              (c) => c.email?.toLowerCase() === userEmail.toLowerCase()
-            );
+            const matchedCustomer = customers.find((c) => c.email?.toLowerCase() === userEmail.toLowerCase());
 
             if (matchedCustomer) {
               fanbasesCustomerId = matchedCustomer.id;
@@ -220,7 +206,7 @@ Deno.serve(async (req) => {
           needs_payment_method: true,
           redirect_to_checkout: true,
         }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
@@ -228,16 +214,13 @@ Deno.serve(async (req) => {
     if (!paymentMethodId) {
       console.log("[Fanbases Charge] No stored payment method, fetching from Fanbases...");
       try {
-        const pmResponse = await fetch(
-          `${FANBASES_API_URL}/customers/${fanbasesCustomerId}/payment-methods`,
-          {
-            method: "GET",
-            headers: {
-              Accept: "application/json",
-              "x-api-key": FANBASES_API_KEY,
-            },
-          }
-        );
+        const pmResponse = await fetch(`${FANBASES_API_URL}/customers/${fanbasesCustomerId}/payment-methods`, {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+            "x-api-key": FANBASES_API_KEY,
+          },
+        });
 
         if (pmResponse.ok) {
           const pmData = await pmResponse.json();
@@ -245,8 +228,7 @@ Deno.serve(async (req) => {
 
           if (paymentMethods.length > 0) {
             const defaultMethod =
-              paymentMethods.find((pm: { is_default?: boolean }) => pm.is_default) ||
-              paymentMethods[0];
+              paymentMethods.find((pm: { is_default?: boolean }) => pm.is_default) || paymentMethods[0];
             paymentMethodId = defaultMethod.id;
             console.log("[Fanbases Charge] Found payment method:", paymentMethodId);
 
@@ -271,13 +253,13 @@ Deno.serve(async (req) => {
           needs_payment_method: true,
           redirect_to_checkout: true,
         }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
     // Charge using the Fanbases product ID
     console.log(
-      `[Fanbases Charge] Charging customer ${fanbasesCustomerId} with product ${product.fanbases_product_id}`
+      `[Fanbases Charge] Charging customer ${fanbasesCustomerId} with product ${product.fanbases_product_id}`,
     );
 
     const chargePayload = {
@@ -291,18 +273,15 @@ Deno.serve(async (req) => {
     };
     console.log("[Fanbases Charge] Request payload:", JSON.stringify(chargePayload));
 
-    const chargeResponse = await fetch(
-      `${FANBASES_API_URL}/customers/${fanbasesCustomerId}/charge`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-          "x-api-key": FANBASES_API_KEY,
-        },
-        body: JSON.stringify(chargePayload),
-      }
-    );
+    const chargeResponse = await fetch(`${FANBASES_API_URL}/customers/${fanbasesCustomerId}/charge`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        "x-api-key": FANBASES_API_KEY,
+      },
+      body: JSON.stringify(chargePayload),
+    });
 
     const responseText = await chargeResponse.text();
     console.log("[Fanbases Charge] Raw response:", responseText, "Status:", chargeResponse.status);
@@ -329,14 +308,14 @@ Deno.serve(async (req) => {
             needs_checkout: true,
             redirect_to_checkout: true,
           }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
 
-      return new Response(
-        JSON.stringify({ error: chargeData.message || chargeData.error || "Payment failed" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: chargeData.message || chargeData.error || "Payment failed" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const chargeId = chargeData.data?.charge_id || chargeData.charge_id || chargeData.id;
@@ -362,7 +341,6 @@ Deno.serve(async (req) => {
         });
       }
       console.log(`[Fanbases Charge] Module ${product.internal_reference} unlocked for user ${user.id}`);
-
     } else if (product.product_type === "subscription") {
       const subDetails = getSubscriptionDetails(product.internal_reference);
       const renewalDate = new Date();
@@ -377,14 +355,10 @@ Deno.serve(async (req) => {
           current_period_end: renewalDate.toISOString(),
           fanbases_subscription_id: chargeId,
         },
-        { onConflict: "user_id" }
+        { onConflict: "user_id" },
       );
 
-      const { data: userProfile } = await supabase
-        .from("users")
-        .select("credits")
-        .eq("id", user.id)
-        .maybeSingle();
+      const { data: userProfile } = await supabase.from("users").select("credits").eq("id", user.id).maybeSingle();
 
       await supabase
         .from("users")
@@ -403,15 +377,10 @@ Deno.serve(async (req) => {
       });
 
       console.log(`[Fanbases Charge] Subscription ${subDetails.tier} activated for user ${user.id}`);
-
     } else if (product.product_type === "topup") {
       const credits = getTopupCredits(product.internal_reference);
 
-      const { data: userProfile } = await supabase
-        .from("users")
-        .select("credits")
-        .eq("id", user.id)
-        .maybeSingle();
+      const { data: userProfile } = await supabase.from("users").select("credits").eq("id", user.id).maybeSingle();
 
       await supabase
         .from("users")
@@ -436,7 +405,7 @@ Deno.serve(async (req) => {
         product_type: product.product_type,
         message: "Payment successful",
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   } catch (err) {
     const error = err as Error;

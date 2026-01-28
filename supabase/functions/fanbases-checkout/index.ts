@@ -5,11 +5,12 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Fanbases API base URL - Production (v2 - uses payment_link approach)
-const FANBASES_API_URL = "https://www.fanbasis.com/public-api";
+// Fanbases API base URL - Production
+//const FANBASES_API_URL = "https://www.fanbasis.com/public-api";
+const FANBASES_API_URL = "https://qa.dev-fan-basis.com/public-api";
 
-// Product mapping interface from local DB
-interface FanbasesProductLocal {
+// Product mapping interface
+interface FanbasesProduct {
   id: string;
   fanbases_product_id: string;
   product_type: "module" | "subscription" | "topup" | "card_setup";
@@ -17,22 +18,9 @@ interface FanbasesProductLocal {
   price_cents: number | null;
 }
 
-// Product from Fanbases API
-interface FanbasesProductRemote {
-  id: string;
-  title: string;
-  internal_name: string | null;
-  description: string | null;
-  price: number; // Price in dollars
-  payment_link: string;
-}
-
 // Look up product from fanbases_products table by internal_reference
 // deno-lint-ignore no-explicit-any
-async function lookupProductByInternalRef(
-  supabase: any,
-  internalReference: string
-): Promise<FanbasesProductLocal | null> {
+async function lookupProductByInternalRef(supabase: any, internalReference: string): Promise<FanbasesProduct | null> {
   const { data, error } = await supabase
     .from("fanbases_products")
     .select("id, fanbases_product_id, product_type, internal_reference, price_cents")
@@ -46,51 +34,6 @@ async function lookupProductByInternalRef(
   return data;
 }
 
-// Fetch product details from Fanbases API by product ID
-async function fetchFanbasesProduct(
-  apiKey: string,
-  fanbasesProductId: string
-): Promise<FanbasesProductRemote | null> {
-  try {
-    console.log(`[Fanbases Checkout] Fetching products from Fanbases API...`);
-    
-    const response = await fetch(`${FANBASES_API_URL}/products?per_page=100`, {
-      method: "GET",
-      headers: {
-        "Accept": "application/json",
-        "x-api-key": apiKey,
-      },
-    });
-
-    const responseText = await response.text();
-    console.log(`[Fanbases Checkout] Products API response status: ${response.status}`);
-
-    if (!response.ok) {
-      console.error("[Fanbases Checkout] Failed to fetch products:", responseText);
-      return null;
-    }
-
-    const result = JSON.parse(responseText);
-    const products = result.data?.data || [];
-    
-    console.log(`[Fanbases Checkout] Found ${products.length} products, looking for ID: ${fanbasesProductId}`);
-
-    // Find the matching product by ID
-    const product = products.find((p: FanbasesProductRemote) => p.id === fanbasesProductId);
-    
-    if (product) {
-      console.log(`[Fanbases Checkout] Found Fanbases product: ${product.title} ($${product.price})`);
-    } else {
-      console.error(`[Fanbases Checkout] Product not found in Fanbases: ${fanbasesProductId}`);
-    }
-    
-    return product || null;
-  } catch (err) {
-    console.error("[Fanbases Checkout] Error fetching Fanbases products:", err);
-    return null;
-  }
-}
-
 Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -98,10 +41,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-    );
+    const supabase = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "");
 
     const FANBASES_API_KEY = Deno.env.get("FANBASES_API_KEY");
     if (!FANBASES_API_KEY) {
@@ -143,12 +83,8 @@ Deno.serve(async (req) => {
     const webhookUrl = `${supabaseUrl}/functions/v1/fanbases-webhook`;
 
     // Get user profile for metadata
-    const { data: userProfile } = await supabase
-      .from("users")
-      .select("email, name")
-      .eq("id", user.id)
-      .maybeSingle();
-    
+    const { data: userProfile } = await supabase.from("users").select("email, name").eq("id", user.id).maybeSingle();
+
     const email = userProfile?.email || user.email || "";
     const fullName = userProfile?.name || "";
 
@@ -158,156 +94,200 @@ Deno.serve(async (req) => {
 
       if (!product) {
         console.error(`[Fanbases Checkout] Product not found for internal_reference: ${internal_reference}`);
-        return new Response(
-          JSON.stringify({ error: `Product not found: ${internal_reference}` }),
-          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return new Response(JSON.stringify({ error: `Product not found: ${internal_reference}` }), {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
 
-      console.log(`[Fanbases Checkout] Found local product: ${product.fanbases_product_id} (${product.product_type})`);
+      console.log(`[Fanbases Checkout] Found product: ${product.fanbases_product_id} (${product.product_type})`);
 
-      // Fetch the actual product from Fanbases API to get its payment_link and real price
-      const fanbasesProduct = await fetchFanbasesProduct(FANBASES_API_KEY, product.fanbases_product_id);
+      // Build product title based on type
+      const productTitles: Record<string, string> = {
+        subscription: product.internal_reference === "tier2" ? "Pro Subscription" : "Starter Subscription",
+        topup: `${product.internal_reference.replace("_credits", "")} Credits Top-Up`,
+        module: `Module: ${product.internal_reference}`,
+        card_setup: "Card Setup",
+      };
 
-      if (!fanbasesProduct) {
-        console.error(`[Fanbases Checkout] Product not found in Fanbases API: ${product.fanbases_product_id}`);
-        return new Response(
-          JSON.stringify({ error: "Product not available in payment system" }),
-          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+      // Build checkout payload with full product definition (Fanbases requires amount_cents)
+      const checkoutPayload: Record<string, unknown> = {
+        product: {
+          title: productTitles[product.product_type] || product.internal_reference,
+          amount_cents: product.price_cents || 0,
+          type: product.product_type === "subscription" ? "subscription" : "onetime_non_reusable",
+        },
+        fan: {
+          email: email,
+          name: fullName,
+        },
+        metadata: {
+          user_id: user.id,
+          product_type: product.product_type,
+          internal_reference: product.internal_reference,
+          fanbases_product_id: product.fanbases_product_id,
+        },
+        success_url:
+          success_url ||
+          `${body.base_url || "https://app.example.com"}/settings?payment=success&type=${product.product_type}`,
+        cancel_url: cancel_url || `${body.base_url || "https://app.example.com"}/settings?payment=cancelled`,
+        webhook_url: webhookUrl,
+      };
+
+      // Add subscription-specific config if needed
+      if (product.product_type === "subscription") {
+        (checkoutPayload.product as Record<string, unknown>).subscription = {
+          frequency_days: 30,
+          auto_expire_after_x_periods: null,
+        };
       }
 
-      // Use the payment_link from the existing Fanbases product
-      // Append user metadata as query params for tracking
-      const basePaymentLink = fanbasesProduct.payment_link;
-      const paymentLinkUrl = new URL(basePaymentLink);
-      
-      // Add tracking metadata as query params (Fanbases will pass these to webhook)
-      paymentLinkUrl.searchParams.set("metadata[user_id]", user.id);
-      paymentLinkUrl.searchParams.set("metadata[product_type]", product.product_type);
-      paymentLinkUrl.searchParams.set("metadata[internal_reference]", product.internal_reference);
-      
-      // Add prefill params for email and name
-      paymentLinkUrl.searchParams.set("prefill[email]", email);
-      if (fullName) {
-        paymentLinkUrl.searchParams.set("prefill[name]", fullName);
-      }
-      
-      // Add success and cancel URLs if provided
-      if (success_url) {
-        paymentLinkUrl.searchParams.set("success_url", success_url);
-      } else if (body.base_url) {
-        paymentLinkUrl.searchParams.set("success_url", `${body.base_url}/settings?payment=success&type=${product.product_type}`);
-      }
-      
-      if (cancel_url) {
-        paymentLinkUrl.searchParams.set("cancel_url", cancel_url);
-      } else if (body.base_url) {
-        paymentLinkUrl.searchParams.set("cancel_url", `${body.base_url}/settings?payment=cancelled`);
+      console.log("[Fanbases Checkout] Creating checkout session:", JSON.stringify(checkoutPayload));
+
+      const response = await fetch(`${FANBASES_API_URL}/checkout-sessions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          "x-api-key": FANBASES_API_KEY,
+        },
+        body: JSON.stringify(checkoutPayload),
+      });
+
+      const responseText = await response.text();
+      console.log("[Fanbases Checkout] Response:", responseText, "Status:", response.status);
+
+      if (!response.ok) {
+        console.error("Failed to create checkout session:", responseText);
+        return new Response(JSON.stringify({ error: "Failed to create checkout session", details: responseText }), {
+          status: response.status,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
 
-      const finalPaymentLink = paymentLinkUrl.toString();
-      console.log(`[Fanbases Checkout] Using existing product payment link: ${finalPaymentLink}`);
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch {
+        console.error("Failed to parse response:", responseText);
+        return new Response(JSON.stringify({ error: "Invalid response from payment provider" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
 
-      // Store checkout session reference locally
-      const sessionId = `local_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      const checkoutSessionId = data.data?.checkout_session_id || data.data?.id;
+      const paymentLink = data.data?.payment_link;
+
+      console.log(`[Fanbases Checkout] Session created: ${checkoutSessionId}`);
+
+      // Store checkout session reference
       await supabase.from("checkout_sessions").insert({
         user_id: user.id,
         provider: "fanbases",
-        session_id: sessionId,
+        session_id: String(checkoutSessionId),
         product_type: product.product_type,
         product_id: product.internal_reference,
-        amount_cents: Math.round(fanbasesProduct.price * 100),
+        amount_cents: product.price_cents,
         status: "pending",
       });
 
       return new Response(
         JSON.stringify({
           success: true,
-          checkout_session_id: sessionId,
-          payment_link: finalPaymentLink,
+          checkout_session_id: checkoutSessionId,
+          payment_link: paymentLink,
           product_type: product.product_type,
-          product_title: fanbasesProduct.title,
-          amount_cents: Math.round(fanbasesProduct.price * 100),
         }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
-
     } else if (action === "setup_card") {
       // Look up the card_setup product from our fanbases_products table
       const cardSetupProduct = await lookupProductByInternalRef(supabase, "card_setup_fee");
 
       if (!cardSetupProduct) {
         console.error("[Fanbases Checkout] Card setup product not found in fanbases_products");
-        return new Response(
-          JSON.stringify({ error: "Card setup product not configured" }),
-          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return new Response(JSON.stringify({ error: "Card setup product not configured" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
 
       console.log(`[Fanbases Checkout] Using card setup product: ${cardSetupProduct.fanbases_product_id}`);
 
-      // Fetch the actual product from Fanbases API
-      const fanbasesCardProduct = await fetchFanbasesProduct(FANBASES_API_KEY, cardSetupProduct.fanbases_product_id);
+      const setupPayload = {
+        product: {
+          title: "Card Setup",
+          amount_cents: cardSetupProduct.price_cents || 100, // Minimal charge for card verification
+          type: "onetime_non_reusable" as const,
+        },
+        fan: {
+          email: email,
+          name: fullName,
+        },
+        metadata: {
+          user_id: user.id,
+          action: "setup_card",
+          fanbases_product_id: cardSetupProduct.fanbases_product_id,
+        },
+        success_url: success_url || `${body.base_url || "https://app.example.com"}/settings?setup=complete`,
+        cancel_url: cancel_url || `${body.base_url || "https://app.example.com"}/settings?setup=cancelled`,
+        webhook_url: webhookUrl,
+      };
 
-      if (!fanbasesCardProduct) {
-        console.error(`[Fanbases Checkout] Card setup product not found in Fanbases API`);
-        return new Response(
-          JSON.stringify({ error: "Card setup product not available" }),
-          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+      console.log("[Fanbases Checkout] Creating card setup session:", JSON.stringify(setupPayload));
+
+      const response = await fetch(`${FANBASES_API_URL}/checkout-sessions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          "x-api-key": FANBASES_API_KEY,
+        },
+        body: JSON.stringify(setupPayload),
+      });
+
+      const responseText = await response.text();
+      console.log("[Fanbases Checkout] Card setup response:", responseText, "Status:", response.status);
+
+      if (!response.ok) {
+        console.error("Failed to create card setup session:", responseText);
+        return new Response(JSON.stringify({ error: "Failed to create card setup session", details: responseText }), {
+          status: response.status,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
 
-      // Use the payment_link from the existing Fanbases product
-      const basePaymentLink = fanbasesCardProduct.payment_link;
-      const paymentLinkUrl = new URL(basePaymentLink);
-      
-      // Add tracking metadata
-      paymentLinkUrl.searchParams.set("metadata[user_id]", user.id);
-      paymentLinkUrl.searchParams.set("metadata[action]", "setup_card");
-      
-      // Add prefill params
-      paymentLinkUrl.searchParams.set("prefill[email]", email);
-      if (fullName) {
-        paymentLinkUrl.searchParams.set("prefill[name]", fullName);
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch {
+        console.error("Failed to parse response:", responseText);
+        return new Response(JSON.stringify({ error: "Invalid response from payment provider" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
-      
-      // Add URLs
-      if (success_url) {
-        paymentLinkUrl.searchParams.set("success_url", success_url);
-      } else if (body.base_url) {
-        paymentLinkUrl.searchParams.set("success_url", `${body.base_url}/settings?setup=complete`);
-      }
-      
-      if (cancel_url) {
-        paymentLinkUrl.searchParams.set("cancel_url", cancel_url);
-      } else if (body.base_url) {
-        paymentLinkUrl.searchParams.set("cancel_url", `${body.base_url}/settings?setup=cancelled`);
-      }
-
-      const finalPaymentLink = paymentLinkUrl.toString();
-      console.log(`[Fanbases Checkout] Using card setup payment link: ${finalPaymentLink}`);
 
       return new Response(
         JSON.stringify({
           success: true,
-          checkout_session_id: `setup_${Date.now()}`,
-          payment_link: finalPaymentLink,
+          checkout_session_id: data.data?.checkout_session_id || data.data?.id,
+          payment_link: data.data?.payment_link,
         }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
-
     } else if (action === "one_click_charge") {
       // One-click purchase using saved payment method
       // This requires the user to have a saved payment method and uses fanbases-charge internally
-      
+
       const product = await lookupProductByInternalRef(supabase, internal_reference);
-      
+
       if (!product) {
-        return new Response(
-          JSON.stringify({ error: `Product not found: ${internal_reference}` }),
-          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return new Response(JSON.stringify({ error: `Product not found: ${internal_reference}` }), {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
 
       // Get customer's payment method
@@ -319,12 +299,12 @@ Deno.serve(async (req) => {
 
       if (!customer?.fanbases_customer_id || !customer?.payment_method_id) {
         return new Response(
-          JSON.stringify({ 
-            error: "No payment method on file", 
+          JSON.stringify({
+            error: "No payment method on file",
             needs_payment_method: true,
-            redirect_to_checkout: true 
+            redirect_to_checkout: true,
           }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
 
@@ -339,20 +319,20 @@ Deno.serve(async (req) => {
         },
       };
 
-      console.log(`[Fanbases Checkout] One-click charge for customer ${customer.fanbases_customer_id}:`, JSON.stringify(chargePayload));
-
-      const chargeResponse = await fetch(
-        `${FANBASES_API_URL}/customers/${customer.fanbases_customer_id}/charge`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-            "x-api-key": FANBASES_API_KEY,
-          },
-          body: JSON.stringify(chargePayload),
-        }
+      console.log(
+        `[Fanbases Checkout] One-click charge for customer ${customer.fanbases_customer_id}:`,
+        JSON.stringify(chargePayload),
       );
+
+      const chargeResponse = await fetch(`${FANBASES_API_URL}/customers/${customer.fanbases_customer_id}/charge`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          "x-api-key": FANBASES_API_KEY,
+        },
+        body: JSON.stringify(chargePayload),
+      });
 
       const chargeText = await chargeResponse.text();
       console.log("[Fanbases Checkout] Charge response:", chargeText, "Status:", chargeResponse.status);
@@ -377,14 +357,14 @@ Deno.serve(async (req) => {
               redirect_to_checkout: true,
               needs_checkout: true,
             }),
-            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
           );
         }
 
-        return new Response(
-          JSON.stringify({ error: chargeData.message || "Payment failed" }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
+        return new Response(JSON.stringify({ error: chargeData.message || "Payment failed" }), {
+          status: 400,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
 
       const chargeId = chargeData.data?.charge_id || chargeData.charge_id || chargeData.id;
@@ -400,7 +380,7 @@ Deno.serve(async (req) => {
           product_type: product.product_type,
           message: "Payment successful",
         }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
@@ -420,12 +400,7 @@ Deno.serve(async (req) => {
 
 // Helper function to grant access after successful payment
 // deno-lint-ignore no-explicit-any
-async function grantAccess(
-  supabase: any,
-  userId: string,
-  product: FanbasesProductLocal,
-  chargeId: string
-) {
+async function grantAccess(supabase: any, userId: string, product: FanbasesProduct, chargeId: string) {
   console.log(`[Fanbases Checkout] Granting access for ${product.product_type}: ${product.internal_reference}`);
 
   if (product.product_type === "module") {
@@ -448,40 +423,31 @@ async function grantAccess(
       });
       console.log(`[Fanbases Checkout] Module ${product.internal_reference} unlocked for user ${userId}`);
     }
-
   } else if (product.product_type === "topup") {
     // Parse credits from internal_reference (e.g., "1000_credits" -> 1000)
     const match = product.internal_reference.match(/(\d+)/);
     const credits = match ? parseInt(match[1]) : 0;
 
     if (credits > 0) {
-      const { data: userProfile } = await supabase
-        .from("users")
-        .select("credits")
-        .eq("id", userId)
-        .maybeSingle();
+      const { data: userProfile } = await supabase.from("users").select("credits").eq("id", userId).maybeSingle();
 
       const newCredits = (userProfile?.credits || 0) + credits;
 
-      await supabase
-        .from("users")
-        .update({ credits: newCredits })
-        .eq("id", userId);
+      await supabase.from("users").update({ credits: newCredits }).eq("id", userId);
 
       await supabase.from("credit_transactions").insert({
         user_id: userId,
         amount: credits,
         type: "topup",
         payment_method: "fanbases",
-        metadata: { 
-          internal_reference: product.internal_reference, 
+        metadata: {
+          internal_reference: product.internal_reference,
           charge_id: chargeId,
-          amount_cents: product.price_cents 
+          amount_cents: product.price_cents,
         },
       });
       console.log(`[Fanbases Checkout] ${credits} credits added for user ${userId}`);
     }
-
   } else if (product.product_type === "subscription") {
     // Determine tier from internal_reference
     const tierMap: Record<string, { tier: string; credits: number }> = {
@@ -502,14 +468,10 @@ async function grantAccess(
         current_period_end: renewalDate.toISOString(),
         fanbases_subscription_id: chargeId,
       },
-      { onConflict: "user_id" }
+      { onConflict: "user_id" },
     );
 
-    const { data: userProfile } = await supabase
-      .from("users")
-      .select("credits")
-      .eq("id", userId)
-      .maybeSingle();
+    const { data: userProfile } = await supabase.from("users").select("credits").eq("id", userId).maybeSingle();
 
     await supabase
       .from("users")
