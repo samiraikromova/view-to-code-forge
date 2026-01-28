@@ -27,19 +27,19 @@ export function TopUpModal({
 }: TopUpModalProps) {
   const [loading, setLoading] = useState<number | null>(null);
 
-  const handlePurchase = async (credits: number, priceCents: number) => {
+  const handlePurchase = async (credits: number) => {
     setLoading(credits);
     try {
-      // Use fanbases-checkout to create a checkout session instead of direct charging
+      // Map credits to internal_reference used in fanbases_products table
+      const internalReference = `${credits}_credits`;
+      
+      // Use fanbases-checkout with existing product ID from fanbases_products
       const { data, error } = await supabase.functions.invoke('fanbases-checkout', {
         body: {
           action: 'create_checkout',
-          product_type: 'topup',
-          product_id: `credits_${credits}`,
-          amount_cents: priceCents,
-          title: `${credits.toLocaleString()} Credits Top-up`,
-          description: `Add ${credits.toLocaleString()} credits to your account`,
+          internal_reference: internalReference,
           success_url: `${window.location.origin}/settings?topup=success&credits=${credits}`,
+          cancel_url: `${window.location.origin}/settings?topup=cancelled`,
           base_url: window.location.origin,
         },
       });
@@ -113,7 +113,7 @@ export function TopUpModal({
                   className={`w-full ${option.popular ? 'bg-accent hover:bg-accent-hover text-accent-foreground' : ''}`}
                   variant={option.popular ? 'default' : 'outline'}
                   size="sm"
-                  onClick={() => handlePurchase(option.credits, option.price * 100)}
+                  onClick={() => handlePurchase(option.credits)}
                   disabled={isDisabled}
                 >
                   {loading === option.credits ? (

@@ -40,11 +40,8 @@ export function UnlockModal({
 
     setLoading(true);
     try {
-      const result = await purchaseModule(
-        moduleSlug,
-        product.price_cents,
-        product.name
-      );
+      // Use module slug as internal_reference - it should match fanbases_products table
+      const result = await purchaseModule(moduleSlug);
 
       if (result.success) {
         toast.success(`${moduleName} unlocked!`);

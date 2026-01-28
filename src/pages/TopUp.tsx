@@ -59,14 +59,14 @@ export default function TopUp() {
     }
   };
 
-  const handlePurchase = async (credits: number, priceCents: number) => {
+  const handlePurchase = async (credits: number) => {
     if (!hasPaymentMethod) {
       toast.error('Please add a payment method first');
       return;
     }
     setLoading(credits);
     try {
-      const result = await purchaseCredits(credits, priceCents);
+      const result = await purchaseCredits(credits);
       if (result.success) {
         toast.success(`${credits.toLocaleString()} credits added!`);
         refreshProfile?.();
@@ -189,7 +189,7 @@ export default function TopUp() {
                 <Button
                   className="w-full"
                   variant={option.popular ? "default" : "outline"}
-                  onClick={() => handlePurchase(option.credits, option.price * 100)}
+                  onClick={() => handlePurchase(option.credits)}
                   disabled={loading !== null || checkingPaymentMethod || !hasPaymentMethod}
                 >
                   {loading === option.credits ? (
