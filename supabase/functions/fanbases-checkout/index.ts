@@ -10,7 +10,8 @@ const corsHeaders = {
 };
 
 // Fanbases API - PRODUCTION URL (required for checkout)
-const FANBASES_API_URL = "https://www.fanbasis.com/public-api";
+//const FANBASES_API_URL = "https://www.fanbasis.com/public-api";
+const FANBASES_API_URL = "https://qa.dev-fan-basis.com/public-api";
 
 // Product mapping interface
 interface FanbasesProduct {
