@@ -52,7 +52,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Get authenticated user using getClaims for proper JWT validation
+    // Get authenticated user by decoding the JWT token
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
@@ -62,17 +62,25 @@ Deno.serve(async (req) => {
     }
 
     const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
-
-    if (claimsError || !claimsData?.claims) {
-      console.error("[Fanbases Checkout] Auth error:", claimsError);
+    
+    // Decode JWT payload (base64url encoded)
+    let user: { id: string; email: string };
+    try {
+      const parts = token.split(".");
+      if (parts.length !== 3) {
+        throw new Error("Invalid JWT format");
+      }
+      // Decode the payload (second part)
+      const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
+      user = { id: payload.sub, email: payload.email };
+      console.log(`[Fanbases Checkout] Decoded user: ${user.id}`);
+    } catch (decodeError) {
+      console.error("[Fanbases Checkout] JWT decode error:", decodeError);
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-
-    const user = { id: claimsData.claims.sub, email: claimsData.claims.email };
 
     const body = await req.json();
     const { action, internal_reference, success_url, cancel_url } = body;
