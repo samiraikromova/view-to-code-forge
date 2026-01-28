@@ -52,26 +52,27 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Get authenticated user
+    // Get authenticated user using getClaims for proper JWT validation
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
+    if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser(authHeader.replace("Bearer ", ""));
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
 
-    if (authError || !user) {
+    if (claimsError || !claimsData?.claims) {
+      console.error("[Fanbases Checkout] Auth error:", claimsError);
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    const user = { id: claimsData.claims.sub, email: claimsData.claims.email };
 
     const body = await req.json();
     const { action, internal_reference, success_url, cancel_url } = body;
@@ -102,101 +103,82 @@ Deno.serve(async (req) => {
 
       console.log(`[Fanbases Checkout] Found product: ${product.fanbases_product_id} (${product.product_type})`);
 
-      // Build product title based on type
-      const productTitles: Record<string, string> = {
-        subscription: product.internal_reference === "tier2" ? "Pro Subscription" : "Starter Subscription",
-        topup: `${product.internal_reference.replace("_credits", "")} Credits Top-Up`,
-        module: `Module: ${product.internal_reference}`,
-        card_setup: "Card Setup",
-      };
-
-      // Build checkout payload with full product definition (Fanbases requires amount_cents)
-      const checkoutPayload: Record<string, unknown> = {
-        product: {
-          title: productTitles[product.product_type] || product.internal_reference,
-          amount_cents: product.price_cents || 0,
-          type: product.product_type === "subscription" ? "subscription" : "onetime_non_reusable",
-        },
-        fan: {
-          email: email,
-          name: fullName,
-        },
-        metadata: {
-          user_id: user.id,
-          product_type: product.product_type,
-          internal_reference: product.internal_reference,
-          fanbases_product_id: product.fanbases_product_id,
-        },
-        success_url:
-          success_url ||
-          `${body.base_url || "https://app.example.com"}/settings?payment=success&type=${product.product_type}`,
-        cancel_url: cancel_url || `${body.base_url || "https://app.example.com"}/settings?payment=cancelled`,
-        webhook_url: webhookUrl,
-      };
-
-      // Add subscription-specific config if needed
-      if (product.product_type === "subscription") {
-        (checkoutPayload.product as Record<string, unknown>).subscription = {
-          frequency_days: 30,
-          auto_expire_after_x_periods: null,
-        };
-      }
-
-      console.log("[Fanbases Checkout] Creating checkout session:", JSON.stringify(checkoutPayload));
-
-      const response = await fetch(`${FANBASES_API_URL}/checkout-sessions`, {
-        method: "POST",
+      // Fetch the product from Fanbases to get its payment_link
+      const productResponse = await fetch(`${FANBASES_API_URL}/products/${product.fanbases_product_id}`, {
+        method: "GET",
         headers: {
-          "Content-Type": "application/json",
           Accept: "application/json",
           "x-api-key": FANBASES_API_KEY,
         },
-        body: JSON.stringify(checkoutPayload),
       });
 
-      const responseText = await response.text();
-      console.log("[Fanbases Checkout] Response:", responseText, "Status:", response.status);
-
-      if (!response.ok) {
-        console.error("Failed to create checkout session:", responseText);
-        return new Response(JSON.stringify({ error: "Failed to create checkout session", details: responseText }), {
-          status: response.status,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      let data;
-      try {
-        data = JSON.parse(responseText);
-      } catch {
-        console.error("Failed to parse response:", responseText);
-        return new Response(JSON.stringify({ error: "Invalid response from payment provider" }), {
+      if (!productResponse.ok) {
+        const errorText = await productResponse.text();
+        console.error(`[Fanbases Checkout] Failed to fetch product: ${errorText}`);
+        return new Response(JSON.stringify({ error: "Failed to fetch product from payment provider" }), {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
-      const checkoutSessionId = data.data?.checkout_session_id || data.data?.id;
-      const paymentLink = data.data?.payment_link;
+      const productData = await productResponse.json();
+      const fanbasesProduct = productData.data || productData;
+      
+      console.log(`[Fanbases Checkout] Fanbases product:`, JSON.stringify(fanbasesProduct));
 
-      console.log(`[Fanbases Checkout] Session created: ${checkoutSessionId}`);
+      // Get the payment link from the product
+      let paymentLink = fanbasesProduct.payment_link || fanbasesProduct.checkout_url;
+      
+      if (!paymentLink) {
+        console.error(`[Fanbases Checkout] No payment_link found on product ${product.fanbases_product_id}`);
+        return new Response(JSON.stringify({ error: "Product has no payment link configured" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Build the redirect URL with metadata and prefill
+      const paymentUrl = new URL(paymentLink);
+      
+      // Add metadata for webhook/redirect processing
+      paymentUrl.searchParams.set("metadata[user_id]", user.id);
+      paymentUrl.searchParams.set("metadata[product_type]", product.product_type);
+      paymentUrl.searchParams.set("metadata[internal_reference]", product.internal_reference);
+      paymentUrl.searchParams.set("metadata[fanbases_product_id]", product.fanbases_product_id);
+      
+      // Add prefill for user experience
+      paymentUrl.searchParams.set("prefill[email]", email);
+      paymentUrl.searchParams.set("prefill[name]", fullName);
+      
+      // Add success/cancel URLs
+      const finalSuccessUrl = success_url || `${body.base_url || "https://view-to-code-forge.lovable.app"}/settings?topup=success&credits=${product.internal_reference.replace("_credits", "")}`;
+      const finalCancelUrl = cancel_url || `${body.base_url || "https://view-to-code-forge.lovable.app"}/settings?topup=cancelled`;
+      
+      paymentUrl.searchParams.set("success_url", finalSuccessUrl);
+      paymentUrl.searchParams.set("cancel_url", finalCancelUrl);
+
+      console.log(`[Fanbases Checkout] Redirecting to payment link: ${paymentUrl.toString()}`);
 
       // Store checkout session reference
+      const sessionId = `checkout_${Date.now()}_${user.id.slice(0, 8)}`;
       await supabase.from("checkout_sessions").insert({
         user_id: user.id,
-        provider: "fanbases",
-        session_id: String(checkoutSessionId),
+        checkout_session_id: sessionId,
+        payment_link: paymentUrl.toString(),
         product_type: product.product_type,
         product_id: product.internal_reference,
         amount_cents: product.price_cents,
         status: "pending",
+        metadata: {
+          fanbases_product_id: product.fanbases_product_id,
+        },
       });
 
       return new Response(
         JSON.stringify({
           success: true,
-          checkout_session_id: checkoutSessionId,
-          payment_link: paymentLink,
+          checkout_url: paymentUrl.toString(),
+          checkout_session_id: sessionId,
           product_type: product.product_type,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },

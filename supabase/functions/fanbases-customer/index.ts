@@ -27,26 +27,27 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Get authenticated user
+    // Get authenticated user using getClaims for proper JWT validation
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
+    if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser(authHeader.replace("Bearer ", ""));
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
 
-    if (authError || !user) {
+    if (claimsError || !claimsData?.claims) {
+      console.error("[Fanbases Customer] Auth error:", claimsError);
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    const user = { id: claimsData.claims.sub, email: claimsData.claims.email };
 
     const body = await req.json();
     const { action } = body;
