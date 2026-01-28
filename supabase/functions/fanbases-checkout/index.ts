@@ -5,7 +5,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Fanbases API base URL - Production
+// Fanbases API base URL - Production (v2 - uses payment_link approach)
 const FANBASES_API_URL = "https://www.fanbasis.com/public-api";
 
 // Product mapping interface from local DB
