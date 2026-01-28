@@ -46,3 +46,9 @@ enabled = true
 verify_jwt = false
 import_map = "./functions/fanbases-checkout/deno.json"
 entrypoint = "./functions/fanbases-checkout/index.ts"
+
+[functions.fanbases-confirm-payment]
+enabled = true
+verify_jwt = false
+import_map = "./functions/fanbases-confirm-payment/deno.json"
+entrypoint = "./functions/fanbases-confirm-payment/index.ts"

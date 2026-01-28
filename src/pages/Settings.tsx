@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -43,6 +43,7 @@ export default function Settings() {
   const [settingUpCard, setSettingUpCard] = useState(false);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [loadingPaymentMethods, setLoadingPaymentMethods] = useState(false);
+  const [confirmingPayment, setConfirmingPayment] = useState(false);
 
   const handleAddCard = async () => {
     setSettingUpCard(true);
@@ -84,7 +85,80 @@ export default function Settings() {
     }
   };
 
-  // Handle return from Fanbases checkout
+  // Confirm payment after Fanbases redirect
+  const confirmPayment = useCallback(async (params: URLSearchParams) => {
+    const paymentIntent = params.get('payment_intent');
+    const redirectStatus = params.get('redirect_status');
+    const productType = params.get('metadata[product_type]') || params.get('product_type');
+    const internalReference = params.get('metadata[internal_reference]') || params.get('internal_reference') || params.get('credits');
+    const fanbasesProductId = params.get('metadata[fanbases_product_id]');
+    
+    // Also check for topup=success pattern
+    const topupSuccess = params.get('topup');
+    const credits = params.get('credits');
+    
+    console.log('[Settings] Payment confirmation params:', {
+      paymentIntent, redirectStatus, productType, internalReference, fanbasesProductId, topupSuccess, credits
+    });
+
+    if (!paymentIntent || redirectStatus !== 'succeeded') {
+      console.log('[Settings] No valid payment to confirm');
+      return false;
+    }
+
+    setConfirmingPayment(true);
+    try {
+      // Determine product type and reference from URL
+      let finalProductType = productType;
+      let finalInternalRef = internalReference;
+      
+      if (topupSuccess === 'success' && credits) {
+        finalProductType = 'topup';
+        finalInternalRef = `${credits}_credits`;
+      }
+
+      const { data, error } = await supabase.functions.invoke('fanbases-confirm-payment', {
+        body: {
+          payment_intent: paymentIntent,
+          redirect_status: redirectStatus,
+          product_type: finalProductType,
+          internal_reference: finalInternalRef,
+          fanbases_product_id: fanbasesProductId,
+        },
+      });
+
+      console.log('[Settings] Confirm payment response:', data, error);
+
+      if (error) {
+        console.error('[Settings] Error confirming payment:', error);
+        toast.error('Failed to confirm payment. Please contact support.');
+        return false;
+      }
+
+      if (data?.success) {
+        if (data.already_processed) {
+          toast.info('This payment was already processed');
+        } else {
+          toast.success(data.message || 'Payment confirmed successfully!');
+          // Refresh profile to get updated credits/subscription
+          refreshProfile?.();
+          fetchBillingHistory();
+        }
+        return true;
+      } else {
+        toast.error(data?.message || 'Payment confirmation failed');
+        return false;
+      }
+    } catch (err) {
+      console.error('[Settings] Payment confirmation error:', err);
+      toast.error('Failed to confirm payment');
+      return false;
+    } finally {
+      setConfirmingPayment(false);
+    }
+  }, [refreshProfile]);
+
+  // Handle return from Fanbases checkout - card setup
   useEffect(() => {
     const setup = searchParams.get('setup');
     const paymentId = searchParams.get('payment_id');
@@ -103,6 +177,26 @@ export default function Settings() {
       toast.error('Card setup was cancelled');
     }
   }, [searchParams, setSearchParams]);
+
+  // Handle return from Fanbases payment - confirm and grant access
+  useEffect(() => {
+    const paymentIntent = searchParams.get('payment_intent');
+    const redirectStatus = searchParams.get('redirect_status');
+    const topupSuccess = searchParams.get('topup');
+    
+    if (paymentIntent && redirectStatus === 'succeeded') {
+      console.log('[Settings] Detected successful payment redirect');
+      confirmPayment(searchParams).then((confirmed) => {
+        if (confirmed) {
+          // Clear URL params after successful confirmation
+          setSearchParams({});
+        }
+      });
+    } else if (topupSuccess === 'cancelled') {
+      setSearchParams({});
+      toast.error('Top-up was cancelled');
+    }
+  }, [searchParams, setSearchParams, confirmPayment]);
 
   // Load payment methods on mount - always fetch to check Fanbases API
   useEffect(() => {
