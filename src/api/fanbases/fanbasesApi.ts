@@ -210,3 +210,26 @@ export async function checkSubscriptionStatus(): Promise<{ is_active: boolean; t
 
   return { is_active: !!data, tier: data?.tier };
 }
+
+/**
+ * Confirm a payment after redirect from Fanbases
+ * This grants access based on the payment details
+ */
+export async function confirmPayment(params: {
+  payment_intent: string;
+  redirect_status: string;
+  product_type: string;
+  internal_reference: string;
+  fanbases_product_id?: string;
+}): Promise<{ success: boolean; message?: string; already_processed?: boolean; error?: string }> {
+  const { data, error } = await supabase.functions.invoke('fanbases-confirm-payment', {
+    body: params,
+  });
+
+  if (error) {
+    console.error('Error confirming payment:', error);
+    return { success: false, error: error.message };
+  }
+
+  return data;
+}
