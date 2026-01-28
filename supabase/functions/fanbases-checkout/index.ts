@@ -103,8 +103,9 @@ Deno.serve(async (req) => {
 
       console.log(`[Fanbases Checkout] Found product: ${product.fanbases_product_id} (${product.product_type})`);
 
-      // Fetch the product from Fanbases to get its payment_link
-      const productResponse = await fetch(`${FANBASES_API_URL}/products/${product.fanbases_product_id}`, {
+      // Fetch ALL products from Fanbases using GET /products (list endpoint)
+      // Then find the matching product by ID - this avoids 404 on sandbox for single product fetch
+      const productsResponse = await fetch(`${FANBASES_API_URL}/products?per_page=100`, {
         method: "GET",
         headers: {
           Accept: "application/json",
@@ -112,22 +113,36 @@ Deno.serve(async (req) => {
         },
       });
 
-      if (!productResponse.ok) {
-        const errorText = await productResponse.text();
-        console.error(`[Fanbases Checkout] Failed to fetch product: ${errorText}`);
-        return new Response(JSON.stringify({ error: "Failed to fetch product from payment provider" }), {
+      if (!productsResponse.ok) {
+        const errorText = await productsResponse.text();
+        console.error(`[Fanbases Checkout] Failed to fetch products list: ${errorText}`);
+        return new Response(JSON.stringify({ error: "Failed to fetch products from payment provider" }), {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
-      const productData = await productResponse.json();
-      const fanbasesProduct = productData.data || productData;
+      const productsData = await productsResponse.json();
+      const productsList = productsData.data?.data || productsData.data || [];
       
-      console.log(`[Fanbases Checkout] Fanbases product:`, JSON.stringify(fanbasesProduct));
+      console.log(`[Fanbases Checkout] Fetched ${productsList.length} products from Fanbases`);
+
+      // Find the matching product by fanbases_product_id
+      const fanbasesProduct = productsList.find((p: { id: string }) => p.id === product.fanbases_product_id);
+      
+      if (!fanbasesProduct) {
+        console.error(`[Fanbases Checkout] Product ${product.fanbases_product_id} not found in Fanbases products list`);
+        console.log(`[Fanbases Checkout] Available product IDs:`, productsList.map((p: { id: string }) => p.id));
+        return new Response(JSON.stringify({ error: `Product ${product.fanbases_product_id} not found in payment provider` }), {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      
+      console.log(`[Fanbases Checkout] Found Fanbases product:`, JSON.stringify(fanbasesProduct));
 
       // Get the payment link from the product
-      let paymentLink = fanbasesProduct.payment_link || fanbasesProduct.checkout_url;
+      const paymentLink = fanbasesProduct.payment_link;
       
       if (!paymentLink) {
         console.error(`[Fanbases Checkout] No payment_link found on product ${product.fanbases_product_id}`);
