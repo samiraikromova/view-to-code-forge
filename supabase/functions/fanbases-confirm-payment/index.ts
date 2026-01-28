@@ -27,20 +27,21 @@ const TOPUP_CONFIG: Record<string, ProductConfig> = {
 };
 
 // Fanbases API configuration
-const FANBASES_API_URL = "https://www.fanbasis.com/public-api";
+//const FANBASES_API_URL = "https://www.fanbasis.com/public-api";
+const FANBASES_API_URL = "https://qa.dev-fan-basis.com/public-api";
 
 // Verify transaction with Fanbases API
 async function verifyTransactionWithFanbases(
   paymentIntent: string,
-  apiKey: string
+  apiKey: string,
 ): Promise<{ verified: boolean; transactionData?: Record<string, unknown>; error?: string }> {
   try {
     console.log(`[Fanbases Confirm] Verifying transaction: ${paymentIntent}`);
-    
+
     const response = await fetch(`${FANBASES_API_URL}/transactions/${paymentIntent}`, {
       method: "GET",
       headers: {
-        "Accept": "application/json",
+        Accept: "application/json",
         "x-api-key": apiKey,
       },
     });
@@ -48,7 +49,7 @@ async function verifyTransactionWithFanbases(
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`[Fanbases Confirm] API error: ${response.status} - ${errorText}`);
-      
+
       // If 404, transaction might not exist yet or different ID format
       if (response.status === 404) {
         return { verified: false, error: "Transaction not found in Fanbases" };
@@ -78,10 +79,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL") ?? "",
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
-    );
+    const supabase = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "");
 
     const FANBASES_API_KEY = Deno.env.get("FANBASES_API_KEY");
     if (!FANBASES_API_KEY) {
@@ -115,13 +113,7 @@ Deno.serve(async (req) => {
     const user = { id: claimsData.claims.sub, email: claimsData.claims.email };
 
     const body = await req.json();
-    const {
-      payment_intent,
-      redirect_status,
-      product_type,
-      internal_reference,
-      fanbases_product_id,
-    } = body;
+    const { payment_intent, redirect_status, product_type, internal_reference, fanbases_product_id } = body;
 
     console.log(`[Fanbases Confirm] User: ${user.id}, Payment Intent: ${payment_intent}`);
     console.log(`[Fanbases Confirm] Product: ${product_type} / ${internal_reference}`);
@@ -129,18 +121,18 @@ Deno.serve(async (req) => {
 
     // Validate required fields
     if (!payment_intent || !product_type || !internal_reference) {
-      return new Response(
-        JSON.stringify({ error: "Missing required payment confirmation data" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "Missing required payment confirmation data" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Check redirect status from URL
     if (redirect_status !== "succeeded") {
-      return new Response(
-        JSON.stringify({ error: "Payment was not successful", status: redirect_status }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "Payment was not successful", status: redirect_status }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Check if this payment was already processed (idempotency)
@@ -153,18 +145,18 @@ Deno.serve(async (req) => {
     if (existingPayment) {
       console.log(`[Fanbases Confirm] Payment ${payment_intent} already processed`);
       return new Response(
-        JSON.stringify({ 
-          success: true, 
+        JSON.stringify({
+          success: true,
           message: "Payment already processed",
-          already_processed: true 
+          already_processed: true,
         }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
     // Verify transaction with Fanbases API
     const verification = await verifyTransactionWithFanbases(payment_intent, FANBASES_API_KEY);
-    
+
     if (!verification.verified) {
       console.warn(`[Fanbases Confirm] Transaction verification failed: ${verification.error}`);
       // Still proceed if redirect_status is succeeded - API might have delay
@@ -213,10 +205,10 @@ Deno.serve(async (req) => {
   } catch (err) {
     const error = err as Error;
     console.error("[Fanbases Confirm] Error:", error);
-    return new Response(
-      JSON.stringify({ error: error.message || "Internal server error" }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
+    return new Response(JSON.stringify({ error: error.message || "Internal server error" }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   }
 });
 
@@ -227,27 +219,23 @@ async function grantTopUpCredits(
   userId: string,
   internalReference: string,
   paymentIntent: string,
-  priceCents: number
+  priceCents: number,
 ) {
   const config = TOPUP_CONFIG[internalReference];
   let credits = config?.credits || 0;
-  
+
   if (!credits) {
     // Try to parse credits from internal_reference (e.g., "2500_credits" -> 2500)
     const match = internalReference.match(/(\d+)/);
     credits = match ? parseInt(match[1]) : 0;
   }
-  
+
   if (credits <= 0) {
     return { success: false, message: `Unknown top-up product: ${internalReference}` };
   }
 
   // Update users table credits ONLY (not user_credits table)
-  const { data: userProfile } = await supabase
-    .from("users")
-    .select("credits")
-    .eq("id", userId)
-    .maybeSingle();
+  const { data: userProfile } = await supabase.from("users").select("credits").eq("id", userId).maybeSingle();
 
   const currentCredits = parseFloat(userProfile?.credits || 0);
   const newCredits = currentCredits + credits;
@@ -283,7 +271,7 @@ async function grantSubscription(
   userId: string,
   internalReference: string,
   paymentIntent: string,
-  priceCents: number
+  priceCents: number,
 ) {
   const config = TIER_CONFIG[internalReference];
   if (!config) {
@@ -295,10 +283,7 @@ async function grantSubscription(
   periodEnd.setMonth(periodEnd.getMonth() + 1);
 
   // Update users table subscription_tier
-  await supabase
-    .from("users")
-    .update({ subscription_tier: config.tier })
-    .eq("id", userId);
+  await supabase.from("users").update({ subscription_tier: config.tier }).eq("id", userId);
 
   // Upsert user_subscriptions (NOT user_credits)
   await supabase.from("user_subscriptions").upsert(
@@ -310,7 +295,7 @@ async function grantSubscription(
       current_period_end: periodEnd.toISOString(),
       fanbases_subscription_id: paymentIntent,
     },
-    { onConflict: "user_id" }
+    { onConflict: "user_id" },
   );
 
   // Record purchase in user_purchases
@@ -343,7 +328,7 @@ async function grantModuleAccess(
   userId: string,
   internalReference: string,
   paymentIntent: string,
-  priceCents: number
+  priceCents: number,
 ) {
   // Check if already purchased
   const { data: existingPurchase } = await supabase
