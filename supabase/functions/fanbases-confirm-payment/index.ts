@@ -162,31 +162,19 @@ async function grantTopUpCredits(
   priceCents: number
 ) {
   const config = TOPUP_CONFIG[internalReference];
-  if (!config || !config.credits) {
-    // Try to parse credits from internal_reference
+  let credits = config?.credits || 0;
+  
+  if (!credits) {
+    // Try to parse credits from internal_reference (e.g., "2500_credits" -> 2500)
     const match = internalReference.match(/(\d+)/);
-    const credits = match ? parseInt(match[1]) : 0;
-    
-    if (credits <= 0) {
-      return { success: false, message: `Unknown top-up product: ${internalReference}` };
-    }
-    
-    return await processTopUp(supabase, userId, credits, paymentIntent, priceCents, internalReference);
+    credits = match ? parseInt(match[1]) : 0;
+  }
+  
+  if (credits <= 0) {
+    return { success: false, message: `Unknown top-up product: ${internalReference}` };
   }
 
-  return await processTopUp(supabase, userId, config.credits, paymentIntent, priceCents, internalReference);
-}
-
-// deno-lint-ignore no-explicit-any
-async function processTopUp(
-  supabase: any,
-  userId: string,
-  credits: number,
-  paymentIntent: string,
-  priceCents: number,
-  internalReference: string
-) {
-  // Update users table credits
+  // Update users table credits ONLY (not user_credits table)
   const { data: userProfile } = await supabase
     .from("users")
     .select("credits")
@@ -201,29 +189,6 @@ async function processTopUp(
     .update({ credits: newCredits, last_credit_update: new Date().toISOString() })
     .eq("id", userId);
 
-  // Also update user_credits table if exists
-  const { data: userCreditsData } = await supabase
-    .from("user_credits")
-    .select("id, credits")
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (userCreditsData) {
-    const newUserCredits = parseFloat(userCreditsData.credits || 0) + credits;
-    await supabase
-      .from("user_credits")
-      .update({ credits: newUserCredits })
-      .eq("id", userCreditsData.id);
-  } else {
-    // Create user_credits entry if it doesn't exist
-    await supabase.from("user_credits").insert({
-      user_id: userId,
-      tier: "free",
-      credits: credits,
-      monthly_allowance: 0,
-    });
-  }
-
   // Record purchase in user_purchases
   await supabase.from("user_purchases").insert({
     user_id: userId,
@@ -232,19 +197,6 @@ async function processTopUp(
     amount_cents: priceCents,
     charge_id: paymentIntent,
     status: "completed",
-  });
-
-  // Record transaction
-  await supabase.from("credit_transactions").insert({
-    user_id: userId,
-    amount: credits,
-    type: "topup",
-    payment_method: "fanbases",
-    metadata: {
-      internal_reference: internalReference,
-      charge_id: paymentIntent,
-      amount_cents: priceCents,
-    },
   });
 
   console.log(`[Fanbases Confirm] Added ${credits} credits for user ${userId}. New balance: ${newCredits}`);
@@ -280,7 +232,7 @@ async function grantSubscription(
     .update({ subscription_tier: config.tier })
     .eq("id", userId);
 
-  // Upsert user_subscriptions
+  // Upsert user_subscriptions (NOT user_credits)
   await supabase.from("user_subscriptions").upsert(
     {
       user_id: userId,
@@ -293,33 +245,7 @@ async function grantSubscription(
     { onConflict: "user_id" }
   );
 
-  // Update or create user_credits with monthly allowance
-  const { data: userCreditsData } = await supabase
-    .from("user_credits")
-    .select("id, credits")
-    .eq("user_id", userId)
-    .maybeSingle();
-
-  if (userCreditsData) {
-    await supabase
-      .from("user_credits")
-      .update({
-        tier: config.tier,
-        monthly_allowance: config.monthlyCredits,
-        renewal_date: periodEnd.toISOString(),
-      })
-      .eq("id", userCreditsData.id);
-  } else {
-    await supabase.from("user_credits").insert({
-      user_id: userId,
-      tier: config.tier!,
-      credits: config.monthlyCredits,
-      monthly_allowance: config.monthlyCredits,
-      renewal_date: periodEnd.toISOString(),
-    });
-  }
-
-  // Record purchase
+  // Record purchase in user_purchases
   await supabase.from("user_purchases").insert({
     user_id: userId,
     product_id: internalReference,
