@@ -53,16 +53,13 @@ export function SubscriptionModal({
     try {
       const plan = PLANS[tier];
       
-      // Use fanbases-checkout to create a checkout session
+      // Use fanbases-checkout with existing product ID from fanbases_products
       const { data, error } = await supabase.functions.invoke('fanbases-checkout', {
         body: {
           action: 'create_checkout',
-          product_type: 'subscription',
-          product_id: plan.internalRef,
-          amount_cents: plan.price * 100,
-          title: `${plan.name} Plan Subscription`,
-          description: `${plan.credits.toLocaleString()} monthly credits with AI access`,
+          internal_reference: plan.internalRef, // tier1 or tier2
           success_url: `${window.location.origin}/settings?subscription=success&tier=${tier}`,
+          cancel_url: `${window.location.origin}/settings?subscription=cancelled`,
           base_url: window.location.origin,
         },
       });

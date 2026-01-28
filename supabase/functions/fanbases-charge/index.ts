@@ -5,32 +5,31 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// Fanbases API base URL
-// SANDBOX (for testing):
-const FANBASES_API_URL = "https://qa.dev-fan-basis.com/public-api";
-// PRODUCTION (for live):
-// const FANBASES_API_URL = 'https://www.fanbasis.com/public-api';
+// Fanbases API base URL - Production
+const FANBASES_API_URL = "https://www.fanbasis.com/public-api";
 
 // Product mapping interface
 interface FanbasesProduct {
   fanbases_product_id: string;
-  product_type: "module" | "subscription" | "topup";
+  product_type: "module" | "subscription" | "topup" | "card_setup";
   internal_reference: string;
+  price_cents: number | null;
 }
 
 // Look up product from fanbases_products table by internal_reference
-// The frontend sends internal references (e.g., 'steal-my-script', 'tier1', '1000_credits')
-// and we need to find the actual Fanbases product ID
 // deno-lint-ignore no-explicit-any
-async function lookupProductByInternalRef(supabase: any, internalReference: string): Promise<FanbasesProduct | null> {
+async function lookupProductByInternalRef(
+  supabase: any,
+  internalReference: string
+): Promise<FanbasesProduct | null> {
   const { data, error } = await supabase
     .from("fanbases_products")
-    .select("fanbases_product_id, product_type, internal_reference")
+    .select("fanbases_product_id, product_type, internal_reference, price_cents")
     .eq("internal_reference", internalReference)
     .maybeSingle();
 
   if (error) {
-    console.error("[Fanbases Charge] Error looking up product by internal_reference:", error);
+    console.error("[Fanbases Charge] Error looking up product:", error);
     return null;
   }
   return data;
@@ -60,7 +59,10 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabase = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "");
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+    );
 
     const FANBASES_API_KEY = Deno.env.get("FANBASES_API_KEY");
     if (!FANBASES_API_KEY) {
@@ -93,15 +95,22 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { product_type, product_id, amount_cents, description } = body;
+    const { internal_reference } = body;
 
-    console.log(
-      `[Fanbases Charge] Type: ${product_type}, Product: ${product_id}, Amount: ${amount_cents} cents, User: ${user.id}`,
-    );
+    console.log(`[Fanbases Charge] Internal Ref: ${internal_reference}, User: ${user.id}`);
 
-    // Get user email for lookups
-    const { data: userProfile } = await supabase.from("users").select("email, name").eq("id", user.id).single();
-    const userEmail = userProfile?.email || user.email;
+    // Look up product from fanbases_products table
+    const product = await lookupProductByInternalRef(supabase, internal_reference);
+
+    if (!product) {
+      console.error(`[Fanbases Charge] Product not found: ${internal_reference}`);
+      return new Response(
+        JSON.stringify({ error: `Product not found: ${internal_reference}` }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`[Fanbases Charge] Found product: ${product.fanbases_product_id} (${product.product_type})`);
 
     // Get customer and payment method from local database
     const { data: customer, error: customerError } = await supabase
@@ -122,96 +131,100 @@ Deno.serve(async (req) => {
     let paymentMethodId = customer?.payment_method_id;
 
     // If no fanbases_customer_id, try to find by email in Fanbases API
-    if (!fanbasesCustomerId && userEmail) {
-      console.log("[Fanbases Charge] No stored customer ID, looking up by email:", userEmail);
-      
-      try {
-        // Use search parameter as per API docs: GET /customers?search=email
-        let customersResponse = await fetch(`${FANBASES_API_URL}/customers?search=${encodeURIComponent(userEmail)}`, {
-          method: "GET",
-          headers: {
-            Accept: "application/json",
-            "x-api-key": FANBASES_API_KEY,
-          },
-        });
+    if (!fanbasesCustomerId) {
+      const { data: userProfile } = await supabase
+        .from("users")
+        .select("email, name")
+        .eq("id", user.id)
+        .maybeSingle();
+      const userEmail = userProfile?.email || user.email;
 
-        // Fallback to getting all customers if search doesn't work
-        if (!customersResponse.ok || customersResponse.status === 400) {
-          console.log("[Fanbases Charge] Search filter not supported, fetching all customers");
-          customersResponse = await fetch(`${FANBASES_API_URL}/customers?per_page=200`, {
-            method: "GET",
-            headers: {
-              Accept: "application/json",
-              "x-api-key": FANBASES_API_KEY,
-            },
-          });
-        }
+      if (userEmail) {
+        console.log("[Fanbases Charge] No stored customer ID, looking up by email:", userEmail);
 
-        if (customersResponse.ok) {
-          const customersData = await customersResponse.json();
-          console.log("[Fanbases Charge] Customers response keys:", Object.keys(customersData));
-          
-          let customers: Array<{ id: string; email?: string }> = [];
-          if (Array.isArray(customersData)) {
-            customers = customersData;
-          } else if (customersData.data?.customers) {
-            customers = customersData.data.customers;
-          } else if (customersData.customers) {
-            customers = customersData.customers;
-          } else if (customersData.data && Array.isArray(customersData.data)) {
-            customers = customersData.data;
-          }
-          
-          console.log(`[Fanbases Charge] Found ${customers.length} total customers`);
-          if (customers.length > 0) {
-            console.log("[Fanbases Charge] Sample customer:", JSON.stringify(customers[0]));
-          }
-          
-          const matchedCustomer = customers.find((c) => c.email?.toLowerCase() === userEmail.toLowerCase());
-          
-          if (matchedCustomer) {
-            fanbasesCustomerId = matchedCustomer.id;
-            console.log(`[Fanbases Charge] Found customer by email: ${fanbasesCustomerId}`);
-            
-            // Insert or update our local database record
-            if (customer) {
-              await supabase
-                .from("fanbases_customers")
-                .update({
-                  fanbases_customer_id: fanbasesCustomerId,
-                  updated_at: new Date().toISOString(),
-                })
-                .eq("user_id", user.id);
-            } else {
-              // No local record exists - create one
-              await supabase.from("fanbases_customers").insert({
-                user_id: user.id,
-                fanbases_customer_id: fanbasesCustomerId,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-              });
+        try {
+          let customersResponse = await fetch(
+            `${FANBASES_API_URL}/customers?search=${encodeURIComponent(userEmail)}`,
+            {
+              method: "GET",
+              headers: {
+                Accept: "application/json",
+                "x-api-key": FANBASES_API_KEY,
+              },
             }
-          } else {
-            console.log(`[Fanbases Charge] No customer found with email: ${userEmail}`);
+          );
+
+          if (!customersResponse.ok || customersResponse.status === 400) {
+            customersResponse = await fetch(`${FANBASES_API_URL}/customers?per_page=200`, {
+              method: "GET",
+              headers: {
+                Accept: "application/json",
+                "x-api-key": FANBASES_API_KEY,
+              },
+            });
           }
-        } else {
-          const errorText = await customersResponse.text();
-          console.error("[Fanbases Charge] Customers API error:", customersResponse.status, errorText);
+
+          if (customersResponse.ok) {
+            const customersData = await customersResponse.json();
+
+            let customers: Array<{ id: string; email?: string }> = [];
+            if (Array.isArray(customersData)) {
+              customers = customersData;
+            } else if (customersData.data?.customers) {
+              customers = customersData.data.customers;
+            } else if (customersData.customers) {
+              customers = customersData.customers;
+            } else if (customersData.data && Array.isArray(customersData.data)) {
+              customers = customersData.data;
+            }
+
+            const matchedCustomer = customers.find(
+              (c) => c.email?.toLowerCase() === userEmail.toLowerCase()
+            );
+
+            if (matchedCustomer) {
+              fanbasesCustomerId = matchedCustomer.id;
+              console.log(`[Fanbases Charge] Found customer by email: ${fanbasesCustomerId}`);
+
+              // Update local database
+              if (customer) {
+                await supabase
+                  .from("fanbases_customers")
+                  .update({
+                    fanbases_customer_id: fanbasesCustomerId,
+                    updated_at: new Date().toISOString(),
+                  })
+                  .eq("user_id", user.id);
+              } else {
+                await supabase.from("fanbases_customers").insert({
+                  user_id: user.id,
+                  fanbases_customer_id: fanbasesCustomerId,
+                  email: userEmail,
+                  created_at: new Date().toISOString(),
+                  updated_at: new Date().toISOString(),
+                });
+              }
+            }
+          }
+        } catch (e) {
+          console.error("[Fanbases Charge] Error looking up customer:", e);
         }
-      } catch (e) {
-        console.error("[Fanbases Charge] Error looking up customer:", e);
       }
     }
 
     if (!fanbasesCustomerId) {
       console.log("No Fanbases customer found for user:", user.id);
       return new Response(
-        JSON.stringify({ error: "No payment method on file. Please add a card first.", needs_payment_method: true }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        JSON.stringify({
+          error: "No payment method on file. Please add a card first.",
+          needs_payment_method: true,
+          redirect_to_checkout: true,
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Try to fetch payment methods from Fanbases if we don't have one stored
+    // Fetch payment methods from Fanbases if not stored locally
     if (!paymentMethodId) {
       console.log("[Fanbases Charge] No stored payment method, fetching from Fanbases...");
       try {
@@ -223,7 +236,7 @@ Deno.serve(async (req) => {
               Accept: "application/json",
               "x-api-key": FANBASES_API_KEY,
             },
-          },
+          }
         );
 
         if (pmResponse.ok) {
@@ -231,13 +244,18 @@ Deno.serve(async (req) => {
           const paymentMethods = pmData.data?.payment_methods || [];
 
           if (paymentMethods.length > 0) {
-            paymentMethodId = paymentMethods[0].id;
+            const defaultMethod =
+              paymentMethods.find((pm: { is_default?: boolean }) => pm.is_default) ||
+              paymentMethods[0];
+            paymentMethodId = defaultMethod.id;
             console.log("[Fanbases Charge] Found payment method:", paymentMethodId);
 
-            // Update our database
             await supabase
               .from("fanbases_customers")
-              .update({ payment_method_id: paymentMethodId, updated_at: new Date().toISOString() })
+              .update({
+                payment_method_id: paymentMethodId,
+                updated_at: new Date().toISOString(),
+              })
               .eq("user_id", user.id);
           }
         }
@@ -248,37 +266,43 @@ Deno.serve(async (req) => {
 
     if (!paymentMethodId) {
       return new Response(
-        JSON.stringify({ error: "No payment method on file. Please add a card first.", needs_payment_method: true }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        JSON.stringify({
+          error: "No payment method on file. Please add a card first.",
+          needs_payment_method: true,
+          redirect_to_checkout: true,
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Charge customer via Fanbases API
+    // Charge using the Fanbases product ID
     console.log(
-      `[Fanbases Charge] Charging customer ${fanbasesCustomerId} with payment method ${paymentMethodId}`,
+      `[Fanbases Charge] Charging customer ${fanbasesCustomerId} with product ${product.fanbases_product_id}`
     );
 
     const chargePayload = {
       payment_method_id: paymentMethodId,
-      amount_cents,
-      description,
+      product_id: product.fanbases_product_id,
       metadata: {
         user_id: user.id,
-        product_type,
-        product_id,
+        product_type: product.product_type,
+        internal_reference: product.internal_reference,
       },
     };
     console.log("[Fanbases Charge] Request payload:", JSON.stringify(chargePayload));
 
-    const chargeResponse = await fetch(`${FANBASES_API_URL}/customers/${fanbasesCustomerId}/charge`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-        "x-api-key": FANBASES_API_KEY,
-      },
-      body: JSON.stringify(chargePayload),
-    });
+    const chargeResponse = await fetch(
+      `${FANBASES_API_URL}/customers/${fanbasesCustomerId}/charge`,
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          "x-api-key": FANBASES_API_KEY,
+        },
+        body: JSON.stringify(chargePayload),
+      }
+    );
 
     const responseText = await chargeResponse.text();
     console.log("[Fanbases Charge] Raw response:", responseText, "Status:", chargeResponse.status);
@@ -287,137 +311,119 @@ Deno.serve(async (req) => {
     try {
       chargeData = JSON.parse(responseText);
     } catch {
-      console.error("Failed to parse charge response as JSON:", responseText);
+      console.error("Failed to parse charge response:", responseText);
       return new Response(JSON.stringify({ error: "Invalid response from payment provider" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    if (!chargeResponse.ok || (chargeData.status && chargeData.status !== "success")) {
+    if (!chargeResponse.ok || chargeData.status === "error") {
       console.error("Charge failed:", chargeData);
-      return new Response(JSON.stringify({ error: chargeData.message || chargeData.error || "Payment failed" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+
+      // If manual rebilling not allowed, indicate that checkout is needed
+      if (chargeData.message?.includes("Manual rebilling is not allowed")) {
+        return new Response(
+          JSON.stringify({
+            error: "One-click payment not available for your account",
+            needs_checkout: true,
+            redirect_to_checkout: true,
+          }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      return new Response(
+        JSON.stringify({ error: chargeData.message || chargeData.error || "Payment failed" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
 
     const chargeId = chargeData.data?.charge_id || chargeData.charge_id || chargeData.id;
     console.log(`[Fanbases Charge] Charge successful: ${chargeId}`);
 
-    // Look up product from fanbases_products table by internal_reference
-    // The frontend sends internal references like 'steal-my-script', 'tier1', 'credits_1000'
-    // Map credits_X format to X_credits format used in the table
-    let lookupRef = product_id;
-    if (product_id.startsWith("credits_")) {
-      lookupRef = product_id.replace("credits_", "") + "_credits";
-    }
+    // Grant access based on product type
+    if (product.product_type === "module") {
+      const { data: existingPurchase } = await supabase
+        .from("user_purchases")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("product_id", product.internal_reference)
+        .maybeSingle();
 
-    const productMapping = await lookupProductByInternalRef(supabase, lookupRef);
-
-    // Determine processing type from mapping or fallback to request
-    const processingType = productMapping?.product_type || product_type;
-    const internalRef = productMapping?.internal_reference || product_id;
-    const fanbasesProductId = productMapping?.fanbases_product_id;
-
-    console.log(
-      `[Fanbases Charge] Processing as: ${processingType}, internal_ref: ${internalRef}, fanbases_id: ${fanbasesProductId}`,
-    );
-
-    // Process based on product type
-    if (processingType === "module") {
-      // Record module purchase with internal_reference as the module slug
-      const { error: purchaseError } = await supabase.from("user_purchases").insert({
-        user_id: user.id,
-        product_id: internalRef,
-        product_type: "module",
-        amount_cents,
-        charge_id: chargeId,
-        status: "completed",
-      });
-
-      if (purchaseError) {
-        console.error("Error recording purchase:", purchaseError);
-        // Don't fail - charge was successful
+      if (!existingPurchase) {
+        await supabase.from("user_purchases").insert({
+          user_id: user.id,
+          product_id: product.internal_reference,
+          product_type: "module",
+          amount_cents: product.price_cents,
+          charge_id: chargeId,
+          status: "completed",
+        });
       }
+      console.log(`[Fanbases Charge] Module ${product.internal_reference} unlocked for user ${user.id}`);
 
-      // Log transaction
-      await supabase.from("credit_transactions").insert({
-        user_id: user.id,
-        amount: 0,
-        type: "module_purchase",
-        payment_method: "fanbases",
-        metadata: { product_id: internalRef, charge_id: chargeId, amount_cents },
-      });
-
-      console.log(`[Fanbases Charge] Module ${internalRef} unlocked for user ${user.id}`);
-    } else if (processingType === "subscription") {
-      // Get tier and credits from mapping or infer from product_id
-      const subDetails = getSubscriptionDetails(internalRef);
-      const tier = subDetails.tier;
-      const monthlyCredits = subDetails.credits;
-
-      // Calculate next renewal
+    } else if (product.product_type === "subscription") {
+      const subDetails = getSubscriptionDetails(product.internal_reference);
       const renewalDate = new Date();
       renewalDate.setMonth(renewalDate.getMonth() + 1);
 
-      // Upsert subscription
-      const { error: subError } = await supabase.from("user_subscriptions").upsert(
+      await supabase.from("user_subscriptions").upsert(
         {
           user_id: user.id,
-          tier,
+          tier: subDetails.tier,
           status: "active",
           current_period_start: new Date().toISOString(),
           current_period_end: renewalDate.toISOString(),
           fanbases_subscription_id: chargeId,
         },
-        { onConflict: "user_id" },
+        { onConflict: "user_id" }
       );
 
-      if (subError) {
-        console.error("Error updating subscription:", subError);
-      }
-
-      // Update user credits and tier
-      const { data: userProfile } = await supabase.from("users").select("credits").eq("id", user.id).single();
-
-      const newCredits = (userProfile?.credits || 0) + monthlyCredits;
+      const { data: userProfile } = await supabase
+        .from("users")
+        .select("credits")
+        .eq("id", user.id)
+        .maybeSingle();
 
       await supabase
         .from("users")
         .update({
-          subscription_tier: tier,
-          credits: newCredits,
+          subscription_tier: subDetails.tier,
+          credits: (userProfile?.credits || 0) + subDetails.credits,
         })
         .eq("id", user.id);
 
-      // Log transaction
       await supabase.from("credit_transactions").insert({
         user_id: user.id,
-        amount: monthlyCredits,
+        amount: subDetails.credits,
         type: "subscription",
         payment_method: "fanbases",
-        metadata: { tier, charge_id: chargeId },
+        metadata: { tier: subDetails.tier, charge_id: chargeId },
       });
 
-      console.log(`[Fanbases Charge] Subscription ${tier} activated for user ${user.id}`);
-    } else if (processingType === "topup") {
-      // Get credits from mapping or parse from product_id
-      const credits = productMapping ? getTopupCredits(internalRef) : parseInt(product_id.replace("credits_", ""));
+      console.log(`[Fanbases Charge] Subscription ${subDetails.tier} activated for user ${user.id}`);
 
-      const { data: userProfile } = await supabase.from("users").select("credits").eq("id", user.id).single();
+    } else if (product.product_type === "topup") {
+      const credits = getTopupCredits(product.internal_reference);
 
-      const newCredits = (userProfile?.credits || 0) + credits;
+      const { data: userProfile } = await supabase
+        .from("users")
+        .select("credits")
+        .eq("id", user.id)
+        .maybeSingle();
 
-      await supabase.from("users").update({ credits: newCredits }).eq("id", user.id);
+      await supabase
+        .from("users")
+        .update({ credits: (userProfile?.credits || 0) + credits })
+        .eq("id", user.id);
 
-      // Log transaction
       await supabase.from("credit_transactions").insert({
         user_id: user.id,
         amount: credits,
         type: "topup",
         payment_method: "fanbases",
-        metadata: { credits, charge_id: chargeId },
+        metadata: { internal_reference: product.internal_reference, charge_id: chargeId },
       });
 
       console.log(`[Fanbases Charge] ${credits} credits added for user ${user.id}`);
@@ -427,9 +433,10 @@ Deno.serve(async (req) => {
       JSON.stringify({
         success: true,
         charge_id: chargeId,
+        product_type: product.product_type,
         message: "Payment successful",
       }),
-      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (err) {
     const error = err as Error;

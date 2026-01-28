@@ -86,20 +86,15 @@ export async function fetchPaymentMethods(paymentId?: string, email?: string): P
 }
 
 /**
- * Charge the current user for a product purchase
+ * Charge the current user for a product purchase using internal_reference
+ * This uses the pre-defined products in fanbases_products table
  */
 export async function chargeCustomer(
-  product_type: 'module' | 'subscription' | 'topup',
-  product_id: string,
-  amount_cents: number,
-  description: string
+  internal_reference: string
 ): Promise<ChargeResult> {
   const { data, error } = await supabase.functions.invoke('fanbases-charge', {
     body: {
-      product_type,
-      product_id,
-      amount_cents,
-      description,
+      internal_reference,
     },
   });
 
@@ -109,6 +104,13 @@ export async function chargeCustomer(
   }
 
   if (!data.success) {
+    // Check if we need to redirect to checkout
+    if (data.needs_checkout || data.redirect_to_checkout) {
+      return { 
+        success: false, 
+        error: data.error || 'Payment method not available',
+      };
+    }
     return { success: false, error: data.error || 'Charge failed' };
   }
 
@@ -120,9 +122,10 @@ export async function chargeCustomer(
 
 /**
  * Purchase a module (one-time payment)
+ * Uses the internal_reference from fanbases_products table
  */
-export async function purchaseModule(moduleId: string, priceCents: number, moduleName: string): Promise<ChargeResult> {
-  return chargeCustomer('module', moduleId, priceCents, `Module: ${moduleName}`);
+export async function purchaseModule(moduleSlug: string): Promise<ChargeResult> {
+  return chargeCustomer(moduleSlug);
 }
 
 /**
@@ -130,17 +133,16 @@ export async function purchaseModule(moduleId: string, priceCents: number, modul
  * Uses internal_reference: tier1 or tier2
  */
 export async function startSubscription(tier: 'starter' | 'pro'): Promise<ChargeResult> {
-  const prices = { starter: 2900, pro: 9900 };
-  // Map to internal_reference used in fanbases_products table
   const tierMapping = { starter: 'tier1', pro: 'tier2' };
-  return chargeCustomer('subscription', tierMapping[tier], prices[tier], `${tier.charAt(0).toUpperCase() + tier.slice(1)} Plan Subscription`);
+  return chargeCustomer(tierMapping[tier]);
 }
 
 /**
  * Purchase credits top-up
+ * Uses internal_reference format: 1000_credits, 2500_credits, etc.
  */
-export async function purchaseCredits(credits: number, priceCents: number): Promise<ChargeResult> {
-  return chargeCustomer('topup', `credits_${credits}`, priceCents, `${credits.toLocaleString()} Credits Top-up`);
+export async function purchaseCredits(credits: number): Promise<ChargeResult> {
+  return chargeCustomer(`${credits}_credits`);
 }
 
 /**
