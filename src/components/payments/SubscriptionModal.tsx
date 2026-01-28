@@ -70,9 +70,10 @@ export function SubscriptionModal({
         return;
       }
 
-      if (data?.payment_link) {
+      const checkoutUrl = data?.checkout_url || data?.payment_link;
+      if (checkoutUrl) {
         // Redirect to Fanbases checkout
-        window.location.href = data.payment_link;
+        window.location.href = checkoutUrl;
       } else {
         toast.error('Failed to get checkout link');
       }
