@@ -111,15 +111,30 @@ Deno.serve(async (req) => {
 
       console.log(`[Fanbases Checkout] Found product: ${product.fanbases_product_id} (${product.product_type})`);
 
-      // Build checkout payload using the existing Fanbases product ID
+      // Build product title based on type
+      const productTitles: Record<string, string> = {
+        subscription: product.internal_reference === "tier2" ? "Pro Subscription" : "Starter Subscription",
+        topup: `${product.internal_reference.replace("_credits", "")} Credits Top-Up`,
+        module: `Module: ${product.internal_reference}`,
+        card_setup: "Card Setup",
+      };
+
+      // Build checkout payload with full product definition (Fanbases requires amount_cents)
       const checkoutPayload: Record<string, unknown> = {
-        product_id: product.fanbases_product_id,
+        product: {
+          title: productTitles[product.product_type] || product.internal_reference,
+          amount_cents: product.price_cents || 0,
+          type: product.product_type === "subscription" ? "subscription" : "onetime_non_reusable",
+        },
+        fan: {
+          email: email,
+          name: fullName,
+        },
         metadata: {
           user_id: user.id,
           product_type: product.product_type,
           internal_reference: product.internal_reference,
-          email: email,
-          name: fullName,
+          fanbases_product_id: product.fanbases_product_id,
         },
         success_url: success_url || `${body.base_url || "https://app.example.com"}/settings?payment=success&type=${product.product_type}`,
         cancel_url: cancel_url || `${body.base_url || "https://app.example.com"}/settings?payment=cancelled`,
@@ -128,13 +143,13 @@ Deno.serve(async (req) => {
 
       // Add subscription-specific config if needed
       if (product.product_type === "subscription") {
-        checkoutPayload.subscription = {
+        (checkoutPayload.product as Record<string, unknown>).subscription = {
           frequency_days: 30,
           auto_expire_after_x_periods: null,
         };
       }
 
-      console.log("[Fanbases Checkout] Creating checkout with existing product:", JSON.stringify(checkoutPayload));
+      console.log("[Fanbases Checkout] Creating checkout session:", JSON.stringify(checkoutPayload));
 
       const response = await fetch(`${FANBASES_API_URL}/checkout-sessions`, {
         method: "POST",
@@ -209,12 +224,19 @@ Deno.serve(async (req) => {
       console.log(`[Fanbases Checkout] Using card setup product: ${cardSetupProduct.fanbases_product_id}`);
 
       const setupPayload = {
-        product_id: cardSetupProduct.fanbases_product_id,
+        product: {
+          title: "Card Setup",
+          amount_cents: cardSetupProduct.price_cents || 100, // Minimal charge for card verification
+          type: "onetime_non_reusable" as const,
+        },
+        fan: {
+          email: email,
+          name: fullName,
+        },
         metadata: {
           user_id: user.id,
           action: "setup_card",
-          email: email,
-          name: fullName,
+          fanbases_product_id: cardSetupProduct.fanbases_product_id,
         },
         success_url: success_url || `${body.base_url || "https://app.example.com"}/settings?setup=complete`,
         cancel_url: cancel_url || `${body.base_url || "https://app.example.com"}/settings?setup=cancelled`,
