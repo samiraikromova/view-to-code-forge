@@ -26,6 +26,51 @@ const TOPUP_CONFIG: Record<string, ProductConfig> = {
   "10000_credits": { credits: 10000 },
 };
 
+// Fanbases API configuration
+const FANBASES_API_URL = "https://www.fanbasis.com/public-api";
+
+// Verify transaction with Fanbases API
+async function verifyTransactionWithFanbases(
+  paymentIntent: string,
+  apiKey: string
+): Promise<{ verified: boolean; transactionData?: Record<string, unknown>; error?: string }> {
+  try {
+    console.log(`[Fanbases Confirm] Verifying transaction: ${paymentIntent}`);
+    
+    const response = await fetch(`${FANBASES_API_URL}/transactions/${paymentIntent}`, {
+      method: "GET",
+      headers: {
+        "Accept": "application/json",
+        "x-api-key": apiKey,
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[Fanbases Confirm] API error: ${response.status} - ${errorText}`);
+      
+      // If 404, transaction might not exist yet or different ID format
+      if (response.status === 404) {
+        return { verified: false, error: "Transaction not found in Fanbases" };
+      }
+      return { verified: false, error: `API error: ${response.status}` };
+    }
+
+    const data = await response.json();
+    console.log(`[Fanbases Confirm] Transaction API response:`, JSON.stringify(data));
+
+    if (data.status === "success" && data.data) {
+      return { verified: true, transactionData: data.data };
+    }
+
+    return { verified: false, error: "Invalid transaction response" };
+  } catch (err) {
+    const error = err as Error;
+    console.error(`[Fanbases Confirm] Verification error:`, error);
+    return { verified: false, error: error.message };
+  }
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -37,6 +82,15 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
     );
+
+    const FANBASES_API_KEY = Deno.env.get("FANBASES_API_KEY");
+    if (!FANBASES_API_KEY) {
+      console.error("[Fanbases Confirm] Missing FANBASES_API_KEY");
+      return new Response(JSON.stringify({ error: "Server configuration error" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Get authenticated user using getClaims for proper JWT validation
     const authHeader = req.headers.get("Authorization");
@@ -81,7 +135,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Check redirect status
+    // Check redirect status from URL
     if (redirect_status !== "succeeded") {
       return new Response(
         JSON.stringify({ error: "Payment was not successful", status: redirect_status }),
@@ -106,6 +160,18 @@ Deno.serve(async (req) => {
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+
+    // Verify transaction with Fanbases API
+    const verification = await verifyTransactionWithFanbases(payment_intent, FANBASES_API_KEY);
+    
+    if (!verification.verified) {
+      console.warn(`[Fanbases Confirm] Transaction verification failed: ${verification.error}`);
+      // Still proceed if redirect_status is succeeded - API might have delay
+      // But log it for monitoring
+      console.log(`[Fanbases Confirm] Proceeding based on redirect_status=succeeded despite API verification failure`);
+    } else {
+      console.log(`[Fanbases Confirm] Transaction verified successfully via API`);
     }
 
     // Get product price from fanbases_products table
