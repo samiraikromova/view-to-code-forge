@@ -1,33 +1,33 @@
 // Access control hook for managing user permissions
 // Handles module access, subscription status, trial, and dashboard access
 
-import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '@/lib/supabase';
-import { useAuth } from './useAuth';
+import { useState, useEffect, useCallback } from "react";
+import { supabase } from "@/lib/supabase";
+import { useAuth } from "./useAuth";
 
 export interface AccessState {
   // Module access
   purchasedModules: string[];
-  
+
   // Subscription
   hasActiveSubscription: boolean;
   subscriptionTier: string | null;
-  
+
   // Trial
   isOnTrial: boolean;
   trialEndsAt: Date | null;
   trialExpired: boolean;
   trialDaysRemaining: number;
-  
+
   // Dashboard
   hasDashboardAccess: boolean;
-  
+
   // Chat/AI
   hasChatAccess: boolean;
-  
+
   // Products from fanbases_products table
   fanbasesProducts: FanbasesProduct[];
-  
+
   // Loading
   loading: boolean;
 }
@@ -50,10 +50,7 @@ export interface ModuleAccessInfo {
 }
 
 // Modules that require booking a call (cannot be purchased)
-const CALL_REQUIRED_MODULES = [
-  'call-recordings',
-  'coaching-content',
-];
+const CALL_REQUIRED_MODULES = ["call-recordings", "coaching-content"];
 
 export function useAccess() {
   const { user, profile } = useAuth();
@@ -92,41 +89,36 @@ export function useAccess() {
 
     try {
       // Fetch all data in parallel
-      const [userDataResult, purchasesResult, subscriptionResult, dashboardAccessResult, fanbasesProductsResult] = await Promise.all([
-        // User data for trial info
-        supabase
-          .from('users')
-          .select('trial_started_at, trial_ends_at, subscription_tier')
-          .eq('id', user.id)
-          .single(),
-        // Purchases
-        supabase
-          .from('user_purchases')
-          .select('product_id')
-          .eq('user_id', user.id)
-          .eq('status', 'completed'),
-        // Subscription
-        supabase
-          .from('user_subscriptions')
-          .select('tier, status')
-          .eq('user_id', user.id)
-          .eq('status', 'active')
-          .maybeSingle(),
-        // Dashboard access
-        supabase
-          .from('user_special_access')
-          .select('id')
-          .eq('user_id', user.id)
-          .eq('access_type', 'dashboard')
-          .maybeSingle(),
-        // Fanbases products for pricing
-        supabase
-          .from('fanbases_products')
-          .select('fanbases_product_id, product_type, internal_reference')
-      ]);
+      const [userDataResult, purchasesResult, subscriptionResult, dashboardAccessResult, fanbasesProductsResult] =
+        await Promise.all([
+          // User data for trial info
+          supabase
+            .from("users")
+            .select("trial_started_at, trial_ends_at, subscription_tier")
+            .eq("id", user.id)
+            .single(),
+          // Purchases
+          supabase.from("user_purchases").select("product_id").eq("user_id", user.id).eq("status", "completed"),
+          // Subscription
+          supabase
+            .from("user_subscriptions")
+            .select("tier, status")
+            .eq("user_id", user.id)
+            .eq("status", "active")
+            .maybeSingle(),
+          // Dashboard access
+          supabase
+            .from("user_special_access")
+            .select("id")
+            .eq("user_id", user.id)
+            .eq("access_type", "dashboard")
+            .maybeSingle(),
+          // Fanbases products for pricing
+          supabase.from("fanbases_products").select("fanbases_product_id, product_type, internal_reference"),
+        ]);
 
       const userData = userDataResult.data;
-      
+
       // Calculate trial status
       let isOnTrial = false;
       let trialEndsAt: Date | null = null;
@@ -136,7 +128,7 @@ export function useAccess() {
       if (userData?.trial_ends_at) {
         trialEndsAt = new Date(userData.trial_ends_at);
         const now = new Date();
-        
+
         if (userData.trial_started_at && trialEndsAt > now) {
           isOnTrial = true;
           trialDaysRemaining = Math.ceil((trialEndsAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
@@ -145,13 +137,13 @@ export function useAccess() {
         }
       }
 
-      const purchasedModules = purchasesResult.data?.map(p => p.product_id) || [];
-      
+      const purchasedModules = purchasesResult.data?.map((p) => p.product_id) || [];
+
       // Check subscription from user_subscriptions OR users.subscription_tier
-      const subscriptionTier = subscriptionResult.data?.tier || userData?.subscription_tier || 'free';
-      const hasActiveSubscription = !!subscriptionResult.data || 
-        (subscriptionTier && subscriptionTier !== 'free' && subscriptionTier !== 'trial');
-      
+      const subscriptionTier = subscriptionResult.data?.tier || userData?.subscription_tier || "free";
+      const hasActiveSubscription =
+        !!subscriptionResult.data || (subscriptionTier && subscriptionTier !== "free" && subscriptionTier !== "trial");
+
       const hasDashboardAccess = !!dashboardAccessResult.data;
       const hasChatAccess = hasActiveSubscription || isOnTrial;
       const fanbasesProducts = fanbasesProductsResult.data || [];
@@ -170,8 +162,8 @@ export function useAccess() {
         loading: false,
       });
     } catch (error) {
-      console.error('Error loading access data:', error);
-      setAccessState(prev => ({ ...prev, loading: false }));
+      console.error("Error loading access data:", error);
+      setAccessState((prev) => ({ ...prev, loading: false }));
     }
   }, [user]);
 
@@ -180,85 +172,101 @@ export function useAccess() {
   }, [loadAccessData]);
 
   // Check if user has access to a specific module based on its access_type
-  const checkModuleAccess = useCallback((moduleSlug: string, accessType?: string, productId?: string): ModuleAccessInfo => {
-    // PRIORITY 1: Check access_type from database FIRST
-    // If access_type is 'free', module is always accessible (regardless of module name)
-    if (accessType === 'free') {
-      return { hasAccess: true, requiresCall: false };
-    }
-
-    // If access_type is 'book_a_call', require a call
-    if (accessType === 'book_a_call') {
-      return {
-        hasAccess: accessState.hasDashboardAccess,
-        requiresCall: true,
-      };
-    }
-
-    // If access_type is 'tier_required', check subscription
-    if (accessType === 'tier_required') {
-      return {
-        hasAccess: accessState.hasActiveSubscription,
-        requiresCall: false,
-      };
-    }
-
-    // If access_type is 'purchase_required', check if purchased
-    if (accessType === 'purchase_required') {
-      // Check if user has purchased this module
-      const hasPurchased = accessState.purchasedModules.includes(moduleSlug) || 
-                           (productId && accessState.purchasedModules.includes(productId));
-      
-      if (hasPurchased) {
+  const checkModuleAccess = useCallback(
+    (moduleSlug: string, accessType?: string, productId?: string): ModuleAccessInfo => {
+      // PRIORITY 1: Check access_type from database FIRST
+      // If access_type is 'free', module is always accessible (regardless of module name)
+      if (accessType === "free") {
         return { hasAccess: true, requiresCall: false };
       }
 
-      // Find product in fanbases_products for checkout link
-      const product = accessState.fanbasesProducts.find(p => 
-        p.internal_reference === moduleSlug || p.internal_reference === productId
+      // If access_type is 'book_a_call', require a call
+      if (accessType === "book_a_call") {
+        return {
+          hasAccess: accessState.hasDashboardAccess,
+          requiresCall: true,
+        };
+      }
+
+      // If access_type is 'tier_required', check subscription
+      if (accessType === "tier_required") {
+        return {
+          hasAccess: accessState.hasActiveSubscription,
+          requiresCall: false,
+        };
+      }
+
+      // If access_type is 'purchase_required', check if purchased
+      if (accessType === "purchase_required") {
+        // Check if user has purchased this module
+        const hasPurchased =
+          accessState.purchasedModules.includes(moduleSlug) ||
+          (productId && accessState.purchasedModules.includes(productId));
+
+        if (hasPurchased) {
+          return { hasAccess: true, requiresCall: false };
+        }
+
+        // Find product in fanbases_products for checkout link
+        const product = accessState.fanbasesProducts.find(
+          (p) => p.internal_reference === moduleSlug || p.internal_reference === productId,
+        );
+
+        return {
+          hasAccess: false,
+          requiresCall: false,
+          productId: productId || moduleSlug,
+          fanbasesProductId: product?.fanbases_product_id,
+          fanbasesCheckoutUrl: product
+            ? `https://qa.dev-fan-basis.com/agency-checkout/leveragedcreator/${product.fanbases_product_id}`
+            : undefined,
+          //fanbasesCheckoutUrl: product ? `https://www.fanbasis.com/agency-checkout/leveragedcreator/${product.fanbases_product_id}` : undefined,
+        };
+      }
+
+      // PRIORITY 2: Fallback pattern matching (only if no accessType provided)
+      // Call-required modules (call recordings) - require call booking
+      if (!accessType && (CALL_REQUIRED_MODULES.includes(moduleSlug) || moduleSlug.includes("call-recording"))) {
+        return {
+          hasAccess: accessState.hasDashboardAccess,
+          requiresCall: true,
+        };
+      }
+
+      // PRIORITY 3: Default - check if purchased (backward compatibility)
+      if (accessState.purchasedModules.includes(moduleSlug)) {
+        return { hasAccess: true, requiresCall: false };
+      }
+
+      // No accessType and not purchased - check fanbases for purchase option
+      const product = accessState.fanbasesProducts.find(
+        (p) => p.internal_reference === moduleSlug || p.internal_reference === productId,
       );
+
+      // If no product found and no accessType, default to free
+      if (!product && !accessType) {
+        return { hasAccess: true, requiresCall: false };
+      }
 
       return {
         hasAccess: false,
         requiresCall: false,
         productId: productId || moduleSlug,
         fanbasesProductId: product?.fanbases_product_id,
-        fanbasesCheckoutUrl: product ? `https://www.fanbasis.com/agency-checkout/leveragedcreator/${product.fanbases_product_id}` : undefined,
+        fanbasesCheckoutUrl: product
+          ? `https://qa.dev-fan-basis.com/agency-checkout/leveragedcreator/${product.fanbases_product_id}`
+          : undefined,
+
+        //fanbasesCheckoutUrl: product ? `https://www.fanbasis.com/agency-checkout/leveragedcreator/${product.fanbases_product_id}` : undefined,
       };
-    }
-
-    // PRIORITY 2: Fallback pattern matching (only if no accessType provided)
-    // Call-required modules (call recordings) - require call booking
-    if (!accessType && (CALL_REQUIRED_MODULES.includes(moduleSlug) || moduleSlug.includes('call-recording'))) {
-      return {
-        hasAccess: accessState.hasDashboardAccess,
-        requiresCall: true,
-      };
-    }
-
-    // PRIORITY 3: Default - check if purchased (backward compatibility)
-    if (accessState.purchasedModules.includes(moduleSlug)) {
-      return { hasAccess: true, requiresCall: false };
-    }
-
-    // No accessType and not purchased - check fanbases for purchase option
-    const product = accessState.fanbasesProducts.find(p => 
-      p.internal_reference === moduleSlug || p.internal_reference === productId
-    );
-
-    // If no product found and no accessType, default to free
-    if (!product && !accessType) {
-      return { hasAccess: true, requiresCall: false };
-    }
-
-    return {
-      hasAccess: false,
-      requiresCall: false,
-      productId: productId || moduleSlug,
-      fanbasesProductId: product?.fanbases_product_id,
-      fanbasesCheckoutUrl: product ? `https://www.fanbasis.com/agency-checkout/leveragedcreator/${product.fanbases_product_id}` : undefined,
-    };
-  }, [accessState.purchasedModules, accessState.hasDashboardAccess, accessState.hasActiveSubscription, accessState.fanbasesProducts]);
+    },
+    [
+      accessState.purchasedModules,
+      accessState.hasDashboardAccess,
+      accessState.hasActiveSubscription,
+      accessState.fanbasesProducts,
+    ],
+  );
 
   // Check if Ask AI is available (requires subscription or trial)
   const canAskAI = useCallback(() => {

@@ -38,10 +38,9 @@ export function ModuleGrid({ modules, onModuleSelect, isLoading, contentType }: 
               No {contentType === "recordings" ? "Recordings" : "Courses"} Yet
             </h2>
             <p className="text-muted-foreground">
-              {contentType === "recordings" 
+              {contentType === "recordings"
                 ? "Call recordings will appear here once they're available."
-                : "Course materials will appear here once they're available."
-              }
+                : "Course materials will appear here once they're available."}
             </p>
           </div>
         </div>
@@ -58,7 +57,7 @@ export function ModuleGrid({ modules, onModuleSelect, isLoading, contentType }: 
         setShowBookCallModal(true);
       } else if (module.fanbasesCheckoutUrl) {
         // Redirect to Fanbases checkout page
-        window.open(module.fanbasesCheckoutUrl, '_blank');
+        window.open(module.fanbasesCheckoutUrl, "_blank");
       }
     } else {
       onModuleSelect(module.id);
@@ -70,7 +69,7 @@ export function ModuleGrid({ modules, onModuleSelect, isLoading, contentType }: 
     // Pass access_type and productId from the module to checkModuleAccess
     const accessInfo = checkModuleAccess(module.id, module.accessType, module.productId);
     const isLocked = !accessInfo.hasAccess;
-    
+
     let unlockMessage: string | undefined;
     if (isLocked) {
       if (accessInfo.requiresCall) {
@@ -85,9 +84,10 @@ export function ModuleGrid({ modules, onModuleSelect, isLoading, contentType }: 
     }
 
     // Build checkout URL directly from module's fanbasesProductId if available
-    const checkoutUrl = module.fanbasesProductId 
-      ? `https://www.fanbasis.com/agency-checkout/leveragedcreator/${module.fanbasesProductId}`
-      : accessInfo.fanbasesCheckoutUrl;
+    const checkoutUrl = module.fanbasesProductId
+      ? `https://qa.dev-fan-basis.com/agency-checkout/lc-sandbox/${module.fanbasesProductId}`
+      : //? `https://www.fanbasis.com/agency-checkout/leveragedcreator/${module.fanbasesProductId}`
+        accessInfo.fanbasesCheckoutUrl;
 
     return {
       id: module.id,
@@ -95,7 +95,7 @@ export function ModuleGrid({ modules, onModuleSelect, isLoading, contentType }: 
       description: module.lessons[0]?.description || undefined,
       thumbnailUrl: undefined,
       totalLessons: module.lessons.length,
-      completedLessons: module.lessons.filter(l => l.completed).length,
+      completedLessons: module.lessons.filter((l) => l.completed).length,
       isLocked,
       unlockMessage,
       requiresCall: accessInfo.requiresCall,
@@ -113,20 +113,13 @@ export function ModuleGrid({ modules, onModuleSelect, isLoading, contentType }: 
             {contentType === "recordings" ? "Call Recordings" : "Classroom"}
           </h1>
           <p className="text-muted-foreground">
-            {contentType === "recordings" 
-              ? "Access all recorded sessions and calls"
-              : "Your complete training library"
-            }
+            {contentType === "recordings" ? "Access all recorded sessions and calls" : "Your complete training library"}
           </p>
         </div>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {moduleCards.map((module) => (
-            <ModuleCard
-              key={module.id}
-              module={module}
-              onClick={() => handleModuleClick(module)}
-            />
+            <ModuleCard key={module.id} module={module} onClick={() => handleModuleClick(module)} />
           ))}
         </div>
       </div>
