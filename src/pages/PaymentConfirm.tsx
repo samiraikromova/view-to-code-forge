@@ -13,16 +13,21 @@ export default function PaymentConfirm() {
 
   const confirmPayment = useCallback(async () => {
     // Extract all possible payment params from URL
+    // Fanbases adds: payment_intent, redirect_status
+    // We add: product_type, internal_reference (in success_url)
     const paymentIntent = searchParams.get("payment_intent");
     const redirectStatus = searchParams.get("redirect_status");
     
-    // Check for metadata in different formats
-    const productType = searchParams.get("metadata[product_type]") || searchParams.get("product_type");
-    const internalRef = searchParams.get("metadata[internal_reference]") || searchParams.get("internal_reference");
+    // Check for metadata in different formats (we use simple format, Fanbases uses metadata[...])
+    const productType = searchParams.get("product_type") || 
+                        searchParams.get("metadata[product_type]");
+    const internalRef = searchParams.get("internal_reference") || 
+                        searchParams.get("metadata[internal_reference]");
     const fanbasesProductId = searchParams.get("metadata[fanbases_product_id]");
     const userId = searchParams.get("metadata[user_id]");
 
-    console.log("[PaymentConfirm] Params:", { 
+    console.log("[PaymentConfirm] All URL params:", Object.fromEntries(searchParams.entries()));
+    console.log("[PaymentConfirm] Extracted:", { 
       paymentIntent, redirectStatus, productType, internalRef, fanbasesProductId, userId 
     });
 
