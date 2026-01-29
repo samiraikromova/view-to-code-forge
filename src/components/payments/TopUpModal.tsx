@@ -30,15 +30,13 @@ export function TopUpModal({
   const handlePurchase = async (credits: number) => {
     setLoading(credits);
     try {
-      // Map credits to internal_reference used in fanbases_products table
       const internalReference = `${credits}_credits`;
       
-      // Use fanbases-checkout with existing product ID from fanbases_products
       const { data, error } = await supabase.functions.invoke('fanbases-checkout', {
         body: {
           action: 'create_checkout',
           internal_reference: internalReference,
-          success_url: `${window.location.origin}/settings?topup=success&credits=${credits}`,
+          success_url: `${window.location.origin}/payment-confirm?metadata[product_type]=topup&metadata[internal_reference]=${internalReference}`,
           cancel_url: `${window.location.origin}/settings?topup=cancelled`,
           base_url: window.location.origin,
         },
@@ -52,8 +50,9 @@ export function TopUpModal({
 
       const checkoutUrl = data?.checkout_url || data?.payment_link;
       if (checkoutUrl) {
-        // Redirect to Fanbases checkout
-        window.location.href = checkoutUrl;
+        // Open in new tab instead of redirect
+        window.open(checkoutUrl, '_blank');
+        onClose();
       } else {
         toast.error('Failed to get checkout link');
       }

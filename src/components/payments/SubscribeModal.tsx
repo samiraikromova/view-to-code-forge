@@ -18,27 +18,30 @@ interface SubscribeModalProps {
 
 export function SubscribeModal({ isOpen, onClose, trialExpired = false }: SubscribeModalProps) {
   const handleSubscribe = async () => {
-    // Redirect to Fanbases checkout for subscription
-    // TODO: Replace with actual Fanbases checkout URL
-    //window.open('https://fanbasis.com/checkout/subscription', '_blank');
+    try {
+      const { data, error } = await supabase.functions.invoke('fanbases-checkout', {
+        body: {
+          action: 'create_checkout',
+          internal_reference: 'tier1',
+          success_url: `${window.location.origin}/payment-confirm?metadata[product_type]=subscription&metadata[internal_reference]=tier1`,
+          cancel_url: `${window.location.origin}/settings?subscription=cancelled`,
+          base_url: window.location.origin,
+        },
+      });
 
-    // Call your fanbases-checkout function instead
-    const { data: session } = await supabase.auth.getSession();
-    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/fanbases-checkout`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${session.session?.access_token}`,
-      },
-      body: JSON.stringify({
-        action: "create_checkout",
-        internal_reference: "tier1", // or "tier2" depending on selected plan
-        base_url: window.location.origin,
-      }),
-    });
-    const result = await response.json();
-    if (result.checkout_url) {
-      window.location.href = result.checkout_url;
+      if (error) {
+        console.error('Checkout error:', error);
+        return;
+      }
+
+      const checkoutUrl = data?.checkout_url || data?.payment_link;
+      if (checkoutUrl) {
+        // Open in new tab instead of redirect
+        window.open(checkoutUrl, '_blank');
+        onClose();
+      }
+    } catch (error) {
+      console.error('Subscription error:', error);
     }
   };
 
