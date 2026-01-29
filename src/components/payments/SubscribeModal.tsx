@@ -21,7 +21,7 @@ export function SubscribeModal({ isOpen, onClose, trialExpired = false }: Subscr
     // TODO: Replace with actual Fanbases checkout URL
     //window.open('https://fanbasis.com/checkout/subscription', '_blank');
 
-    window.open('https://qa.dev-fan-basis.com/agency-checkout/lc-sandbox/${product.fanbases_product_id});
+    window.open('https://qa.dev-fan-basis.com/agency-checkout/lc-sandbox/', '_blank');
     onClose();
   };
 
