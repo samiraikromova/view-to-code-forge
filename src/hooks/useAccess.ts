@@ -218,7 +218,7 @@ export function useAccess() {
           productId: productId || moduleSlug,
           fanbasesProductId: product?.fanbases_product_id,
           fanbasesCheckoutUrl: product
-            ? `https://qa.dev-fan-basis.com/agency-checkout/leveragedcreator/${product.fanbases_product_id}`
+            ? `https://qa.dev-fan-basis.com/agency-checkout/lc-sandbox/${product.fanbases_product_id}`
             : undefined,
           //fanbasesCheckoutUrl: product ? `https://www.fanbasis.com/agency-checkout/leveragedcreator/${product.fanbases_product_id}` : undefined,
         };
@@ -254,7 +254,7 @@ export function useAccess() {
         productId: productId || moduleSlug,
         fanbasesProductId: product?.fanbases_product_id,
         fanbasesCheckoutUrl: product
-          ? `https://qa.dev-fan-basis.com/agency-checkout/leveragedcreator/${product.fanbases_product_id}`
+          ? `https://qa.dev-fan-basis.com/agency-checkout/lc-sandbox/${product.fanbases_product_id}`
           : undefined,
 
         //fanbasesCheckoutUrl: product ? `https://www.fanbasis.com/agency-checkout/leveragedcreator/${product.fanbases_product_id}` : undefined,

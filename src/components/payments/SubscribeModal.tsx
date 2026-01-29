@@ -1,6 +1,13 @@
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Sparkles, CreditCard, Lock } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Sparkles, CreditCard, Lock } from "lucide-react";
 
 interface SubscribeModalProps {
   isOpen: boolean;
@@ -8,15 +15,13 @@ interface SubscribeModalProps {
   trialExpired?: boolean;
 }
 
-export function SubscribeModal({
-  isOpen,
-  onClose,
-  trialExpired = false
-}: SubscribeModalProps) {
+export function SubscribeModal({ isOpen, onClose, trialExpired = false }: SubscribeModalProps) {
   const handleSubscribe = () => {
     // Redirect to Fanbases checkout for subscription
     // TODO: Replace with actual Fanbases checkout URL
-    window.open('https://fanbases.com/checkout/subscription', '_blank');
+    //window.open('https://fanbasis.com/checkout/subscription', '_blank');
+
+    //window.open('https://fanbasis.com/checkout/subscription', '_blank');
     onClose();
   };
 
@@ -28,15 +33,12 @@ export function SubscribeModal({
             <div className="h-12 w-12 rounded-full bg-accent/20 flex items-center justify-center">
               <Lock className="h-6 w-6 text-accent" />
             </div>
-            <DialogTitle className="text-xl">
-              {trialExpired ? "Trial Expired" : "Subscribe to Continue"}
-            </DialogTitle>
+            <DialogTitle className="text-xl">{trialExpired ? "Trial Expired" : "Subscribe to Continue"}</DialogTitle>
           </div>
           <DialogDescription className="text-base">
-            {trialExpired 
+            {trialExpired
               ? "Your 7-day free trial has ended. Subscribe to keep using AI chat."
-              : "Subscribe to access AI chat and all its powerful features."
-            }
+              : "Subscribe to access AI chat and all its powerful features."}
           </DialogDescription>
         </DialogHeader>
 
@@ -46,7 +48,9 @@ export function SubscribeModal({
               <p className="font-medium text-foreground">AI Chat Subscription</p>
               <p className="text-sm text-muted-foreground">Monthly billing</p>
             </div>
-            <p className="text-2xl font-bold text-foreground">$29<span className="text-sm font-normal text-muted-foreground">/mo</span></p>
+            <p className="text-2xl font-bold text-foreground">
+              $29<span className="text-sm font-normal text-muted-foreground">/mo</span>
+            </p>
           </div>
 
           <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
