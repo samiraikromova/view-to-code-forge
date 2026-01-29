@@ -125,7 +125,7 @@ export default function TopUp() {
         body: {
           action: 'create_checkout',
           internal_reference: internalReference,
-          success_url: `${window.location.origin}/pricing/top-up?topup=success&credits=${credits}`,
+          success_url: `${window.location.origin}/payment-confirm?metadata[product_type]=topup&metadata[internal_reference]=${internalReference}`,
           cancel_url: `${window.location.origin}/pricing/top-up?topup=cancelled`,
           base_url: window.location.origin,
         },
@@ -139,8 +139,9 @@ export default function TopUp() {
 
       const checkoutUrl = data?.checkout_url || data?.payment_link;
       if (checkoutUrl) {
-        // Redirect to Fanbases checkout
-        window.location.href = checkoutUrl;
+        // Open in new tab instead of redirect
+        window.open(checkoutUrl, '_blank');
+        toast.success('Checkout opened in new tab. Complete your payment there.');
       } else {
         toast.error('Failed to get checkout link');
       }
