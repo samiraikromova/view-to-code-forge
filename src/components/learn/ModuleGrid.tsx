@@ -61,11 +61,8 @@ export function ModuleGrid({ modules, onModuleSelect, isLoading, contentType }: 
       } else if (module.productId) {
         // Use fanbases-checkout edge function to get full URL with prefill
         try {
-          // Build success URL - Fanbases will append payment_intent and redirect_status params
-          const successParams = new URLSearchParams();
-          successParams.set('product_type', 'module');
-          successParams.set('internal_reference', module.productId);
-          const successUrl = `${window.location.origin}/payment-confirm?${successParams.toString()}`;
+          // Simple success URL - we look up the checkout session from DB instead of relying on URL params
+          const successUrl = `${window.location.origin}/payment-confirm`;
           
           const { data, error } = await supabase.functions.invoke('fanbases-checkout', {
             body: {

@@ -53,11 +53,8 @@ export function SubscriptionModal({
     try {
       const plan = PLANS[tier];
       
-      // Build success URL - Fanbases will append payment_intent and redirect_status params
-      const successParams = new URLSearchParams();
-      successParams.set('product_type', 'subscription');
-      successParams.set('internal_reference', plan.internalRef);
-      const successUrl = `${window.location.origin}/payment-confirm?${successParams.toString()}`;
+      // Simple success URL - we look up the checkout session from DB instead of relying on URL params
+      const successUrl = `${window.location.origin}/payment-confirm`;
       
       // Use fanbases-checkout with existing product ID from fanbases_products
       const { data, error } = await supabase.functions.invoke('fanbases-checkout', {
@@ -78,8 +75,9 @@ export function SubscriptionModal({
 
       const checkoutUrl = data?.checkout_url || data?.payment_link;
       if (checkoutUrl) {
-        // Redirect to Fanbases checkout
-        window.location.href = checkoutUrl;
+        // Open in new tab instead of redirect
+        window.open(checkoutUrl, '_blank');
+        onClose();
       } else {
         toast.error('Failed to get checkout link');
       }
