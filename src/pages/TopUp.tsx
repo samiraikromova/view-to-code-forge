@@ -1,10 +1,10 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Zap, Check, CreditCard, Loader2 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
-import { purchaseCredits, fetchPaymentMethods, setupPaymentMethod } from "@/api/fanbases/fanbasesApi";
-import { useState, useEffect } from "react";
+import { supabase } from "@/lib/supabase";
+import { useState, useEffect, useCallback } from "react";
 import { toast } from "sonner";
 
 const topUpOptions = [
@@ -16,62 +16,133 @@ const topUpOptions = [
 
 export default function TopUp() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { profile, refreshProfile } = useAuth();
   const currentCredits = profile?.credits || 0;
   const [loading, setLoading] = useState<number | null>(null);
-  const [hasPaymentMethod, setHasPaymentMethod] = useState<boolean | null>(null);
-  const [checkingPaymentMethod, setCheckingPaymentMethod] = useState(true);
-  const [settingUpCard, setSettingUpCard] = useState(false);
+  const [confirmingPayment, setConfirmingPayment] = useState(false);
 
-  useEffect(() => {
-    const checkPaymentMethod = async () => {
-      setCheckingPaymentMethod(true);
-      try {
-        // Use fetchPaymentMethods which actually checks Fanbases API
-        const result = await fetchPaymentMethods();
-        setHasPaymentMethod(result.has_payment_method);
-      } catch (error) {
-        console.error('Error checking payment method:', error);
-        setHasPaymentMethod(false);
-      } finally {
-        setCheckingPaymentMethod(false);
-      }
-    };
-    checkPaymentMethod();
-  }, []);
+  // Confirm payment after Fanbases redirect
+  const confirmPayment = useCallback(async (params: URLSearchParams) => {
+    const paymentIntent = params.get('payment_intent');
+    const redirectStatus = params.get('redirect_status');
+    const productType = params.get('metadata[product_type]') || params.get('product_type');
+    const internalReference = params.get('metadata[internal_reference]') || params.get('internal_reference');
+    const fanbasesProductId = params.get('metadata[fanbases_product_id]');
+    
+    // Also check for topup=success pattern
+    const topupSuccess = params.get('topup');
+    const credits = params.get('credits');
+    
+    console.log('[TopUp] Payment confirmation params:', {
+      paymentIntent, redirectStatus, productType, internalReference, fanbasesProductId, topupSuccess, credits
+    });
 
-  const handleAddCard = async () => {
-    setSettingUpCard(true);
-    try {
-      const result = await setupPaymentMethod();
-      if (result.success && result.checkout_url) {
-        // Open in new tab - Fanbases doesn't allow iframe embedding
-        window.open(result.checkout_url, '_blank');
-        toast.info('Complete the payment in the new tab, then return here and refresh');
-      } else {
-        toast.error(result.error || 'Failed to set up payment method');
-      }
-    } catch (error) {
-      console.error('Setup error:', error);
-      toast.error('Something went wrong. Please try again.');
-    } finally {
-      setSettingUpCard(false);
+    if (!paymentIntent || redirectStatus !== 'succeeded') {
+      console.log('[TopUp] No valid payment to confirm');
+      return false;
     }
-  };
+
+    setConfirmingPayment(true);
+    try {
+      // Determine product type and reference from URL
+      let finalProductType = productType;
+      let finalInternalRef = internalReference;
+      
+      if (topupSuccess === 'success' && credits) {
+        finalProductType = 'topup';
+        finalInternalRef = `${credits}_credits`;
+      }
+
+      const { data, error } = await supabase.functions.invoke('fanbases-confirm-payment', {
+        body: {
+          payment_intent: paymentIntent,
+          redirect_status: redirectStatus,
+          product_type: finalProductType,
+          internal_reference: finalInternalRef,
+          fanbases_product_id: fanbasesProductId,
+        },
+      });
+
+      console.log('[TopUp] Confirm payment response:', data, error);
+
+      if (error) {
+        console.error('[TopUp] Error confirming payment:', error);
+        toast.error('Failed to confirm payment. Please contact support.');
+        return false;
+      }
+
+      if (data?.success) {
+        if (data.already_processed) {
+          toast.info('This payment was already processed');
+        } else {
+          toast.success(data.message || 'Credits added successfully!');
+          // Refresh profile to get updated credits
+          refreshProfile?.();
+        }
+        return true;
+      } else {
+        toast.error(data?.message || 'Payment confirmation failed');
+        return false;
+      }
+    } catch (err) {
+      console.error('[TopUp] Payment confirmation error:', err);
+      toast.error('Failed to confirm payment');
+      return false;
+    } finally {
+      setConfirmingPayment(false);
+    }
+  }, [refreshProfile]);
+
+  // Handle return from Fanbases payment
+  useEffect(() => {
+    const paymentIntent = searchParams.get('payment_intent');
+    const redirectStatus = searchParams.get('redirect_status');
+    const topupSuccess = searchParams.get('topup');
+    
+    if (paymentIntent && redirectStatus === 'succeeded') {
+      console.log('[TopUp] Detected successful payment redirect');
+      confirmPayment(searchParams).then((confirmed) => {
+        if (confirmed) {
+          // Clear URL params after successful confirmation
+          setSearchParams({});
+        }
+      });
+    } else if (topupSuccess === 'cancelled') {
+      setSearchParams({});
+      toast.error('Top-up was cancelled');
+    }
+  }, [searchParams, setSearchParams, confirmPayment]);
 
   const handlePurchase = async (credits: number) => {
-    if (!hasPaymentMethod) {
-      toast.error('Please add a payment method first');
-      return;
-    }
     setLoading(credits);
     try {
-      const result = await purchaseCredits(credits);
-      if (result.success) {
-        toast.success(`${credits.toLocaleString()} credits added!`);
-        refreshProfile?.();
+      // Map credits to internal_reference used in fanbases_products table
+      const internalReference = `${credits}_credits`;
+      
+      // Use fanbases-checkout with existing product ID from fanbases_products
+      const { data, error } = await supabase.functions.invoke('fanbases-checkout', {
+        body: {
+          action: 'create_checkout',
+          internal_reference: internalReference,
+          success_url: `${window.location.origin}/pricing/top-up?topup=success&credits=${credits}`,
+          cancel_url: `${window.location.origin}/pricing/top-up?topup=cancelled`,
+          base_url: window.location.origin,
+        },
+      });
+
+      if (error) {
+        console.error('Checkout error:', error);
+        toast.error(error.message || 'Failed to create checkout');
+        return;
+      }
+
+      const checkoutUrl = data?.checkout_url || data?.payment_link;
+      if (checkoutUrl) {
+        // Redirect to Fanbases checkout
+        window.location.href = checkoutUrl;
       } else {
-        toast.error(result.error || 'Purchase failed');
+        toast.error('Failed to get checkout link');
       }
     } catch (error) {
       console.error('Top-up error:', error);
@@ -94,41 +165,17 @@ export default function TopUp() {
           </div>
         </div>
 
-        {/* Payment Method Status */}
-        {checkingPaymentMethod ? (
-          <Card className="mb-6 border-border">
+        {/* Payment Confirmation Loading */}
+        {confirmingPayment && (
+          <Card className="mb-6 border-primary bg-primary/10">
             <CardContent className="py-4">
               <div className="flex items-center gap-3">
-                <Loader2 className="h-5 w-5 text-muted-foreground animate-spin" />
-                <p className="text-muted-foreground">Checking payment method...</p>
+                <Loader2 className="h-5 w-5 text-primary animate-spin" />
+                <p className="text-foreground font-medium">Confirming your payment...</p>
               </div>
             </CardContent>
           </Card>
-        ) : hasPaymentMethod === false ? (
-          <Card className="mb-6 border-warning bg-warning/10">
-            <CardContent className="py-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <CreditCard className="h-5 w-5 text-warning" />
-                  <div>
-                    <p className="font-medium text-foreground">No payment method on file</p>
-                    <p className="text-sm text-muted-foreground">Add a card to purchase credits</p>
-                  </div>
-                </div>
-                <Button onClick={handleAddCard} disabled={settingUpCard} className="bg-accent hover:bg-accent-hover text-accent-foreground">
-                  {settingUpCard ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      Setting up...
-                    </>
-                  ) : (
-                    'Add Card'
-                  )}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ) : null}
+        )}
 
         {/* Current Balance */}
         <Card className="mb-8">
@@ -190,12 +237,12 @@ export default function TopUp() {
                   className="w-full"
                   variant={option.popular ? "default" : "outline"}
                   onClick={() => handlePurchase(option.credits)}
-                  disabled={loading !== null || checkingPaymentMethod || !hasPaymentMethod}
+                  disabled={loading !== null || confirmingPayment}
                 >
                   {loading === option.credits ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      Processing...
+                      Redirecting...
                     </>
                   ) : (
                     'Purchase'
@@ -210,7 +257,7 @@ export default function TopUp() {
         <Card className="bg-surface/50">
           <CardContent className="py-4">
             <p className="text-sm text-muted-foreground text-center">
-            Credits are added instantly after purchase. All purchases are charged to your card on file.{" "}
+              Credits are added instantly after payment. Secure checkout powered by Fanbases.{" "}
               <Button variant="link" className="p-0 h-auto text-accent hover:text-accent-hover" onClick={() => navigate("/settings")}>
                 Upgrade your plan
               </Button>{" "}
