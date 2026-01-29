@@ -68,6 +68,13 @@ function getTopupCredits(internalReference: string): number {
 }
 
 Deno.serve(async (req) => {
+  // Log ALL webhook calls for debugging
+  console.log("[Fanbases Webhook] Received request", {
+    method: req.method,
+    url: req.url,
+    headers: Object.fromEntries(req.headers.entries()),
+  });
+
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -85,7 +92,8 @@ Deno.serve(async (req) => {
     const rawBody = await req.text();
     const signature = req.headers.get("x-webhook-signature") || "";
 
-    console.log("[Fanbases Webhook] Received webhook");
+    console.log("[Fanbases Webhook] Raw body received:", rawBody.substring(0, 500));
+    console.log("[Fanbases Webhook] Signature:", signature ? "present" : "missing");
 
     // Validate signature if secret is configured
     if (WEBHOOK_SECRET && signature) {

@@ -11,6 +11,7 @@ import Analytics from "./pages/Analytics";
 import Settings from "./pages/Settings";
 import Profile from "./pages/Profile";
 import TopUp from "./pages/TopUp";
+import PaymentConfirm from "./pages/PaymentConfirm";
 import NotFound from "./pages/NotFound";
 
 // Auth pages
@@ -61,6 +62,7 @@ const App = () => {
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
             <Route path="/pricing/top-up" element={<ProtectedRoute><TopUp /></ProtectedRoute>} />
+            <Route path="/payment-confirm" element={<PaymentConfirm />} />
             
             {/* Admin routes */}
             <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
