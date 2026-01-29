@@ -9,12 +9,6 @@ export const FANBASES_API_URL = "https://qa.dev-fan-basis.com/public-api";
 // PRODUCTION (for live):
 // export const FANBASES_API_URL = 'https://www.fanbasis.com/public-api';
 
-// Fanbases Product ID mappings (for reference - authoritative data is in fanbases_products table)
-// Card Setup: Rop7q
-// Modules: rRJZp, voNq5, wmO98, xvPqB, yr0ln, zKRPy
-// Subscriptions: APwql (tier1), BLxoY (tier2)
-// Top-ups: MQMDG, N9NDv, PZPm4, Q0QJ9
-
 // Product configurations for modules (one-time purchases)
 // internal_reference values match what's stored in fanbases_products table
 export const MODULE_PRODUCTS = {
