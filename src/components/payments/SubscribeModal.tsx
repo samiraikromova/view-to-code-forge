@@ -12,7 +12,7 @@ import { Sparkles, CreditCard, Lock } from "lucide-react";
 interface SubscribeModalProps {
   isOpen: boolean;
   onClose: () => void;
-  trialExpired?: boolean; 
+  trialExpired?: boolean;
 }
 
 export function SubscribeModal({ isOpen, onClose, trialExpired = false }: SubscribeModalProps) {
@@ -21,8 +21,24 @@ export function SubscribeModal({ isOpen, onClose, trialExpired = false }: Subscr
     // TODO: Replace with actual Fanbases checkout URL
     //window.open('https://fanbasis.com/checkout/subscription', '_blank');
 
-    window.open('https://qa.dev-fan-basis.com/agency-checkout/lc-sandbox/', '_blank');
-    onClose();
+    // Call your fanbases-checkout function instead
+    const { data: session } = await supabase.auth.getSession();
+    const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/fanbases-checkout`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.session?.access_token}`,
+      },
+      body: JSON.stringify({
+        action: "create_checkout",
+        internal_reference: "tier1", // or "tier2" depending on selected plan
+        base_url: window.location.origin,
+      }),
+    });
+    const result = await response.json();
+    if (result.checkout_url) {
+      window.location.href = result.checkout_url;
+    }
   };
 
   return (
