@@ -3,7 +3,10 @@ import { ModuleCard, ModuleCardData } from "./ModuleCard";
 import { BookOpen, Loader2 } from "lucide-react";
 import { Module } from "./LearnSidebar";
 import { useAccess } from "@/hooks/useAccess";
+import { useAuth } from "@/hooks/useAuth";
 import { BookCallModal } from "@/components/payments/BookCallModal";
+import { supabase } from "@/lib/supabase";
+import { toast } from "sonner";
 
 interface ModuleGridProps {
   modules: Module[];
@@ -14,6 +17,7 @@ interface ModuleGridProps {
 
 export function ModuleGrid({ modules, onModuleSelect, isLoading, contentType }: ModuleGridProps) {
   const { checkModuleAccess, refreshAccess, hasDashboardAccess } = useAccess();
+  const { user, profile } = useAuth();
   const [showBookCallModal, setShowBookCallModal] = useState(false);
   const [selectedBookingUrl, setSelectedBookingUrl] = useState<string | undefined>(undefined);
   const [selectedModuleName, setSelectedModuleName] = useState<string>("");
@@ -48,16 +52,41 @@ export function ModuleGrid({ modules, onModuleSelect, isLoading, contentType }: 
     );
   }
 
-  const handleModuleClick = (module: ModuleCardData & { bookingUrl?: string }) => {
+  const handleModuleClick = async (module: ModuleCardData & { bookingUrl?: string; productId?: string }) => {
     if (module.isLocked) {
       if (module.requiresCall) {
-        // Show book a call modal with the module's booking URL
         setSelectedBookingUrl(module.bookingUrl);
         setSelectedModuleName(module.title);
         setShowBookCallModal(true);
-      } else if (module.fanbasesCheckoutUrl) {
-        // Redirect to Fanbases checkout page
-        window.open(module.fanbasesCheckoutUrl, "_blank");
+      } else if (module.productId) {
+        // Use fanbases-checkout edge function to get full URL with prefill
+        try {
+          const { data, error } = await supabase.functions.invoke('fanbases-checkout', {
+            body: {
+              action: 'create_checkout',
+              internal_reference: module.productId,
+              success_url: `${window.location.origin}/payment-confirm?metadata[product_type]=module&metadata[internal_reference]=${module.productId}`,
+              cancel_url: `${window.location.origin}/chat?payment=cancelled`,
+              base_url: window.location.origin,
+            },
+          });
+
+          if (error) {
+            console.error('Checkout error:', error);
+            toast.error('Failed to open checkout');
+            return;
+          }
+
+          const checkoutUrl = data?.checkout_url || data?.payment_link;
+          if (checkoutUrl) {
+            window.open(checkoutUrl, '_blank');
+          } else {
+            toast.error('Failed to get checkout link');
+          }
+        } catch (err) {
+          console.error('Module checkout error:', err);
+          toast.error('Something went wrong');
+        }
       }
     } else {
       onModuleSelect(module.id);
@@ -83,12 +112,6 @@ export function ModuleGrid({ modules, onModuleSelect, isLoading, contentType }: 
       }
     }
 
-    // Build checkout URL directly from module's fanbasesProductId if available
-    const checkoutUrl = module.fanbasesProductId
-      ? `https://qa.dev-fan-basis.com/agency-checkout/lc-sandbox/${module.fanbasesProductId}`
-      : //? `https://www.fanbasis.com/agency-checkout/leveragedcreator/${module.fanbasesProductId}`
-        accessInfo.fanbasesCheckoutUrl;
-
     return {
       id: module.id,
       title: module.title,
@@ -99,7 +122,8 @@ export function ModuleGrid({ modules, onModuleSelect, isLoading, contentType }: 
       isLocked,
       unlockMessage,
       requiresCall: accessInfo.requiresCall,
-      fanbasesCheckoutUrl: checkoutUrl,
+      fanbasesCheckoutUrl: accessInfo.fanbasesCheckoutUrl,
+      productId: module.productId || module.id,
       priceCents: module.priceCents,
       bookingUrl: module.bookingUrl,
     };
