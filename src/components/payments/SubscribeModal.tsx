@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Sparkles, CreditCard, Lock } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
 interface SubscribeModalProps {
   isOpen: boolean;
@@ -16,7 +17,7 @@ interface SubscribeModalProps {
 }
 
 export function SubscribeModal({ isOpen, onClose, trialExpired = false }: SubscribeModalProps) {
-  const handleSubscribe = () => {
+  const handleSubscribe = async () => {
     // Redirect to Fanbases checkout for subscription
     // TODO: Replace with actual Fanbases checkout URL
     //window.open('https://fanbasis.com/checkout/subscription', '_blank');
