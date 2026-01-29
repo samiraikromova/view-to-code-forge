@@ -32,11 +32,8 @@ export function TopUpModal({
     try {
       const internalReference = `${credits}_credits`;
       
-      // Build success URL - Fanbases will append payment_intent and redirect_status params
-      const successParams = new URLSearchParams();
-      successParams.set('product_type', 'topup');
-      successParams.set('internal_reference', internalReference);
-      const successUrl = `${window.location.origin}/payment-confirm?${successParams.toString()}`;
+      // Simple success URL - we look up the checkout session from DB instead of relying on URL params
+      const successUrl = `${window.location.origin}/payment-confirm`;
       
       const { data, error } = await supabase.functions.invoke('fanbases-checkout', {
         body: {

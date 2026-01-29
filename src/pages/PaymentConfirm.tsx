@@ -12,24 +12,11 @@ export default function PaymentConfirm() {
   const [details, setDetails] = useState<Record<string, unknown> | null>(null);
 
   const confirmPayment = useCallback(async () => {
-    // Extract all possible payment params from URL
-    // Fanbases adds: payment_intent, redirect_status
-    // We add: product_type, internal_reference (in success_url)
+    // Fanbases appends these params after successful payment
     const paymentIntent = searchParams.get("payment_intent");
     const redirectStatus = searchParams.get("redirect_status");
     
-    // Check for metadata in different formats (we use simple format, Fanbases uses metadata[...])
-    const productType = searchParams.get("product_type") || 
-                        searchParams.get("metadata[product_type]");
-    const internalRef = searchParams.get("internal_reference") || 
-                        searchParams.get("metadata[internal_reference]");
-    const fanbasesProductId = searchParams.get("metadata[fanbases_product_id]");
-    const userId = searchParams.get("metadata[user_id]");
-
-    console.log("[PaymentConfirm] All URL params:", Object.fromEntries(searchParams.entries()));
-    console.log("[PaymentConfirm] Extracted:", { 
-      paymentIntent, redirectStatus, productType, internalRef, fanbasesProductId, userId 
-    });
+    console.log("[PaymentConfirm] URL params:", Object.fromEntries(searchParams.entries()));
 
     if (!paymentIntent) {
       setStatus("error");
@@ -43,22 +30,48 @@ export default function PaymentConfirm() {
       return;
     }
 
-    if (!productType || !internalRef) {
-      setStatus("error");
-      setMessage("Missing product information in payment URL");
-      return;
-    }
-
     try {
       // Get current session
       const { data: sessionData } = await supabase.auth.getSession();
       
-      if (!sessionData.session?.access_token) {
+      if (!sessionData.session?.user?.id) {
         console.error("[PaymentConfirm] No active session");
         setStatus("error");
         setMessage("Please log in to confirm your payment");
         return;
       }
+
+      const userId = sessionData.session.user.id;
+      console.log("[PaymentConfirm] User ID:", userId);
+
+      // Look up the most recent pending checkout session for this user
+      const { data: checkoutSession, error: lookupError } = await supabase
+        .from("checkout_sessions")
+        .select("*")
+        .eq("user_id", userId)
+        .eq("status", "pending")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      if (lookupError) {
+        console.error("[PaymentConfirm] Lookup error:", lookupError);
+        setStatus("error");
+        setMessage("Failed to find checkout session");
+        return;
+      }
+
+      if (!checkoutSession) {
+        console.error("[PaymentConfirm] No pending checkout session found");
+        setStatus("error");
+        setMessage("No pending checkout session found");
+        return;
+      }
+
+      console.log("[PaymentConfirm] Found checkout session:", checkoutSession);
+
+      const productType = checkoutSession.product_type;
+      const internalReference = checkoutSession.product_id;
 
       console.log("[PaymentConfirm] Calling fanbases-confirm-payment...");
 
@@ -67,8 +80,8 @@ export default function PaymentConfirm() {
           payment_intent: paymentIntent,
           redirect_status: redirectStatus,
           product_type: productType,
-          internal_reference: internalRef,
-          fanbases_product_id: fanbasesProductId,
+          internal_reference: internalReference,
+          checkout_session_id: checkoutSession.id,
         },
       });
 

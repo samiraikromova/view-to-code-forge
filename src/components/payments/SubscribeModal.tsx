@@ -19,11 +19,14 @@ interface SubscribeModalProps {
 export function SubscribeModal({ isOpen, onClose, trialExpired = false }: SubscribeModalProps) {
   const handleSubscribe = async () => {
     try {
+      // Simple success URL - we look up the checkout session from DB instead of relying on URL params
+      const successUrl = `${window.location.origin}/payment-confirm`;
+      
       const { data, error } = await supabase.functions.invoke('fanbases-checkout', {
         body: {
           action: 'create_checkout',
           internal_reference: 'tier1',
-          success_url: `${window.location.origin}/payment-confirm?metadata[product_type]=subscription&metadata[internal_reference]=tier1`,
+          success_url: successUrl,
           cancel_url: `${window.location.origin}/settings?subscription=cancelled`,
           base_url: window.location.origin,
         },
