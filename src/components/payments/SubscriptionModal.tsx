@@ -53,12 +53,18 @@ export function SubscriptionModal({
     try {
       const plan = PLANS[tier];
       
+      // Build success URL - Fanbases will append payment_intent and redirect_status params
+      const successParams = new URLSearchParams();
+      successParams.set('product_type', 'subscription');
+      successParams.set('internal_reference', plan.internalRef);
+      const successUrl = `${window.location.origin}/payment-confirm?${successParams.toString()}`;
+      
       // Use fanbases-checkout with existing product ID from fanbases_products
       const { data, error } = await supabase.functions.invoke('fanbases-checkout', {
         body: {
           action: 'create_checkout',
           internal_reference: plan.internalRef, // tier1 or tier2
-          success_url: `${window.location.origin}/settings?subscription=success&tier=${tier}`,
+          success_url: successUrl,
           cancel_url: `${window.location.origin}/settings?subscription=cancelled`,
           base_url: window.location.origin,
         },
