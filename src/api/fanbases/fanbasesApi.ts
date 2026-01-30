@@ -39,10 +39,16 @@ export async function getOrCreateCustomer(): Promise<CustomerResult> {
 /**
  * Add a payment method for the current user
  * This will redirect to Fanbases checkout to collect card details
+ * Uses fanbases-checkout with action: "setup_card" as per Fanbasis API requirements
  */
 export async function setupPaymentMethod(): Promise<{ success: boolean; checkout_url?: string; checkout_session_id?: string; error?: string }> {
-  const { data, error } = await supabase.functions.invoke('fanbases-customer', {
-    body: { action: 'setup_payment_method' },
+  const { data, error } = await supabase.functions.invoke('fanbases-checkout', {
+    body: { 
+      action: 'setup_card',
+      base_url: window.location.origin,
+      success_url: `${window.location.origin}/settings?setup=complete`,
+      cancel_url: `${window.location.origin}/settings?setup=cancelled`,
+    },
   });
 
   if (error) {
@@ -50,9 +56,9 @@ export async function setupPaymentMethod(): Promise<{ success: boolean; checkout
     return { success: false, error: error.message };
   }
 
-  // Edge function returns payment_link, map to checkout_url for consistency
+  // Edge function returns payment_link
   return {
-    success: data.success,
+    success: true,
     checkout_url: data.payment_link || data.checkout_url,
     checkout_session_id: data.checkout_session_id,
     error: data.error,
