@@ -72,6 +72,45 @@ async function verifyTransactionWithFanbases(
   }
 }
 
+// Fetch checkout session from Fanbases API to get amount_cents
+async function fetchCheckoutSessionAmount(
+  checkoutSessionId: string,
+  apiKey: string,
+): Promise<number | null> {
+  try {
+    console.log(`[Fanbases Confirm] Fetching checkout session: ${checkoutSessionId}`);
+
+    const response = await fetch(`${FANBASES_API_URL}/checkout-sessions/${checkoutSessionId}`, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        "x-api-key": apiKey,
+      },
+    });
+
+    if (!response.ok) {
+      console.error(`[Fanbases Confirm] Checkout session fetch error: ${response.status}`);
+      return null;
+    }
+
+    const data = await response.json();
+    console.log(`[Fanbases Confirm] Checkout session response:`, JSON.stringify(data));
+
+    // Get amount_cents from product in checkout session
+    const amountCents = data.data?.product?.amount_cents;
+    if (amountCents) {
+      console.log(`[Fanbases Confirm] Found amount_cents from checkout session: ${amountCents}`);
+      return amountCents;
+    }
+
+    return null;
+  } catch (err) {
+    const error = err as Error;
+    console.error(`[Fanbases Confirm] Checkout session fetch error:`, error);
+    return null;
+  }
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -181,14 +220,51 @@ Deno.serve(async (req) => {
       console.log(`[Fanbases Confirm] Transaction verified successfully via API`);
     }
 
-    // Get product price from fanbases_products table
-    const { data: productData } = await supabase
-      .from("fanbases_products")
-      .select("price_cents")
-      .eq("internal_reference", internal_reference)
+    // Get product price - first try checkout_sessions, then fanbases_products, then API
+    let priceCents = 0;
+
+    // First check if we have a checkout session with amount_cents
+    const { data: checkoutSession } = await supabase
+      .from("checkout_sessions")
+      .select("id, checkout_session_id, amount_cents")
+      .eq("user_id", userId)
+      .eq("product_id", internal_reference)
+      .eq("status", "pending")
+      .order("created_at", { ascending: false })
+      .limit(1)
       .maybeSingle();
 
-    const priceCents = productData?.price_cents || 0;
+    if (checkoutSession?.amount_cents) {
+      priceCents = checkoutSession.amount_cents;
+      console.log(`[Fanbases Confirm] Got price from checkout_sessions: ${priceCents} cents`);
+    } else {
+      // Try fanbases_products table
+      const { data: productData } = await supabase
+        .from("fanbases_products")
+        .select("price_cents")
+        .eq("internal_reference", internal_reference)
+        .maybeSingle();
+
+      if (productData?.price_cents) {
+        priceCents = productData.price_cents;
+        console.log(`[Fanbases Confirm] Got price from fanbases_products: ${priceCents} cents`);
+      }
+    }
+
+    // If still no price and we have checkout_session_id, fetch from Fanbases API
+    if (priceCents === 0 && checkoutSession?.checkout_session_id) {
+      const apiAmount = await fetchCheckoutSessionAmount(checkoutSession.checkout_session_id, FANBASES_API_KEY);
+      if (apiAmount) {
+        priceCents = apiAmount;
+        console.log(`[Fanbases Confirm] Got price from Fanbases API: ${priceCents} cents`);
+        
+        // Update checkout_sessions with the fetched amount
+        await supabase
+          .from("checkout_sessions")
+          .update({ amount_cents: priceCents })
+          .eq("id", checkoutSession.id);
+      }
+    }
 
     // Grant access based on product type
     let result: { success: boolean; message: string; details?: Record<string, unknown> } = {
@@ -206,10 +282,18 @@ Deno.serve(async (req) => {
 
     console.log(`[Fanbases Confirm] Result:`, result);
 
-    // Update checkout session status if exists
+    // Update checkout session status if exists and also update amount_cents if we have it
+    const updateData: { status: string; updated_at: string; amount_cents?: number } = { 
+      status: "completed", 
+      updated_at: new Date().toISOString() 
+    };
+    if (priceCents > 0) {
+      updateData.amount_cents = priceCents;
+    }
+    
     await supabase
       .from("checkout_sessions")
-      .update({ status: "completed", updated_at: new Date().toISOString() })
+      .update(updateData)
       .eq("user_id", userId)
       .eq("product_id", internal_reference)
       .eq("status", "pending");
@@ -341,6 +425,7 @@ async function grantSubscription(
       tier: config.tier,
       credits_added: config.monthlyCredits,
       new_balance: newCredits,
+      period_start: now.toISOString(),
       period_end: periodEnd.toISOString(),
     },
   };

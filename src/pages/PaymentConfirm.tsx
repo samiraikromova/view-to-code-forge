@@ -14,6 +14,8 @@ interface PaymentDetails {
   tier?: string;
   module_id?: string;
   module_name?: string;
+  period_start?: string;
+  period_end?: string;
 }
 
 // Tier feature configurations
@@ -260,6 +262,18 @@ export default function PaymentConfirm() {
         const tierKey = (details.tier || "tier1") as keyof typeof TIER_FEATURES;
         const tierInfo = TIER_FEATURES[tierKey] || TIER_FEATURES.tier1;
         
+        // Format subscription dates
+        const formatDate = (dateStr?: string) => {
+          if (!dateStr) return null;
+          return new Date(dateStr).toLocaleDateString("en-US", {
+            month: "long",
+            day: "numeric",
+            year: "numeric",
+          });
+        };
+        const startDate = formatDate(details.period_start);
+        const endDate = formatDate(details.period_end);
+        
         return (
           <div className="space-y-6">
             <div className="flex items-center justify-center gap-3">
@@ -285,6 +299,26 @@ export default function PaymentConfirm() {
                   </Badge>
                 </div>
                 
+                {(startDate || endDate) && (
+                  <>
+                    <Separator className="my-4" />
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      {startDate && (
+                        <div>
+                          <p className="text-muted-foreground">Started</p>
+                          <p className="font-medium text-foreground">{startDate}</p>
+                        </div>
+                      )}
+                      {endDate && (
+                        <div>
+                          <p className="text-muted-foreground">Renews</p>
+                          <p className="font-medium text-foreground">{endDate}</p>
+                        </div>
+                      )}
+                    </div>
+                  </>
+                )}
+                
                 <Separator className="my-4" />
                 
                 <div className="mb-4">
@@ -292,6 +326,11 @@ export default function PaymentConfirm() {
                   <p className="text-2xl font-bold text-accent">
                     +{tierInfo.credits.toLocaleString()} credits
                   </p>
+                  {details.new_balance && (
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Total balance: {details.new_balance.toLocaleString()} credits
+                    </p>
+                  )}
                 </div>
 
                 <Separator className="my-4" />
