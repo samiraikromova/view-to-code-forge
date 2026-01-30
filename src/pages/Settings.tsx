@@ -8,7 +8,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { PLANS, SubscriptionTier } from "@/types/subscription";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/lib/supabase";
-import { SubscriptionModal, TopUpModal } from "@/components/payments";
+import { SubscriptionModal, TopUpModal, CardSetupFeeModal } from "@/components/payments";
 import { setupPaymentMethod, fetchPaymentMethods } from "@/api/fanbases/fanbasesApi";
 import { toast } from "sonner";
 import { TransactionHistory } from "@/components/settings/TransactionHistory";
@@ -31,12 +31,17 @@ export default function Settings() {
   const [loading, setLoading] = useState(true);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [showTopUpModal, setShowTopUpModal] = useState(false);
+  const [showCardSetupModal, setShowCardSetupModal] = useState(false);
   const [settingUpCard, setSettingUpCard] = useState(false);
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [loadingPaymentMethods, setLoadingPaymentMethods] = useState(false);
   const [confirmingPayment, setConfirmingPayment] = useState(false);
 
-  const handleAddCard = async () => {
+  const handleAddCardClick = () => {
+    setShowCardSetupModal(true);
+  };
+
+  const handleConfirmCardSetup = async () => {
     setSettingUpCard(true);
     try {
       const result = await setupPaymentMethod();
@@ -45,6 +50,7 @@ export default function Settings() {
         if (result.checkout_session_id) {
           localStorage.setItem('fanbases_checkout_session', result.checkout_session_id);
         }
+        setShowCardSetupModal(false);
         window.open(result.checkout_url, '_blank');
         toast.info('Complete the payment in the new tab, then return here and click "Refresh" to see your card');
       } else {
@@ -239,6 +245,12 @@ export default function Settings() {
         onSuccess={() => refreshProfile?.()}
         currentCredits={profile?.credits || 0}
       />
+      <CardSetupFeeModal
+        isOpen={showCardSetupModal}
+        onClose={() => setShowCardSetupModal(false)}
+        onConfirm={handleConfirmCardSetup}
+        isLoading={settingUpCard}
+      />
 
       <div className="max-w-5xl mx-auto p-6">
         <div className="flex items-center gap-4 mb-6">
@@ -424,7 +436,7 @@ export default function Settings() {
                 <Button 
                   variant="outline"
                   className="w-full mt-4 gap-2" 
-                  onClick={handleAddCard}
+                  onClick={handleAddCardClick}
                   disabled={settingUpCard}
                 >
                   {settingUpCard ? (
@@ -443,7 +455,7 @@ export default function Settings() {
                 </p>
                 <Button 
                   className="bg-accent hover:bg-accent-hover text-accent-foreground gap-2" 
-                  onClick={handleAddCard}
+                  onClick={handleAddCardClick}
                   disabled={settingUpCard}
                 >
                   {settingUpCard ? (
