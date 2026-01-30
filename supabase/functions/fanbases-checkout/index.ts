@@ -18,20 +18,39 @@ interface FanbasesProduct {
   price_cents: number | null;
 }
 
-// Look up product from fanbases_products table by internal_reference
+// Look up product from fanbases_products table by internal_reference OR fanbases_product_id
 // deno-lint-ignore no-explicit-any
 async function lookupProductByInternalRef(supabase: any, internalReference: string): Promise<FanbasesProduct | null> {
-  const { data, error } = await supabase
+  // First try by internal_reference
+  const { data: byInternalRef, error: error1 } = await supabase
     .from("fanbases_products")
     .select("id, fanbases_product_id, product_type, internal_reference, price_cents")
     .eq("internal_reference", internalReference)
     .maybeSingle();
 
-  if (error) {
-    console.error("[Fanbases Checkout] Error looking up product:", error);
-    return null;
+  if (byInternalRef) {
+    return byInternalRef;
   }
-  return data;
+
+  // Fallback: try by fanbases_product_id (in case someone passes the Fanbases ID directly)
+  const { data: byFanbasesId, error: error2 } = await supabase
+    .from("fanbases_products")
+    .select("id, fanbases_product_id, product_type, internal_reference, price_cents")
+    .eq("fanbases_product_id", internalReference)
+    .maybeSingle();
+
+  if (byFanbasesId) {
+    console.log(`[Fanbases Checkout] Found product by fanbases_product_id: ${internalReference}`);
+    return byFanbasesId;
+  }
+
+  if (error1) {
+    console.error("[Fanbases Checkout] Error looking up product by internal_reference:", error1);
+  }
+  if (error2) {
+    console.error("[Fanbases Checkout] Error looking up product by fanbases_product_id:", error2);
+  }
+  return null;
 }
 
 Deno.serve(async (req) => {
@@ -183,7 +202,12 @@ Deno.serve(async (req) => {
 
       console.log(`[Fanbases Checkout] Redirecting to payment link: ${paymentUrl.toString()}`);
 
-      // Store checkout session reference
+      // Get price from Fanbases product (convert from string like "10.00" to cents)
+      const priceCents = fanbasesProduct.price 
+        ? Math.round(parseFloat(fanbasesProduct.price) * 100) 
+        : product.price_cents;
+
+      // Store checkout session reference with price from Fanbases
       const sessionId = `checkout_${Date.now()}_${user.id.slice(0, 8)}`;
       await supabase.from("checkout_sessions").insert({
         user_id: user.id,
@@ -191,12 +215,21 @@ Deno.serve(async (req) => {
         payment_link: paymentUrl.toString(),
         product_type: product.product_type,
         product_id: product.internal_reference,
-        amount_cents: product.price_cents,
+        amount_cents: priceCents,
         status: "pending",
         metadata: {
           fanbases_product_id: product.fanbases_product_id,
         },
       });
+      
+      // Sync price to fanbases_products if different
+      if (priceCents && priceCents !== product.price_cents) {
+        await supabase
+          .from("fanbases_products")
+          .update({ price_cents: priceCents })
+          .eq("id", product.id);
+        console.log(`[Fanbases Checkout] Synced price ${priceCents} cents for ${product.internal_reference}`);
+      }
 
       return new Response(
         JSON.stringify({

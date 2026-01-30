@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, RefreshCw, Zap, Crown, BookOpen, CreditCard, Receipt } from "lucide-react";
+import { Loader2, RefreshCw, Zap, Crown, BookOpen, CreditCard, Receipt, ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -82,13 +82,19 @@ function formatAmount(amountCents: number | null, productType: string): string {
   return `$${(amountCents / 100).toFixed(2)}`;
 }
 
+const ITEMS_PER_PAGE = 10;
+
 export function TransactionHistory() {
   const { user } = useAuth();
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
 
-  const fetchTransactions = async (isRefresh = false) => {
+  const totalPages = Math.ceil(totalCount / ITEMS_PER_PAGE);
+
+  const fetchTransactions = async (isRefresh = false, page = 1) => {
     if (!user) return;
     
     if (isRefresh) {
@@ -98,13 +104,26 @@ export function TransactionHistory() {
     }
 
     try {
+      // First get total count
+      const { count } = await supabase
+        .from("checkout_sessions")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .eq("status", "completed");
+
+      setTotalCount(count || 0);
+
+      // Then get paginated data
+      const from = (page - 1) * ITEMS_PER_PAGE;
+      const to = from + ITEMS_PER_PAGE - 1;
+
       const { data, error } = await supabase
         .from("checkout_sessions")
         .select("*")
         .eq("user_id", user.id)
         .eq("status", "completed")
         .order("created_at", { ascending: false })
-        .limit(20);
+        .range(from, to);
 
       if (error) {
         console.error("Error fetching transactions:", error);
@@ -118,6 +137,11 @@ export function TransactionHistory() {
       setLoading(false);
       setRefreshing(false);
     }
+  };
+
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+    fetchTransactions(false, newPage);
   };
 
   useEffect(() => {
@@ -158,43 +182,77 @@ export function TransactionHistory() {
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : transactions.length > 0 ? (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Date</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>What You Got</TableHead>
-                <TableHead>Amount</TableHead>
-                <TableHead>Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {transactions.map((tx) => (
-                <TableRow key={tx.id}>
-                  <TableCell className="text-muted-foreground text-sm">
-                    {formatDate(tx.created_at)}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      {getProductIcon(tx.product_type)}
-                      <span className="text-foreground">{formatProductType(tx.product_type)}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-foreground font-medium">
-                    {formatReceived(tx)}
-                  </TableCell>
-                  <TableCell className="text-foreground">
-                    {formatAmount(tx.amount_cents, tx.product_type)}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="outline" className="bg-primary/20 text-primary border-primary/30">
-                      Completed
-                    </Badge>
-                  </TableCell>
+          <>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Date</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead>What You Got</TableHead>
+                  <TableHead>Amount</TableHead>
+                  <TableHead>Status</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {transactions.map((tx) => (
+                  <TableRow key={tx.id}>
+                    <TableCell className="text-muted-foreground text-sm">
+                      {formatDate(tx.created_at)}
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {getProductIcon(tx.product_type)}
+                        <span className="text-foreground">{formatProductType(tx.product_type)}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-foreground font-medium">
+                      {formatReceived(tx)}
+                    </TableCell>
+                    <TableCell className="text-foreground">
+                      {formatAmount(tx.amount_cents, tx.product_type)}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className="bg-primary/10 text-primary/70 border-primary/20">
+                        Completed
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+            
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
+                <p className="text-sm text-muted-foreground">
+                  Showing {((currentPage - 1) * ITEMS_PER_PAGE) + 1}-{Math.min(currentPage * ITEMS_PER_PAGE, totalCount)} of {totalCount}
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Previous
+                  </Button>
+                  <span className="text-sm text-muted-foreground px-2">
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            )}
+          </>
         ) : (
           <div className="text-center py-8">
             <Receipt className="h-12 w-12 text-muted-foreground mx-auto mb-4" />

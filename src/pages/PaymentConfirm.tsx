@@ -175,22 +175,7 @@ export default function PaymentConfirm() {
         setMessage(data.message || "Payment confirmed!");
         setDetails(data.details || null);
         
-        // Auto redirect after 5 seconds
-        setTimeout(() => {
-          if (fetchedProductType === "topup") {
-            navigate("/settings?topup=success");
-          } else if (fetchedProductType === "subscription") {
-            navigate("/chat");
-          } else if (fetchedProductType === "module") {
-            // Navigate to the specific module
-            const moduleId = data.details?.module_id || internalReference;
-            navigate(`/chat?module=${moduleId}`);
-          } else if (fetchedProductType === "card_setup") {
-            navigate("/settings#payment-methods");
-          } else {
-            navigate("/chat");
-          }
-        }, 5000);
+        // Removed auto-redirect - user must click buttons to navigate
       } else {
         setStatus("error");
         setMessage(data?.message || data?.error || "Payment confirmation failed");
@@ -442,15 +427,13 @@ export default function PaymentConfirm() {
         {status === "success" && (
           <div className="p-6">
             {renderSuccessContent()}
-            <div className="mt-6 flex items-center justify-center gap-4 text-sm text-muted-foreground">
+            <div className="mt-6 flex items-center justify-center text-sm text-muted-foreground">
               <button 
                 onClick={handleClose}
                 className="hover:text-foreground transition-colors"
               >
                 Close Tab
               </button>
-              <span>•</span>
-              <span>Redirecting in 5 seconds...</span>
             </div>
           </div>
         )}
