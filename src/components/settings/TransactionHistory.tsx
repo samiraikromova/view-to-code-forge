@@ -35,7 +35,7 @@ function getProductIcon(type: string) {
     case "topup":
       return <Zap className="h-4 w-4 text-accent" />;
     case "subscription":
-      return <Crown className="h-4 w-4 text-primary/60" />;
+      return <Crown className="h-4 w-4" style={{ color: '#7b4485' }} />;
     case "module":
       return <BookOpen className="h-4 w-4 text-accent" />;
     case "card_setup":
