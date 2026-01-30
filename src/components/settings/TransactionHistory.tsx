@@ -212,7 +212,7 @@ export function TransactionHistory() {
                       {formatAmount(tx.amount_cents, tx.product_type)}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline" className="bg-primary/10 text-primary/50 border-primary/20">
+                      <Badge variant="outline" className="bg-primary/10 border-primary/20" style={{ color: '#7b4485' }}>
                         Completed
                       </Badge>
                     </TableCell>
