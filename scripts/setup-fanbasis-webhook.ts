@@ -1,23 +1,23 @@
 /**
  * Fanbasis Webhook Setup Script
- * 
+ *
  * Run this script to register a webhook subscription with Fanbasis.
  * This ensures your app receives real-time payment notifications.
- * 
+ *
  * Usage:
  * 1. Set environment variables:
  *    - VITE_SUPABASE_URL: Your Supabase project URL
  *    - FANBASES_API_KEY: Your Fanbasis API key
- * 
+ *
  * 2. Run with Deno or Node.js:
  *    deno run --allow-net --allow-env scripts/setup-fanbasis-webhook.ts
- *    
+ *
  * Or manually call the API using curl/Postman with your API key.
  */
 
-const FANBASES_API_URL = "https://www.fanbasis.com/public-api";
+// const FANBASES_API_URL = "https://www.fanbasis.com/public-api";
 // Use QA for testing:
-// const FANBASES_API_URL = "https://qa.dev-fan-basis.com/public-api";
+const FANBASES_API_URL = "https://qa.dev-fan-basis.com/public-api";
 
 async function setupWebhook() {
   const supabaseUrl = process.env.VITE_SUPABASE_URL || Deno.env.get("VITE_SUPABASE_URL");
@@ -49,9 +49,7 @@ async function setupWebhook() {
     console.log("Existing webhooks:", JSON.stringify(listData, null, 2));
 
     // Check if our webhook already exists
-    const existingWebhook = listData.data?.find(
-      (w: { webhook_url: string }) => w.webhook_url === webhookUrl
-    );
+    const existingWebhook = listData.data?.find((w: { webhook_url: string }) => w.webhook_url === webhookUrl);
 
     if (existingWebhook) {
       console.log("Webhook already exists:", existingWebhook.id);
