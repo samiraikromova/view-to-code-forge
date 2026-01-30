@@ -35,7 +35,7 @@ function getProductIcon(type: string) {
     case "topup":
       return <Zap className="h-4 w-4 text-accent" />;
     case "subscription":
-      return <Crown className="h-4 w-4 text-primary" />;
+      return <Crown className="h-4 w-4 text-primary/60" />;
     case "module":
       return <BookOpen className="h-4 w-4 text-accent" />;
     case "card_setup":
@@ -212,7 +212,7 @@ export function TransactionHistory() {
                       {formatAmount(tx.amount_cents, tx.product_type)}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline" className="bg-primary/10 text-primary/70 border-primary/20">
+                      <Badge variant="outline" className="bg-primary/10 text-primary/50 border-primary/20">
                         Completed
                       </Badge>
                     </TableCell>
