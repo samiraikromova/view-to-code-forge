@@ -50,10 +50,12 @@ export async function setupPaymentMethod(): Promise<{ success: boolean; checkout
     return { success: false, error: error.message };
   }
 
+  // Edge function returns payment_link, map to checkout_url for consistency
   return {
-    success: true,
-    checkout_url: data.checkout_url,
+    success: data.success,
+    checkout_url: data.payment_link || data.checkout_url,
     checkout_session_id: data.checkout_session_id,
+    error: data.error,
   };
 }
 
