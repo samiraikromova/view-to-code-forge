@@ -326,6 +326,103 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ success: true }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
+    } else if (action === "setup_payment_method") {
+      // Setup a new payment method via Fanbases checkout
+      const { success_url, cancel_url, base_url } = body;
+      
+      // Get user profile for prefill
+      const { data: userProfile } = await supabase.from("users").select("email, name").eq("id", user.id).maybeSingle();
+      const email = userProfile?.email || user.email;
+      const fullName = userProfile?.name || "";
+      
+      // Look up the card_setup product
+      const { data: cardSetupProduct } = await supabase
+        .from("fanbases_products")
+        .select("fanbases_product_id, price_cents")
+        .eq("internal_reference", "card_setup_fee")
+        .maybeSingle();
+      
+      if (!cardSetupProduct) {
+        console.error("[Fanbases Customer] Card setup product not found");
+        return new Response(JSON.stringify({ error: "Card setup product not configured" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      
+      console.log(`[Fanbases Customer] Using card setup product: ${cardSetupProduct.fanbases_product_id}`);
+      
+      // Fetch product list from Fanbases
+      const FANBASES_API_KEY = Deno.env.get("FANBASES_API_KEY");
+      const productsResponse = await fetch(`${FANBASES_API_URL}/products?per_page=100`, {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          "x-api-key": FANBASES_API_KEY!,
+        },
+      });
+      
+      if (!productsResponse.ok) {
+        const errorText = await productsResponse.text();
+        console.error("[Fanbases Customer] Failed to fetch products:", errorText);
+        return new Response(JSON.stringify({ error: "Failed to fetch products" }), {
+          status: 500,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      
+      const productsData = await productsResponse.json();
+      const productsList = productsData.data?.data || productsData.data || [];
+      
+      // Find the card setup product by fanbases_product_id
+      const fanbasesProduct = productsList.find((p: { id: string }) => p.id === cardSetupProduct.fanbases_product_id);
+      
+      if (!fanbasesProduct || !fanbasesProduct.payment_link) {
+        console.error("[Fanbases Customer] Card setup product not found in Fanbases");
+        return new Response(JSON.stringify({ error: "Card setup product not found" }), {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      
+      // Build payment URL with metadata
+      const paymentUrl = new URL(fanbasesProduct.payment_link);
+      paymentUrl.searchParams.set("metadata[user_id]", user.id);
+      paymentUrl.searchParams.set("metadata[product_type]", "card_setup");
+      paymentUrl.searchParams.set("metadata[internal_reference]", "card_setup_fee");
+      paymentUrl.searchParams.set("metadata[fanbases_product_id]", cardSetupProduct.fanbases_product_id);
+      paymentUrl.searchParams.set("prefill[email]", email);
+      paymentUrl.searchParams.set("prefill[name]", fullName);
+      
+      const appBaseUrl = base_url || "https://view-to-code-forge.lovable.app";
+      paymentUrl.searchParams.set("success_url", success_url || `${appBaseUrl}/payment-confirm`);
+      paymentUrl.searchParams.set("cancel_url", cancel_url || `${appBaseUrl}/settings?setup=cancelled`);
+      
+      // Store checkout session
+      const sessionId = `card_setup_${Date.now()}_${user.id.slice(0, 8)}`;
+      await supabase.from("checkout_sessions").insert({
+        user_id: user.id,
+        checkout_session_id: sessionId,
+        payment_link: paymentUrl.toString(),
+        product_type: "card_setup",
+        product_id: "card_setup_fee",
+        amount_cents: cardSetupProduct.price_cents || 0,
+        status: "pending",
+        metadata: {
+          fanbases_product_id: cardSetupProduct.fanbases_product_id,
+        },
+      });
+      
+      console.log(`[Fanbases Customer] Card setup URL: ${paymentUrl.toString()}`);
+      
+      return new Response(
+        JSON.stringify({
+          success: true,
+          payment_link: paymentUrl.toString(),
+          checkout_session_id: sessionId,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
 
     return new Response(JSON.stringify({ error: "Invalid action" }), {
