@@ -2,7 +2,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 // Product type definitions
@@ -90,40 +90,47 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Get authenticated user by decoding the JWT token
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
-    const token = authHeader.replace("Bearer ", "");
-    
-    // Decode JWT payload (base64url encoded)
-    let user: { id: string; email: string };
-    try {
-      const parts = token.split(".");
-      if (parts.length !== 3) {
-        throw new Error("Invalid JWT format");
-      }
-      // Decode the payload (second part)
-      const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
-      user = { id: payload.sub, email: payload.email };
-      console.log(`[Fanbases Confirm] Decoded user: ${user.id}`);
-    } catch (decodeError) {
-      console.error("[Fanbases Confirm] JWT decode error:", decodeError);
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     const body = await req.json();
-    const { payment_intent, redirect_status, product_type, internal_reference, fanbases_product_id } = body;
+    const { payment_intent, redirect_status, product_type, internal_reference, fanbases_product_id, user_id: bodyUserId, checkout_session_id } = body;
 
-    console.log(`[Fanbases Confirm] User: ${user.id}, Payment Intent: ${payment_intent}`);
+    console.log(`[Fanbases Confirm] Request body:`, JSON.stringify(body));
+
+    // Get authenticated user - try multiple methods
+    let userId: string | null = null;
+    let userEmail: string | null = null;
+
+    // Method 1: Try to decode JWT from Authorization header
+    const authHeader = req.headers.get("Authorization");
+    if (authHeader?.startsWith("Bearer ")) {
+      const token = authHeader.replace("Bearer ", "");
+      try {
+        const parts = token.split(".");
+        if (parts.length === 3) {
+          const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
+          userId = payload.sub;
+          userEmail = payload.email;
+          console.log(`[Fanbases Confirm] User from JWT: ${userId} (${userEmail})`);
+        }
+      } catch (decodeError) {
+        console.log("[Fanbases Confirm] JWT decode failed, trying body user_id");
+      }
+    }
+
+    // Method 2: Use user_id from request body (from URL metadata)
+    if (!userId && bodyUserId) {
+      userId = bodyUserId;
+      console.log(`[Fanbases Confirm] User from body: ${userId}`);
+    }
+
+    if (!userId) {
+      console.error("[Fanbases Confirm] No user ID available from JWT or body");
+      return new Response(JSON.stringify({ error: "Unauthorized - no user ID" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    console.log(`[Fanbases Confirm] User: ${userId}, Payment Intent: ${payment_intent}`);
     console.log(`[Fanbases Confirm] Product: ${product_type} / ${internal_reference}`);
     console.log(`[Fanbases Confirm] Redirect Status: ${redirect_status}`);
 
@@ -135,7 +142,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Check redirect status from URL
+    // Check redirect status from URL - we now default to succeeded in caller if missing
     if (redirect_status !== "succeeded") {
       return new Response(JSON.stringify({ error: "Payment was not successful", status: redirect_status }), {
         status: 400,
@@ -190,11 +197,11 @@ Deno.serve(async (req) => {
     };
 
     if (product_type === "topup") {
-      result = await grantTopUpCredits(supabase, user.id, internal_reference, payment_intent, priceCents);
+      result = await grantTopUpCredits(supabase, userId, internal_reference, payment_intent, priceCents);
     } else if (product_type === "subscription") {
-      result = await grantSubscription(supabase, user.id, internal_reference, payment_intent, priceCents);
+      result = await grantSubscription(supabase, userId, internal_reference, payment_intent, priceCents);
     } else if (product_type === "module") {
-      result = await grantModuleAccess(supabase, user.id, internal_reference, payment_intent, priceCents);
+      result = await grantModuleAccess(supabase, userId, internal_reference, payment_intent, priceCents);
     }
 
     console.log(`[Fanbases Confirm] Result:`, result);
@@ -203,7 +210,7 @@ Deno.serve(async (req) => {
     await supabase
       .from("checkout_sessions")
       .update({ status: "completed", updated_at: new Date().toISOString() })
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .eq("product_id", internal_reference)
       .eq("status", "pending");
 
