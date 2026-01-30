@@ -1,15 +1,57 @@
 import { useEffect, useState, useCallback } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import { supabase } from "@/lib/supabase";
-import { Loader2, CheckCircle, XCircle } from "lucide-react";
+import { Loader2, CheckCircle, XCircle, Zap, Crown, BookOpen, CreditCard, ArrowRight, MessageSquare, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+
+interface PaymentDetails {
+  product_type?: string;
+  credits_added?: number;
+  new_balance?: number;
+  tier?: string;
+  module_id?: string;
+  module_name?: string;
+}
+
+// Tier feature configurations
+const TIER_FEATURES = {
+  tier1: {
+    name: "Starter",
+    price: 29,
+    credits: 10000,
+    features: [
+      "10,000 monthly credits",
+      "AI Chat access",
+      "Ask AI on lessons",
+      "Priority support",
+    ],
+  },
+  tier2: {
+    name: "Pro", 
+    price: 99,
+    credits: 40000,
+    features: [
+      "40,000 monthly credits",
+      "AI Chat access",
+      "Ask AI on lessons",
+      "Priority support",
+      "Advanced AI models",
+      "AI Hooks Generator access",
+      "Image Ads Generator access",
+    ],
+  },
+};
 
 export default function PaymentConfirm() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [status, setStatus] = useState<"processing" | "success" | "error">("processing");
   const [message, setMessage] = useState("");
-  const [details, setDetails] = useState<Record<string, unknown> | null>(null);
+  const [details, setDetails] = useState<PaymentDetails | null>(null);
+  const [productType, setProductType] = useState<string | null>(null);
 
   const confirmPayment = useCallback(async () => {
     // Fanbases sends payment_id OR payment_intent depending on the flow
@@ -59,12 +101,12 @@ export default function PaymentConfirm() {
       console.log("[PaymentConfirm] User ID:", userId);
 
       // If we have metadata from URL, use it directly
-      let productType = urlProductType;
+      let fetchedProductType = urlProductType;
       let internalReference = urlInternalReference;
       let checkoutSessionId: string | undefined;
 
       // If we don't have metadata from URL, look up from checkout_sessions table
-      if (!productType || !internalReference) {
+      if (!fetchedProductType || !internalReference) {
         console.log("[PaymentConfirm] Looking up checkout session from database...");
         const { data: checkoutSession, error: lookupError } = await supabase
           .from("checkout_sessions")
@@ -90,15 +132,17 @@ export default function PaymentConfirm() {
         }
 
         console.log("[PaymentConfirm] Found checkout session:", checkoutSession);
-        productType = checkoutSession.product_type;
+        fetchedProductType = checkoutSession.product_type;
         internalReference = checkoutSession.product_id;
         checkoutSessionId = checkoutSession.id;
       }
 
+      setProductType(fetchedProductType || null);
+
       console.log("[PaymentConfirm] Calling fanbases-confirm-payment with:", {
         payment_intent: paymentIntent,
         redirect_status: redirectStatus,
-        product_type: productType,
+        product_type: fetchedProductType,
         internal_reference: internalReference,
         fanbases_product_id: urlFanbasesProductId,
         checkout_session_id: checkoutSessionId,
@@ -109,7 +153,7 @@ export default function PaymentConfirm() {
         body: {
           payment_intent: paymentIntent,
           redirect_status: redirectStatus,
-          product_type: productType,
+          product_type: fetchedProductType,
           internal_reference: internalReference,
           fanbases_product_id: urlFanbasesProductId,
           checkout_session_id: checkoutSessionId,
@@ -131,18 +175,22 @@ export default function PaymentConfirm() {
         setMessage(data.message || "Payment confirmed!");
         setDetails(data.details || null);
         
-        // Auto redirect after 3 seconds
+        // Auto redirect after 5 seconds
         setTimeout(() => {
-          if (productType === "topup") {
+          if (fetchedProductType === "topup") {
             navigate("/settings?topup=success");
-          } else if (productType === "subscription") {
-            navigate("/settings?subscription=success");
-          } else if (productType === "module") {
-            navigate("/chat?module=purchased");
+          } else if (fetchedProductType === "subscription") {
+            navigate("/chat");
+          } else if (fetchedProductType === "module") {
+            // Navigate to the specific module
+            const moduleId = data.details?.module_id || internalReference;
+            navigate(`/chat?module=${moduleId}`);
+          } else if (fetchedProductType === "card_setup") {
+            navigate("/settings#payment-methods");
           } else {
             navigate("/chat");
           }
-        }, 3000);
+        }, 5000);
       } else {
         setStatus("error");
         setMessage(data?.message || data?.error || "Payment confirmation failed");
@@ -166,45 +214,253 @@ export default function PaymentConfirm() {
     navigate("/chat");
   };
 
+  // Render success content based on product type
+  const renderSuccessContent = () => {
+    if (!details) {
+      return (
+        <p className="text-muted-foreground">Your payment has been processed successfully.</p>
+      );
+    }
+
+    const currentProductType = productType || details.product_type;
+
+    switch (currentProductType) {
+      case "topup":
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center justify-center gap-3">
+              <div className="h-16 w-16 rounded-full bg-accent/20 flex items-center justify-center">
+                <Zap className="h-8 w-8 text-accent" />
+              </div>
+            </div>
+            
+            <div className="text-center space-y-2">
+              <h2 className="text-2xl font-bold text-foreground">Credits Added!</h2>
+              <p className="text-muted-foreground">Your account has been topped up successfully</p>
+            </div>
+
+            <Card className="bg-gradient-to-br from-accent/10 to-accent/5 border-accent/30">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <span className="text-muted-foreground">Credits Purchased</span>
+                  <Badge className="bg-accent/20 text-accent border-accent/30 text-lg px-3 py-1">
+                    +{details.credits_added?.toLocaleString()}
+                  </Badge>
+                </div>
+                <Separator className="my-4" />
+                <div className="flex items-center justify-between">
+                  <span className="text-lg font-medium text-foreground">New Balance</span>
+                  <span className="text-2xl font-bold text-accent">
+                    {details.new_balance?.toLocaleString()} credits
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="flex flex-col gap-3">
+              <Button 
+                size="lg" 
+                className="w-full gap-2 bg-accent hover:bg-accent-hover text-accent-foreground"
+                onClick={() => navigate("/chat")}
+              >
+                <MessageSquare className="h-5 w-5" />
+                Start Using Credits
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        );
+
+      case "subscription":
+        const tierKey = (details.tier || "tier1") as keyof typeof TIER_FEATURES;
+        const tierInfo = TIER_FEATURES[tierKey] || TIER_FEATURES.tier1;
+        
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center justify-center gap-3">
+              <div className="h-16 w-16 rounded-full bg-primary/20 flex items-center justify-center">
+                <Crown className="h-8 w-8 text-primary" />
+              </div>
+            </div>
+            
+            <div className="text-center space-y-2">
+              <h2 className="text-2xl font-bold text-foreground">Welcome to {tierInfo.name}!</h2>
+              <p className="text-muted-foreground">Your subscription is now active</p>
+            </div>
+
+            <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/30">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <p className="text-lg font-semibold text-foreground">{tierInfo.name} Plan</p>
+                    <p className="text-muted-foreground">${tierInfo.price}/month</p>
+                  </div>
+                  <Badge className="bg-primary/20 text-primary border-primary/30">
+                    Active
+                  </Badge>
+                </div>
+                
+                <Separator className="my-4" />
+                
+                <div className="mb-4">
+                  <p className="text-sm text-muted-foreground mb-2">Credits Added</p>
+                  <p className="text-2xl font-bold text-accent">
+                    +{tierInfo.credits.toLocaleString()} credits
+                  </p>
+                </div>
+
+                <Separator className="my-4" />
+                
+                <div>
+                  <p className="text-sm text-muted-foreground mb-3">Your Features:</p>
+                  <ul className="space-y-2">
+                    {tierInfo.features.map((feature, i) => (
+                      <li key={i} className="flex items-center gap-2 text-sm text-foreground">
+                        <CheckCircle className="h-4 w-4 text-accent flex-shrink-0" />
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="flex flex-col gap-3">
+              <Button 
+                size="lg" 
+                className="w-full gap-2 bg-accent hover:bg-accent-hover text-accent-foreground"
+                onClick={() => navigate("/chat")}
+              >
+                <MessageSquare className="h-5 w-5" />
+                Start Chatting
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        );
+
+      case "module":
+        const moduleName = details.module_name || details.module_id || "your module";
+        const moduleId = details.module_id;
+        
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center justify-center gap-3">
+              <div className="h-16 w-16 rounded-full bg-accent/20 flex items-center justify-center">
+                <BookOpen className="h-8 w-8 text-accent" />
+              </div>
+            </div>
+            
+            <div className="text-center space-y-2">
+              <h2 className="text-2xl font-bold text-foreground">Module Unlocked!</h2>
+              <p className="text-muted-foreground">You now have full access to this content</p>
+            </div>
+
+            <Card className="bg-gradient-to-br from-accent/10 to-accent/5 border-accent/30">
+              <CardContent className="p-6 text-center">
+                <p className="text-lg font-semibold text-foreground mb-2">{moduleName}</p>
+                <p className="text-muted-foreground text-sm">
+                  Access all lessons, videos, and downloadable files
+                </p>
+              </CardContent>
+            </Card>
+
+            <div className="flex flex-col gap-3">
+              <Button 
+                size="lg" 
+                className="w-full gap-2 bg-accent hover:bg-accent-hover text-accent-foreground"
+                onClick={() => navigate(moduleId ? `/chat?module=${moduleId}` : "/chat")}
+              >
+                <BookOpen className="h-5 w-5" />
+                Go to Module
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        );
+
+      case "card_setup":
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center justify-center gap-3">
+              <div className="h-16 w-16 rounded-full bg-primary/20 flex items-center justify-center">
+                <CreditCard className="h-8 w-8 text-primary" />
+              </div>
+            </div>
+            
+            <div className="text-center space-y-2">
+              <h2 className="text-2xl font-bold text-foreground">Card Saved!</h2>
+              <p className="text-muted-foreground">Your payment method has been added successfully</p>
+            </div>
+
+            <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/30">
+              <CardContent className="p-6 text-center">
+                <p className="text-foreground mb-2">
+                  Your card is now saved in your account
+                </p>
+                <p className="text-muted-foreground text-sm">
+                  You can manage your payment methods in Settings
+                </p>
+              </CardContent>
+            </Card>
+
+            <div className="flex flex-col gap-3">
+              <Button 
+                size="lg" 
+                className="w-full gap-2 bg-accent hover:bg-accent-hover text-accent-foreground"
+                onClick={() => navigate("/settings#payment-methods")}
+              >
+                <Settings className="h-5 w-5" />
+                View Payment Methods
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        );
+
+      default:
+        return (
+          <div className="space-y-4">
+            <p className="text-muted-foreground">Your payment has been processed successfully.</p>
+            <Button onClick={handleGoToApp}>Go to App</Button>
+          </div>
+        );
+    }
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="text-center max-w-md mx-auto p-6">
+    <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <div className="w-full max-w-md">
         {status === "processing" && (
-          <>
+          <div className="text-center p-6">
             <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
             <p className="text-lg text-foreground">Processing your payment...</p>
             <p className="text-sm text-muted-foreground mt-2">Please wait while we confirm your purchase</p>
-          </>
+          </div>
         )}
+        
         {status === "success" && (
-          <>
-            <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />
-            <p className="text-lg font-semibold text-foreground">{message}</p>
-            {details && (
-              <div className="mt-2 text-sm text-muted-foreground">
-                {details.credits_added && <p>Added {String(details.credits_added)} credits</p>}
-                {details.new_balance && <p>New balance: {String(details.new_balance)} credits</p>}
-                {details.tier && <p>Subscription: {String(details.tier)}</p>}
-                {details.module && <p>Module unlocked: {String(details.module)}</p>}
-              </div>
-            )}
-            <p className="text-sm text-muted-foreground mt-4">Redirecting you shortly...</p>
-            <div className="flex gap-2 justify-center mt-4">
-              <Button variant="outline" size="sm" onClick={handleClose}>
+          <div className="p-6">
+            {renderSuccessContent()}
+            <div className="mt-6 flex items-center justify-center gap-4 text-sm text-muted-foreground">
+              <button 
+                onClick={handleClose}
+                className="hover:text-foreground transition-colors"
+              >
                 Close Tab
-              </Button>
-              <Button size="sm" onClick={handleGoToApp}>
-                Go to App
-              </Button>
+              </button>
+              <span>•</span>
+              <span>Redirecting in 5 seconds...</span>
             </div>
-          </>
+          </div>
         )}
+        
         {status === "error" && (
-          <>
-            <XCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <div className="text-center p-6">
+            <XCircle className="h-12 w-12 text-destructive mx-auto mb-4" />
             <p className="text-lg font-semibold text-foreground">Payment Confirmation Failed</p>
             <p className="text-sm text-muted-foreground mt-2">{message}</p>
-            <div className="flex gap-2 justify-center mt-4">
+            <div className="flex gap-2 justify-center mt-6">
               <Button variant="outline" size="sm" onClick={handleClose}>
                 Close Tab
               </Button>
@@ -212,7 +468,7 @@ export default function PaymentConfirm() {
                 Go to App
               </Button>
             </div>
-          </>
+          </div>
         )}
       </div>
     </div>

@@ -297,8 +297,17 @@ async function grantSubscription(
   const periodEnd = new Date(now);
   periodEnd.setMonth(periodEnd.getMonth() + 1);
 
-  // Update users table subscription_tier
-  await supabase.from("users").update({ subscription_tier: config.tier }).eq("id", userId);
+  // Get current user credits and add monthly credits
+  const { data: userProfile } = await supabase.from("users").select("credits").eq("id", userId).maybeSingle();
+  const currentCredits = parseFloat(userProfile?.credits || 0);
+  const newCredits = currentCredits + (config.monthlyCredits || 0);
+
+  // Update users table subscription_tier AND add credits
+  await supabase.from("users").update({ 
+    subscription_tier: config.tier,
+    credits: newCredits,
+    last_credit_update: new Date().toISOString(),
+  }).eq("id", userId);
 
   // Upsert user_subscriptions (NOT user_credits)
   await supabase.from("user_subscriptions").upsert(
@@ -323,14 +332,15 @@ async function grantSubscription(
     status: "completed",
   });
 
-  console.log(`[Fanbases Confirm] Subscription ${config.tier} activated for user ${userId}`);
+  console.log(`[Fanbases Confirm] Subscription ${config.tier} activated for user ${userId}. Added ${config.monthlyCredits} credits. New balance: ${newCredits}`);
 
   return {
     success: true,
     message: `Successfully activated ${config.tier} subscription`,
     details: {
       tier: config.tier,
-      monthly_credits: config.monthlyCredits,
+      credits_added: config.monthlyCredits,
+      new_balance: newCredits,
       period_end: periodEnd.toISOString(),
     },
   };
@@ -358,9 +368,18 @@ async function grantModuleAccess(
     return {
       success: true,
       message: "Module already purchased",
-      details: { module: internalReference, already_owned: true },
+      details: { module_id: internalReference, already_owned: true },
     };
   }
+
+  // Try to get module name from modules table
+  const { data: moduleData } = await supabase
+    .from("modules")
+    .select("title")
+    .eq("id", internalReference)
+    .maybeSingle();
+
+  const moduleName = moduleData?.title || internalReference;
 
   // Record purchase
   await supabase.from("user_purchases").insert({
@@ -372,11 +391,11 @@ async function grantModuleAccess(
     status: "completed",
   });
 
-  console.log(`[Fanbases Confirm] Module ${internalReference} unlocked for user ${userId}`);
+  console.log(`[Fanbases Confirm] Module ${internalReference} (${moduleName}) unlocked for user ${userId}`);
 
   return {
     success: true,
-    message: `Successfully unlocked module: ${internalReference}`,
-    details: { module: internalReference },
+    message: `Successfully unlocked module: ${moduleName}`,
+    details: { module_id: internalReference, module_name: moduleName },
   };
 }
