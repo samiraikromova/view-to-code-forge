@@ -3,8 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, CreditCard, Download, Check, Zap, Loader2, RefreshCw } from "lucide-react";
+import { ArrowLeft, CreditCard, Check, Zap, Loader2, RefreshCw } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { PLANS, SubscriptionTier } from "@/types/subscription";
 import { useAuth } from "@/hooks/useAuth";
@@ -12,14 +11,7 @@ import { supabase } from "@/lib/supabase";
 import { SubscriptionModal, TopUpModal } from "@/components/payments";
 import { setupPaymentMethod, fetchPaymentMethods } from "@/api/fanbases/fanbasesApi";
 import { toast } from "sonner";
-
-interface BillingRecord {
-  id: string;
-  date: string;
-  amount: number;
-  status: string;
-  type: string;
-}
+import { TransactionHistory } from "@/components/settings/TransactionHistory";
 
 interface PaymentMethod {
   id: string;
@@ -36,7 +28,6 @@ export default function Settings() {
   const [searchParams, setSearchParams] = useSearchParams();
   const { user, profile, refreshProfile } = useAuth();
   const [currentTier, setCurrentTier] = useState<SubscriptionTier>("free");
-  const [billingHistory, setBillingHistory] = useState<BillingRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [showTopUpModal, setShowTopUpModal] = useState(false);
@@ -142,7 +133,6 @@ export default function Settings() {
           toast.success(data.message || 'Payment confirmed successfully!');
           // Refresh profile to get updated credits/subscription
           refreshProfile?.();
-          fetchBillingHistory();
         }
         return true;
       } else {
@@ -215,51 +205,16 @@ export default function Settings() {
         pro: "pro",
       };
       setCurrentTier(tierMap[profile.subscription_tier] || "free");
-    }
-    if (user) {
-      fetchBillingHistory();
-    }
-  }, [profile, user]);
-
-  async function fetchBillingHistory() {
-    if (!user) return;
-    setLoading(true);
-    try {
-      const { data } = await supabase
-        .from("credit_transactions")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false })
-        .limit(10);
-
-      if (data) {
-        setBillingHistory(
-          data.map((tx) => ({
-            id: tx.id,
-            date: new Date(tx.created_at).toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-              year: "numeric",
-            }),
-            amount: Math.abs(tx.amount || 0),
-            status: "Completed",
-            type: tx.type || "Credit",
-          })),
-        );
-      }
-    } catch (error) {
-      console.error("Error fetching billing history:", error);
-    } finally {
       setLoading(false);
     }
-  }
+  }, [profile, user]);
 
   const formatCardBrand = (brand?: string) => {
     if (!brand) return 'Card';
     return brand.charAt(0).toUpperCase() + brand.slice(1).toLowerCase();
   };
 
-  if (loading && billingHistory.length === 0) {
+  if (loading && !profile) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
@@ -411,52 +366,7 @@ export default function Settings() {
         </Card>
 
         {/* Transaction History */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle>Transaction History</CardTitle>
-            <CardDescription>View your recent transactions</CardDescription>
-          </CardHeader>
-          <CardContent>
-            {billingHistory.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>ID</TableHead>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {billingHistory.map((record) => (
-                    <TableRow key={record.id}>
-                      <TableCell className="font-medium font-mono text-xs">{record.id.slice(0, 8)}...</TableCell>
-                      <TableCell>{record.date}</TableCell>
-                      <TableCell className="capitalize">{record.type}</TableCell>
-                      <TableCell>{record.amount.toFixed(2)} credits</TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="bg-primary/20 text-primary border-primary/30">
-                          {record.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button variant="ghost" size="sm">
-                          <Download className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                {loading ? "Loading..." : "No transactions yet"}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+        <TransactionHistory />
 
         {/* Payment Methods */}
         <Card>
