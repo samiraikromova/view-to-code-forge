@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ModuleCard, ModuleCardData } from "./ModuleCard";
 import { BookOpen, Loader2 } from "lucide-react";
 import { Module } from "./LearnSidebar";
@@ -21,6 +21,16 @@ export function ModuleGrid({ modules, onModuleSelect, isLoading, contentType }: 
   const [showBookCallModal, setShowBookCallModal] = useState(false);
   const [selectedBookingUrl, setSelectedBookingUrl] = useState<string | undefined>(undefined);
   const [selectedModuleName, setSelectedModuleName] = useState<string>("");
+
+  // Refresh access when window regains focus (user returns from checkout tab)
+  useEffect(() => {
+    const handleFocus = () => {
+      refreshAccess();
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => window.removeEventListener('focus', handleFocus);
+  }, [refreshAccess]);
 
   if (isLoading) {
     return (

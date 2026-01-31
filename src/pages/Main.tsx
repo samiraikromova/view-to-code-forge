@@ -183,6 +183,9 @@ const Main = () => {
     const modeParam = searchParams.get("mode");
     
     if (moduleParam) {
+      // Refresh access state to pick up new purchases from checkout_sessions
+      refreshAccess();
+      
       // Wait for data to load before selecting module
       if (!videosLoading && (materialsData.length > 0 || recordingsData.length > 0)) {
         // Find the module in materials or recordings
@@ -209,7 +212,7 @@ const Main = () => {
       setMode("learn");
       setSearchParams({});
     }
-  }, [searchParams, videosLoading, materialsData, recordingsData, setSearchParams]);
+  }, [searchParams, videosLoading, materialsData, recordingsData, setSearchParams, refreshAccess]);
 
   interface DbModule {
     id: string;
