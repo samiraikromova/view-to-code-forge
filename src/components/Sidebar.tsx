@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { deleteThread, updateThreadTitle, starThread } from "@/api/chat/chatApi";
 import { toast } from "sonner";
+import { TrialBadge } from "@/components/TrialBadge";
 
 interface Chat {
   id: string;
@@ -288,6 +289,12 @@ export function Sidebar({
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" side="top" className="w-56">
+              {/* Trial Status */}
+              {profile?.trial_ends_at && new Date(profile.trial_ends_at) > new Date() && (
+                <div className="px-3 py-2 border-b border-border">
+                  <TrialBadge trialEndsAt={profile.trial_ends_at} variant="compact" />
+                </div>
+              )}
               {/* Credit Usage Gauge */}
               <div className="px-3 py-3">
                 <div className="flex items-center justify-between mb-2">
@@ -331,6 +338,12 @@ export function Sidebar({
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" side="top" className="w-56">
+              {/* Trial Status */}
+              {profile?.trial_ends_at && new Date(profile.trial_ends_at) > new Date() && (
+                <div className="px-3 py-2 border-b border-border">
+                  <TrialBadge trialEndsAt={profile.trial_ends_at} variant="compact" />
+                </div>
+              )}
               {/* Credit Usage Gauge */}
               <div className="px-3 py-3">
                 <div className="flex items-center justify-between mb-2">

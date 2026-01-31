@@ -12,6 +12,7 @@ import { SubscriptionModal, TopUpModal, CardSetupFeeModal } from "@/components/p
 import { setupPaymentMethod, fetchPaymentMethods } from "@/api/fanbases/fanbasesApi";
 import { toast } from "sonner";
 import { TransactionHistory } from "@/components/settings/TransactionHistory";
+import { TrialBadge } from "@/components/TrialBadge";
 
 interface PaymentMethod {
   id: string;
@@ -299,6 +300,13 @@ export default function Settings() {
             <p className="text-sm text-muted-foreground mt-1">Manage your subscription and billing</p>
           </div>
         </div>
+
+        {/* Trial Status Banner */}
+        {profile?.trial_ends_at && new Date(profile.trial_ends_at) > new Date() && (
+          <div className="mb-6">
+            <TrialBadge trialEndsAt={profile.trial_ends_at} variant="full" />
+          </div>
+        )}
 
         {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
