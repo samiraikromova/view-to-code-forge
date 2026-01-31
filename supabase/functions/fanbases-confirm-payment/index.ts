@@ -574,7 +574,7 @@ async function grantModuleAccess(
   };
 }
 
-// Record card setup payment
+// Record card setup payment and sync payment method from Fanbases
 // deno-lint-ignore no-explicit-any
 async function recordCardSetup(
   supabase: any,
@@ -583,8 +583,119 @@ async function recordCardSetup(
   paymentIntent: string,
   priceCents: number,
 ) {
-  // Card setup doesn't grant any access, just records the payment
-  // The actual card is synced via fetchPaymentMethods after redirect
+  const FANBASES_API_KEY = Deno.env.get("FANBASES_API_KEY");
+  const FANBASES_API_URL = "https://qa.dev-fan-basis.com/public-api";
+  
+  // Get user email for customer lookup
+  const { data: userProfile } = await supabase.from("users").select("email").eq("id", userId).maybeSingle();
+  const userEmail = userProfile?.email;
+  
+  // Get existing customer record
+  const { data: existingCustomer } = await supabase
+    .from("fanbases_customers")
+    .select("*")
+    .eq("user_id", userId)
+    .maybeSingle();
+  
+  let customerId = existingCustomer?.fanbases_customer_id;
+  let cardDetails: { brand?: string; last4?: string; exp_month?: number; exp_year?: number } = {};
+  
+  // Try to find customer by email if we don't have their Fanbases ID
+  if (!customerId && userEmail && FANBASES_API_KEY) {
+    try {
+      console.log(`[Fanbases Confirm] Looking up customer by email: ${userEmail}`);
+      
+      const customersResponse = await fetch(`${FANBASES_API_URL}/customers?per_page=200`, {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          "x-api-key": FANBASES_API_KEY,
+        },
+      });
+      
+      if (customersResponse.ok) {
+        const customersData = await customersResponse.json();
+        let customers: Array<{ id: string; email?: string }> = [];
+        
+        if (Array.isArray(customersData)) {
+          customers = customersData;
+        } else if (customersData.data?.customers) {
+          customers = customersData.data.customers;
+        } else if (customersData.customers) {
+          customers = customersData.customers;
+        } else if (customersData.data && Array.isArray(customersData.data)) {
+          customers = customersData.data;
+        }
+        
+        const matchedCustomer = customers.find((c) => c.email?.toLowerCase() === userEmail.toLowerCase());
+        if (matchedCustomer) {
+          customerId = matchedCustomer.id;
+          console.log(`[Fanbases Confirm] Found customer by email: ${customerId}`);
+        }
+      }
+    } catch (e) {
+      console.error("[Fanbases Confirm] Error looking up customer:", e);
+    }
+  }
+  
+  // Fetch payment methods from Fanbases and sync to database
+  if (customerId && FANBASES_API_KEY) {
+    try {
+      console.log(`[Fanbases Confirm] Fetching payment methods for customer: ${customerId}`);
+      
+      const pmResponse = await fetch(`${FANBASES_API_URL}/customers/${customerId}/payment-methods`, {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          "x-api-key": FANBASES_API_KEY,
+        },
+      });
+      
+      if (pmResponse.ok) {
+        const pmData = await pmResponse.json();
+        const paymentMethods = pmData.data?.payment_methods || [];
+        
+        console.log(`[Fanbases Confirm] Found ${paymentMethods.length} payment methods`);
+        
+        if (paymentMethods.length > 0) {
+          // Get the most recent payment method (likely the one just added)
+          const latestMethod = paymentMethods.find((pm: { is_default?: boolean }) => pm.is_default) || paymentMethods[0];
+          
+          cardDetails = {
+            brand: latestMethod.brand || latestMethod.card_brand,
+            last4: latestMethod.last4 || latestMethod.last_four,
+            exp_month: latestMethod.exp_month,
+            exp_year: latestMethod.exp_year,
+          };
+          
+          console.log(`[Fanbases Confirm] Card details:`, cardDetails);
+          
+          // Update or create fanbases_customers record
+          if (existingCustomer) {
+            await supabase
+              .from("fanbases_customers")
+              .update({
+                fanbases_customer_id: customerId,
+                payment_method_id: latestMethod.id,
+                updated_at: new Date().toISOString(),
+              })
+              .eq("user_id", userId);
+          } else {
+            await supabase.from("fanbases_customers").insert({
+              user_id: userId,
+              email: userEmail,
+              fanbases_customer_id: customerId,
+              payment_method_id: latestMethod.id,
+            });
+          }
+          
+          console.log(`[Fanbases Confirm] Synced payment method ${latestMethod.id} for user ${userId}`);
+        }
+      }
+    } catch (pmError) {
+      console.error("[Fanbases Confirm] Error fetching payment methods:", pmError);
+    }
+  }
   
   // Record purchase for audit trail
   await supabase.from("user_purchases").insert({
@@ -598,9 +709,20 @@ async function recordCardSetup(
 
   console.log(`[Fanbases Confirm] Card setup recorded for user ${userId}`);
 
+  // Build card display string
+  const cardBrand = cardDetails.brand ? cardDetails.brand.charAt(0).toUpperCase() + cardDetails.brand.slice(1) : "Card";
+  const cardDisplay = cardDetails.last4 ? `${cardBrand} ending in ${cardDetails.last4}` : "Your card";
+
   return {
     success: true,
     message: "Card saved successfully",
-    details: { product_id: internalReference },
+    details: { 
+      product_id: internalReference,
+      card_brand: cardDetails.brand,
+      card_last4: cardDetails.last4,
+      card_exp_month: cardDetails.exp_month,
+      card_exp_year: cardDetails.exp_year,
+      card_display: cardDisplay,
+    },
   };
 }
