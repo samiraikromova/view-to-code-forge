@@ -365,6 +365,8 @@ Deno.serve(async (req) => {
       result = await grantSubscription(supabase, userId, internal_reference, payment_intent, priceCents);
     } else if (product_type === "module") {
       result = await grantModuleAccess(supabase, userId, internal_reference, payment_intent, priceCents);
+    } else if (product_type === "card_setup") {
+      result = await recordCardSetup(supabase, userId, internal_reference, payment_intent, priceCents);
     }
 
     console.log(`[Fanbases Confirm] Result:`, result);
@@ -569,5 +571,36 @@ async function grantModuleAccess(
     success: true,
     message: `Successfully unlocked module: ${moduleName}`,
     details: { module_id: internalReference, module_name: moduleName },
+  };
+}
+
+// Record card setup payment
+// deno-lint-ignore no-explicit-any
+async function recordCardSetup(
+  supabase: any,
+  userId: string,
+  internalReference: string,
+  paymentIntent: string,
+  priceCents: number,
+) {
+  // Card setup doesn't grant any access, just records the payment
+  // The actual card is synced via fetchPaymentMethods after redirect
+  
+  // Record purchase for audit trail
+  await supabase.from("user_purchases").insert({
+    user_id: userId,
+    product_id: internalReference,
+    product_type: "card_setup",
+    amount_cents: priceCents || 100, // Default to $1.00 if not provided
+    charge_id: paymentIntent,
+    status: "completed",
+  });
+
+  console.log(`[Fanbases Confirm] Card setup recorded for user ${userId}`);
+
+  return {
+    success: true,
+    message: "Card saved successfully",
+    details: { product_id: internalReference },
   };
 }
