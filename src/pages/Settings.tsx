@@ -154,11 +154,30 @@ export default function Settings() {
     }
   }, [refreshProfile]);
 
-  // Handle return from Fanbases checkout - cancelled card setup
+  // Handle return from Fanbases checkout - card setup
   useEffect(() => {
     const setup = searchParams.get('setup');
+    const paymentId = searchParams.get('payment_id');
     
-    if (setup === 'cancelled') {
+    if (setup === 'complete' && paymentId) {
+      // Fanbases doesn't respect success_url, so redirect to payment-confirm manually
+      const productType = searchParams.get('metadata[product_type]') || 'card_setup';
+      const internalRef = searchParams.get('metadata[internal_reference]') || 'card_setup_fee';
+      const fanbasesProductId = searchParams.get('metadata[fanbases_product_id]') || '';
+      
+      // Build payment-confirm URL with required params
+      const confirmUrl = new URL('/payment-confirm', window.location.origin);
+      confirmUrl.searchParams.set('payment_intent', paymentId);
+      confirmUrl.searchParams.set('redirect_status', 'succeeded');
+      confirmUrl.searchParams.set('product_type', productType);
+      confirmUrl.searchParams.set('internal_reference', internalRef);
+      if (fanbasesProductId) {
+        confirmUrl.searchParams.set('fanbases_product_id', fanbasesProductId);
+      }
+      
+      // Redirect to payment-confirm page
+      window.location.href = confirmUrl.toString();
+    } else if (setup === 'cancelled') {
       setSearchParams({});
       toast.error('Card setup was cancelled');
     }
