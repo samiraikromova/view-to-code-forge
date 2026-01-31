@@ -245,6 +245,9 @@ export default function Settings() {
         pro: "pro",
       };
       setCurrentTier(tierMap[profile.subscription_tier] || "free");
+    }
+    // Stop loading once we have user (profile may be null for trial users)
+    if (user) {
       setLoading(false);
     }
   }, [profile, user]);
