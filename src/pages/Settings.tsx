@@ -51,8 +51,8 @@ export default function Settings() {
           localStorage.setItem('fanbases_checkout_session', result.checkout_session_id);
         }
         setShowCardSetupModal(false);
-        window.open(result.checkout_url, '_blank');
-        toast.info('Complete the payment in the new tab, then return here and click "Refresh" to see your card');
+        // Redirect in same window so confirmation runs when returning
+        window.location.href = result.checkout_url;
       } else {
         toast.error(result.error || 'Failed to set up payment method');
       }
