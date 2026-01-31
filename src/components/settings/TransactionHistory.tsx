@@ -187,19 +187,31 @@ export function TransactionHistory() {
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : transactions.length > 0 ? (
-          <>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>What You Got</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {transactions.map((tx) => (
+          (() => {
+            // Deduplicate transactions by checkout_session_id (show each transaction only once)
+            const uniqueTransactions = transactions.reduce((acc, tx) => {
+              const key = tx.checkout_session_id || tx.id;
+              if (!acc.has(key)) {
+                acc.set(key, tx);
+              }
+              return acc;
+            }, new Map<string, Transaction>());
+            const deduplicatedTx = Array.from(uniqueTransactions.values());
+
+            return (
+              <>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>What You Got</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Status</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {deduplicatedTx.map((tx) => (
                   <TableRow key={tx.id}>
                     <TableCell className="text-muted-foreground text-sm">
                       {formatDate(tx.created_at)}
@@ -274,7 +286,9 @@ export function TransactionHistory() {
                 View & Manage All Orders
               </a>
             </Button>
-          </>
+              </>
+            );
+          })()
         ) : (
           <div className="text-center py-8">
             <Receipt className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
