@@ -97,8 +97,13 @@ export function useAccess() {
             .select("trial_started_at, trial_ends_at, subscription_tier")
             .eq("id", user.id)
             .single(),
-          // Purchases
-          supabase.from("user_purchases").select("product_id").eq("user_id", user.id).eq("status", "completed"),
+          // Purchased modules from checkout_sessions (completed module purchases)
+          supabase
+            .from("checkout_sessions")
+            .select("product_id")
+            .eq("user_id", user.id)
+            .eq("product_type", "module")
+            .eq("status", "completed"),
           // Subscription
           supabase
             .from("user_subscriptions")

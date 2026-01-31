@@ -156,16 +156,18 @@ export async function purchaseCredits(credits: number): Promise<ChargeResult> {
 
 /**
  * Check if user has access to a specific module
+ * Uses checkout_sessions table with status='completed' and product_type='module'
  */
 export async function checkModuleAccess(moduleSlug: string): Promise<{ has_access: boolean; access_type?: string }> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { has_access: false };
 
   const { data, error } = await supabase
-    .from('user_purchases')
+    .from('checkout_sessions')
     .select('id')
     .eq('user_id', user.id)
     .eq('product_id', moduleSlug)
+    .eq('product_type', 'module')
     .eq('status', 'completed')
     .maybeSingle();
 
@@ -178,16 +180,17 @@ export async function checkModuleAccess(moduleSlug: string): Promise<{ has_acces
 }
 
 /**
- * Get all user's purchased modules
+ * Get all user's purchased modules from checkout_sessions
  */
 export async function getUserPurchases(): Promise<string[]> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return [];
 
   const { data, error } = await supabase
-    .from('user_purchases')
+    .from('checkout_sessions')
     .select('product_id')
     .eq('user_id', user.id)
+    .eq('product_type', 'module')
     .eq('status', 'completed');
 
   if (error) {
@@ -195,7 +198,7 @@ export async function getUserPurchases(): Promise<string[]> {
     return [];
   }
 
-  return data?.map(p => p.product_id) || [];
+  return data?.map(p => p.product_id).filter(Boolean) as string[] || [];
 }
 
 /**
