@@ -24,7 +24,7 @@ export function FreeTrialModal({
     setLoading(true);
     try {
       const now = new Date();
-      const trialEndDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days from now
+      const trialEndDate = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000); // 2 days from now (testing)
 
       const { error } = await supabase
         .from('users')
