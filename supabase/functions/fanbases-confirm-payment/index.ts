@@ -380,21 +380,54 @@ Deno.serve(async (req) => {
       updateData.amount_cents = priceCents;
     }
     
-    // Update by checkout_session_id if provided, otherwise by product_id
+    // Update by checkout_session_id if provided, otherwise by product_id or product_type
     if (checkout_session_id) {
-      await supabase
+      const { error: updateError } = await supabase
         .from("checkout_sessions")
         .update(updateData)
         .eq("user_id", userId)
         .eq("checkout_session_id", checkout_session_id)
         .eq("status", "pending");
+      
+      if (updateError) {
+        console.error("[Fanbases Confirm] Error updating checkout session by checkout_session_id:", updateError);
+      } else {
+        console.log(`[Fanbases Confirm] Updated checkout session by checkout_session_id: ${checkout_session_id}`);
+      }
     } else {
-      await supabase
+      // Try to update by product_id (internal_reference)
+      const { data: updatedByProductId, error: updateError1 } = await supabase
         .from("checkout_sessions")
         .update(updateData)
         .eq("user_id", userId)
         .eq("product_id", internal_reference)
-        .eq("status", "pending");
+        .eq("status", "pending")
+        .select("id");
+      
+      if (updateError1) {
+        console.error("[Fanbases Confirm] Error updating checkout session by product_id:", updateError1);
+      } else if (updatedByProductId && updatedByProductId.length > 0) {
+        console.log(`[Fanbases Confirm] Updated checkout session by product_id: ${internal_reference}`);
+      } else {
+        // If no match by product_id, try by product_type (for card_setup, etc.)
+        const { data: updatedByType, error: updateError2 } = await supabase
+          .from("checkout_sessions")
+          .update(updateData)
+          .eq("user_id", userId)
+          .eq("product_type", product_type)
+          .eq("status", "pending")
+          .order("created_at", { ascending: false })
+          .limit(1)
+          .select("id");
+          
+        if (updateError2) {
+          console.error("[Fanbases Confirm] Error updating checkout session by product_type:", updateError2);
+        } else if (updatedByType && updatedByType.length > 0) {
+          console.log(`[Fanbases Confirm] Updated checkout session by product_type: ${product_type}`);
+        } else {
+          console.log("[Fanbases Confirm] No pending checkout session found to update");
+        }
+      }
     }
 
     return new Response(JSON.stringify(result), {
