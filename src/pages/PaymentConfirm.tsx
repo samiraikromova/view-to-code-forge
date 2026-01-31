@@ -16,6 +16,12 @@ interface PaymentDetails {
   module_name?: string;
   period_start?: string;
   period_end?: string;
+  // Card setup fields
+  card_brand?: string;
+  card_last4?: string;
+  card_exp_month?: number;
+  card_exp_year?: number;
+  card_display?: string;
 }
 
 // Tier feature configurations
@@ -404,6 +410,13 @@ export default function PaymentConfirm() {
         );
 
       case "card_setup":
+        const cardDisplay = details.card_display || "Your card";
+        const cardBrand = details.card_brand ? 
+          details.card_brand.charAt(0).toUpperCase() + details.card_brand.slice(1) : null;
+        const cardLast4 = details.card_last4;
+        const cardExpiry = details.card_exp_month && details.card_exp_year ? 
+          `${String(details.card_exp_month).padStart(2, '0')}/${String(details.card_exp_year).slice(-2)}` : null;
+        
         return (
           <div className="space-y-6">
             <div className="flex items-center justify-center gap-3">
@@ -418,12 +431,26 @@ export default function PaymentConfirm() {
             </div>
 
             <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/30">
-              <CardContent className="p-6 text-center">
-                <p className="text-foreground mb-2">
-                  Your card is now saved in your account
-                </p>
-                <p className="text-muted-foreground text-sm">
-                  You can manage your payment methods in Settings
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="h-12 w-12 rounded-lg bg-background/50 flex items-center justify-center">
+                      <CreditCard className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-semibold text-foreground">
+                        {cardBrand && cardLast4 ? `${cardBrand} •••• ${cardLast4}` : cardDisplay}
+                      </p>
+                      {cardExpiry && (
+                        <p className="text-sm text-muted-foreground">Expires {cardExpiry}</p>
+                      )}
+                    </div>
+                  </div>
+                  <Badge className="bg-accent/20 text-accent border-accent/30">Saved</Badge>
+                </div>
+                <Separator className="my-4" />
+                <p className="text-sm text-muted-foreground text-center">
+                  This card is now saved for future purchases. You can manage your payment methods anytime in Settings.
                 </p>
               </CardContent>
             </Card>

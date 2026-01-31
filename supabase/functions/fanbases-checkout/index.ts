@@ -322,9 +322,10 @@ Deno.serve(async (req) => {
       paymentUrl.searchParams.set("prefill[email]", email);
       paymentUrl.searchParams.set("prefill[name]", fullName);
       
-      // Add success/cancel URLs
+      // Add success/cancel URLs - redirect to payment-confirm page for proper processing
       const appBaseUrl = body.base_url || "https://view-to-code-forge.lovable.app";
-      const finalSuccessUrl = success_url || `${appBaseUrl}/settings?setup=complete`;
+      // Card setup goes to payment-confirm page just like other payment types
+      const finalSuccessUrl = success_url || `${appBaseUrl}/payment-confirm`;
       const finalCancelUrl = cancel_url || `${appBaseUrl}/settings?setup=cancelled`;
       
       paymentUrl.searchParams.set("success_url", finalSuccessUrl);
