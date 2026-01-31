@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, CreditCard, Check, Zap, Loader2, RefreshCw } from "lucide-react";
+import { ArrowLeft, CreditCard, Check, Zap, Loader2, RefreshCw, ExternalLink } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { PLANS, SubscriptionTier } from "@/types/subscription";
 import { useAuth } from "@/hooks/useAuth";
@@ -414,74 +414,113 @@ export default function Settings() {
             </div>
           </CardHeader>
           <CardContent>
-            {loadingPaymentMethods ? (
-              <div className="flex items-center justify-center py-6">
-                <Loader2 className="h-8 w-8 text-primary animate-spin" />
-                <span className="ml-2 text-muted-foreground">Loading payment methods...</span>
-              </div>
-            ) : paymentMethods.length > 0 ? (
-              <div className="space-y-3">
-                {paymentMethods.map((pm) => (
-                  <div 
-                    key={pm.id} 
-                    className="flex items-center justify-between p-4 border border-border rounded-lg bg-surface/30"
-                  >
-                    <div className="flex items-center gap-4">
-                      <div className="h-10 w-10 rounded-lg bg-[#8e4b9b]/10 flex items-center justify-center">
-                        <CreditCard className="h-5 w-5 text-[#8e4b9b]" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-foreground">
-                          {formatCardBrand(pm.brand)} •••• {pm.last4 || '****'}
-                        </p>
-                        {pm.exp_month && pm.exp_year && (
-                          <p className="text-sm text-muted-foreground">
-                            Expires {pm.exp_month.toString().padStart(2, '0')}/{pm.exp_year.toString().slice(-2)}
+            {(() => {
+              // Deduplicate payment methods by last4 + brand (show each card only once)
+              const uniquePaymentMethods = paymentMethods.reduce((acc, pm) => {
+                const key = `${pm.brand || ''}-${pm.last4 || ''}`;
+                if (!acc.has(key)) {
+                  acc.set(key, pm);
+                }
+                return acc;
+              }, new Map<string, PaymentMethod>());
+              const deduplicatedMethods = Array.from(uniquePaymentMethods.values());
+
+              // Customer portal URL - for production use: https://fanbasis.com/portal/customer/login?token=...
+              const customerPortalUrl = "https://qa.dev-fan-basis.com/portal/customer/login?token=cc8a871002290d3cc4e93bdafe136d0fb6a807eb8b5a41b6c11a51d4fa3a4826";
+
+              return loadingPaymentMethods ? (
+                <div className="flex items-center justify-center py-6">
+                  <Loader2 className="h-8 w-8 text-primary animate-spin" />
+                  <span className="ml-2 text-muted-foreground">Loading payment methods...</span>
+                </div>
+              ) : deduplicatedMethods.length > 0 ? (
+                <div className="space-y-3">
+                  {deduplicatedMethods.map((pm) => (
+                    <div 
+                      key={pm.id} 
+                      className="flex items-center justify-between p-4 border border-border rounded-lg bg-surface/30"
+                    >
+                      <div className="flex items-center gap-4">
+                        <div className="h-10 w-10 rounded-lg bg-[#8e4b9b]/10 flex items-center justify-center">
+                          <CreditCard className="h-5 w-5 text-[#8e4b9b]" />
+                        </div>
+                        <div>
+                          <p className="font-medium text-foreground">
+                            {formatCardBrand(pm.brand)} •••• {pm.last4 || '****'}
                           </p>
-                        )}
+                          {pm.exp_month && pm.exp_year && (
+                            <p className="text-sm text-muted-foreground">
+                              Expires {pm.exp_month.toString().padStart(2, '0')}/{pm.exp_year.toString().slice(-2)}
+                            </p>
+                          )}
+                        </div>
                       </div>
+                      {pm.is_default && (
+                        <Badge variant="outline" className="bg-accent/10 text-accent border-accent/30">
+                          Default
+                        </Badge>
+                      )}
                     </div>
-                    {pm.is_default && (
-                      <Badge variant="outline" className="bg-accent/10 text-accent border-accent/30">
-                        Default
-                      </Badge>
+                  ))}
+                  <Button 
+                    variant="outline"
+                    className="w-full mt-4 gap-2" 
+                    onClick={handleAddCardClick}
+                    disabled={settingUpCard}
+                  >
+                    {settingUpCard ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <CreditCard className="h-4 w-4" />
                     )}
-                  </div>
-                ))}
-                <Button 
-                  variant="outline"
-                  className="w-full mt-4 gap-2" 
-                  onClick={handleAddCardClick}
-                  disabled={settingUpCard}
-                >
-                  {settingUpCard ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <CreditCard className="h-4 w-4" />
-                  )}
-                  Add Another Card
-                </Button>
-              </div>
-            ) : (
-              <div className="text-center py-6">
-                <CreditCard className="h-12 w-12 text-accent mx-auto mb-4" />
-                <p className="text-muted-foreground mb-4">
-                  No payment method on file. Add a card to enable one-click purchases.
-                </p>
-                <Button 
-                  className="bg-accent hover:bg-accent-hover text-accent-foreground gap-2" 
-                  onClick={handleAddCardClick}
-                  disabled={settingUpCard}
-                >
-                  {settingUpCard ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <CreditCard className="h-4 w-4" />
-                  )}
-                  Add Card
-                </Button>
-              </div>
-            )}
+                    Add Another Card
+                  </Button>
+                  
+                  <Separator className="my-4" />
+                  
+                  <a 
+                    href={customerPortalUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    Manage your payment methods here (make default, remove)
+                  </a>
+                </div>
+              ) : (
+                <div className="text-center py-6">
+                  <CreditCard className="h-12 w-12 text-accent mx-auto mb-4" />
+                  <p className="text-muted-foreground mb-4">
+                    No payment method on file. Add a card to enable one-click purchases.
+                  </p>
+                  <Button 
+                    className="bg-accent hover:bg-accent-hover text-accent-foreground gap-2" 
+                    onClick={handleAddCardClick}
+                    disabled={settingUpCard}
+                  >
+                    {settingUpCard ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <CreditCard className="h-4 w-4" />
+                    )}
+                    Add Card
+                  </Button>
+                  
+                  <Separator className="my-4" />
+                  
+                  <a 
+                    href={customerPortalUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                    Manage your payment methods here (make default, remove)
+                  </a>
+                </div>
+              );
+            })()}
           </CardContent>
         </Card>
       </div>
