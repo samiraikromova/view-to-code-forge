@@ -254,7 +254,7 @@ export default function Settings() {
     return brand.charAt(0).toUpperCase() + brand.slice(1).toLowerCase();
   };
 
-  if (loading && !profile) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
