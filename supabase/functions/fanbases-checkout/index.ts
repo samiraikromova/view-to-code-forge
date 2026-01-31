@@ -113,8 +113,13 @@ Deno.serve(async (req) => {
     // Get user profile for metadata
     const { data: userProfile } = await supabase.from("users").select("email, name").eq("id", user.id).maybeSingle();
 
+    // Also get auth user metadata for fallback name
+    const { data: authUserData } = await supabase.auth.admin.getUserById(user.id);
+    const authUserMeta = authUserData?.user?.user_metadata;
+
     const email = userProfile?.email || user.email || "";
-    const fullName = userProfile?.name || "";
+    // Try profile name, then auth metadata full_name, then auth metadata name
+    const fullName = userProfile?.name || authUserMeta?.full_name || authUserMeta?.name || "";
 
     if (action === "create_checkout") {
       // Look up the product from our fanbases_products table
