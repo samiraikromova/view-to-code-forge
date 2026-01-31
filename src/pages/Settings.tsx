@@ -154,47 +154,11 @@ export default function Settings() {
     }
   }, [refreshProfile]);
 
-  // Handle return from Fanbases checkout - card setup
+  // Handle return from Fanbases checkout - cancelled card setup
   useEffect(() => {
     const setup = searchParams.get('setup');
-    const paymentId = searchParams.get('payment_id');
-    const email = searchParams.get('email');
-    const productType = searchParams.get('metadata[product_type]') || searchParams.get('product_type');
-    const internalReference = searchParams.get('metadata[internal_reference]') || searchParams.get('internal_reference');
     
-    if (setup === 'complete') {
-      console.log('[Settings] Returned from card setup with payment_id:', paymentId, 'email:', email);
-      
-      // Clear URL params immediately to prevent reprocessing
-      setSearchParams({});
-      
-      // If we have a payment_id, confirm the payment first
-      if (paymentId) {
-        setConfirmingPayment(true);
-        supabase.functions.invoke('fanbases-confirm-payment', {
-          body: {
-            payment_intent: paymentId,
-            redirect_status: 'succeeded',
-            product_type: productType || 'card_setup',
-            internal_reference: internalReference || 'card_setup_fee',
-          },
-        }).then(({ data, error }) => {
-          console.log('[Settings] Card setup confirm response:', data, error);
-          if (data?.success && !data?.already_processed) {
-            toast.success('Card saved successfully!');
-          } else if (data?.already_processed) {
-            toast.info('Card was already saved');
-          }
-        }).catch((err) => {
-          console.error('[Settings] Card setup confirm error:', err);
-        }).finally(() => {
-          setConfirmingPayment(false);
-        });
-      }
-      
-      // Fetch payment methods with the payment ID and email from redirect
-      loadPaymentMethods(paymentId || undefined, email || undefined, true);
-    } else if (setup === 'cancelled') {
+    if (setup === 'cancelled') {
       setSearchParams({});
       toast.error('Card setup was cancelled');
     }
