@@ -462,11 +462,20 @@ export default function PaymentConfirm() {
               <Button 
                 size="lg" 
                 className="w-full gap-2 bg-accent hover:bg-accent-hover text-accent-foreground"
-                onClick={() => navigate("/settings#payment-methods")}
+                onClick={() => navigate("/chat")}
+              >
+                <MessageSquare className="h-5 w-5" />
+                Start Chatting
+                <ArrowRight className="h-4 w-4" />
+              </Button>
+              <Button 
+                variant="outline"
+                size="lg" 
+                className="w-full gap-2"
+                onClick={() => navigate("/settings")}
               >
                 <Settings className="h-5 w-5" />
-                View Payment Methods
-                <ArrowRight className="h-4 w-4" />
+                Manage Payment Methods
               </Button>
             </div>
           </div>
