@@ -62,19 +62,21 @@ export default function PaymentConfirm() {
   const [productType, setProductType] = useState<string | null>(null);
 
   const confirmPayment = useCallback(async () => {
-    // Fanbases sends payment_id OR payment_intent depending on the flow
+    // Fanbases sends payment_id for card setup and payment_intent for other flows
+    // Always check both formats
     const paymentIntent = searchParams.get("payment_intent") || searchParams.get("payment_id");
     // redirect_status may be missing - if user reached success URL, assume success
     const redirectStatus = searchParams.get("redirect_status") || "succeeded";
     
-    // Extract metadata from URL (Fanbases uses metadata[key] format)
+    // Extract metadata from URL (Fanbases uses metadata[key] format with brackets)
+    // Support both bracket notation and direct params
     const urlProductType = searchParams.get("metadata[product_type]") || searchParams.get("product_type");
     const urlInternalReference = searchParams.get("metadata[internal_reference]") || searchParams.get("internal_reference");
-    const urlFanbasesProductId = searchParams.get("metadata[fanbases_product_id]");
-    const urlUserId = searchParams.get("metadata[user_id]");
+    const urlFanbasesProductId = searchParams.get("metadata[fanbases_product_id]") || searchParams.get("fanbases_product_id");
+    const urlUserId = searchParams.get("metadata[user_id]") || searchParams.get("user_id");
     
     console.log("[PaymentConfirm] URL params:", Object.fromEntries(searchParams.entries()));
-    console.log("[PaymentConfirm] Extracted:", { paymentIntent, redirectStatus, urlProductType, urlInternalReference, urlUserId });
+    console.log("[PaymentConfirm] Extracted:", { paymentIntent, redirectStatus, urlProductType, urlInternalReference, urlUserId, urlFanbasesProductId });
 
     if (!paymentIntent) {
       setStatus("error");

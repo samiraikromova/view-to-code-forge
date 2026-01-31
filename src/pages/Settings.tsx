@@ -155,28 +155,34 @@ export default function Settings() {
   }, [refreshProfile]);
 
   // Handle return from Fanbases checkout - card setup
+  // Fanbases ignores success_url and redirects back to /settings with setup=complete
+  // We need to manually redirect to /payment-confirm with all the params
   useEffect(() => {
     const setup = searchParams.get('setup');
     const paymentId = searchParams.get('payment_id');
     
     if (setup === 'complete' && paymentId) {
-      // Fanbases doesn't respect success_url, so redirect to payment-confirm manually
-      const productType = searchParams.get('metadata[product_type]') || 'card_setup';
-      const internalRef = searchParams.get('metadata[internal_reference]') || 'card_setup_fee';
-      const fanbasesProductId = searchParams.get('metadata[fanbases_product_id]') || '';
+      console.log('[Settings] Card setup complete, redirecting to payment-confirm');
+      console.log('[Settings] All params:', Object.fromEntries(searchParams.entries()));
       
-      // Build payment-confirm URL with required params
+      // Forward all params to payment-confirm page (same as Fanbases would do for other payment types)
+      // Include metadata with bracket notation (same format as Fanbases uses)
       const confirmUrl = new URL('/payment-confirm', window.location.origin);
-      confirmUrl.searchParams.set('payment_intent', paymentId);
-      confirmUrl.searchParams.set('redirect_status', 'succeeded');
-      confirmUrl.searchParams.set('product_type', productType);
-      confirmUrl.searchParams.set('internal_reference', internalRef);
-      if (fanbasesProductId) {
-        confirmUrl.searchParams.set('fanbases_product_id', fanbasesProductId);
-      }
       
-      // Redirect to payment-confirm page
+      // Copy ALL params from the current URL
+      searchParams.forEach((value, key) => {
+        // Skip setup param itself and success/cancel URLs
+        if (key !== 'setup' && !key.includes('success_url') && !key.includes('cancel_url')) {
+          confirmUrl.searchParams.set(key, value);
+        }
+      });
+      
+      // Ensure we have the required params for the confirmation flow
+      confirmUrl.searchParams.set('redirect_status', 'succeeded');
+      
+      console.log('[Settings] Redirecting to:', confirmUrl.toString());
       window.location.href = confirmUrl.toString();
+      return;
     } else if (setup === 'cancelled') {
       setSearchParams({});
       toast.error('Card setup was cancelled');
