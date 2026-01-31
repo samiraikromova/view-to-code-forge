@@ -425,8 +425,8 @@ export default function Settings() {
               }, new Map<string, PaymentMethod>());
               const deduplicatedMethods = Array.from(uniquePaymentMethods.values());
 
-              // Customer portal URL - for production use: https://fanbasis.com/portal/customer/login?token=...
-              const customerPortalUrl = "https://qa.dev-fan-basis.com/portal/customer/login?token=cc8a871002290d3cc4e93bdafe136d0fb6a807eb8b5a41b6c11a51d4fa3a4826";
+              // Customer portal URL - for production use: https://fanbasis.com/portal/customer/settings?token=...
+              const customerPortalUrl = "https://qa.dev-fan-basis.com/portal/customer/settings?token=cc8a871002290d3cc4e93bdafe136d0fb6a807eb8b5a41b6c11a51d4fa3a4826";
 
               return loadingPaymentMethods ? (
                 <div className="flex items-center justify-center py-6">
@@ -478,15 +478,20 @@ export default function Settings() {
                   
                   <Separator className="my-4" />
                   
-                  <a 
-                    href={customerPortalUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  <Button
+                    variant="outline"
+                    className="w-full gap-2 border-primary/30 hover:bg-primary/10"
+                    asChild
                   >
-                    <ExternalLink className="h-4 w-4" />
-                    Manage your payment methods here (make default, remove)
-                  </a>
+                    <a 
+                      href={customerPortalUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                      Manage Cards (Set Default, Remove)
+                    </a>
+                  </Button>
                 </div>
               ) : (
                 <div className="text-center py-6">
@@ -509,15 +514,20 @@ export default function Settings() {
                   
                   <Separator className="my-4" />
                   
-                  <a 
-                    href={customerPortalUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  <Button
+                    variant="outline"
+                    className="w-full gap-2 border-primary/30 hover:bg-primary/10"
+                    asChild
                   >
-                    <ExternalLink className="h-4 w-4" />
-                    Manage your payment methods here (make default, remove)
-                  </a>
+                    <a 
+                      href={customerPortalUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                      Manage Cards (Set Default, Remove)
+                    </a>
+                  </Button>
                 </div>
               );
             })()}
