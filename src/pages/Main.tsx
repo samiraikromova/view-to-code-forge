@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Plus, Sparkles, RefreshCw, UserIcon, CreditCard, LogOut, TrendingUp, Settings, FileText, Loader2 } from "lucide-react";
 import { MainNavigation, NavigationMode } from "@/components/MainNavigation";
 import { AmbientBackground } from "@/components/AmbientBackground";
@@ -54,6 +54,7 @@ const Main = () => {
   const { user, profile, signOut } = useAuth();
   const { purchasedModules, hasActiveSubscription, checkModuleAccess, refreshAccess } = useAccess();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [mode, setMode] = useState<NavigationMode>("chat");
   const [chatId, setChatId] = useState<string | null>(null);
   const [chats, setChats] = useState<Chat[]>([]);
@@ -175,6 +176,40 @@ const Main = () => {
 
     fetchCourseVideos();
   }, [user?.id]);
+
+  // Handle URL parameters for module navigation (e.g., after module purchase)
+  useEffect(() => {
+    const moduleParam = searchParams.get("module");
+    const modeParam = searchParams.get("mode");
+    
+    if (moduleParam) {
+      // Wait for data to load before selecting module
+      if (!videosLoading && (materialsData.length > 0 || recordingsData.length > 0)) {
+        // Find the module in materials or recordings
+        const foundInMaterials = materialsData.find(m => m.id === moduleParam);
+        const foundInRecordings = recordingsData.find(m => m.id === moduleParam);
+        
+        if (foundInMaterials) {
+          setContentType("materials");
+          setSelectedModuleId(moduleParam);
+          setMode("learn");
+        } else if (foundInRecordings) {
+          setContentType("recordings");
+          setSelectedModuleId(moduleParam);
+          setMode("learn");
+        } else {
+          // Module not found, just switch to learn mode
+          setMode("learn");
+        }
+        
+        // Clear the URL params after handling
+        setSearchParams({});
+      }
+    } else if (modeParam === "learn") {
+      setMode("learn");
+      setSearchParams({});
+    }
+  }, [searchParams, videosLoading, materialsData, recordingsData, setSearchParams]);
 
   interface DbModule {
     id: string;

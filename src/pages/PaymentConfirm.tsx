@@ -414,7 +414,7 @@ export default function PaymentConfirm() {
               <Button 
                 size="lg" 
                 className="w-full gap-2 bg-accent hover:bg-accent-hover text-accent-foreground"
-                onClick={() => navigate(moduleId ? `/chat?module=${moduleId}` : "/chat")}
+                onClick={() => navigate(moduleId ? `/chat?module=${moduleId}&mode=learn` : "/chat?mode=learn")}
               >
                 <BookOpen className="h-5 w-5" />
                 Go to Module
