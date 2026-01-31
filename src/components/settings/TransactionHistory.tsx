@@ -40,7 +40,7 @@ function getProductIcon(type: string) {
     case "module":
       return <BookOpen className="h-4 w-4 text-accent" />;
     case "card_setup":
-      return <CreditCard className="h-4 w-4 text-primary" />;
+      return <CreditCard className="h-4 w-4 text-accent" />;
     default:
       return <Receipt className="h-4 w-4 text-muted-foreground" />;
   }
@@ -73,10 +73,7 @@ function formatReceived(tx: Transaction): string {
 }
 
 // Format amount for display
-function formatAmount(amountCents: number | null, productType: string): string {
-  if (productType === "card_setup") {
-    return "Free";
-  }
+function formatAmount(amountCents: number | null): string {
   if (amountCents === null || amountCents === 0) {
     return "—";
   }
@@ -226,7 +223,7 @@ export function TransactionHistory() {
                       {formatReceived(tx)}
                     </TableCell>
                     <TableCell className="text-foreground">
-                      {formatAmount(tx.amount_cents, tx.product_type)}
+                      {formatAmount(tx.amount_cents)}
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className="bg-primary/10 border-primary/20" style={{ color: '#7b4485' }}>
