@@ -56,10 +56,11 @@ const TIER_FEATURES = {
 export default function PaymentConfirm() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [status, setStatus] = useState<"processing" | "success" | "error">("processing");
+  const [status, setStatus] = useState<"waiting" | "processing" | "success" | "error">("waiting");
   const [message, setMessage] = useState("");
   const [details, setDetails] = useState<PaymentDetails | null>(null);
   const [productType, setProductType] = useState<string | null>(null);
+  const [countdown, setCountdown] = useState(5);
 
   const confirmPayment = useCallback(async () => {
     // Fanbases sends payment_id for card setup and payment_intent for other flows
@@ -198,9 +199,29 @@ export default function PaymentConfirm() {
     }
   }, [searchParams, navigate]);
 
+  // Initial delay to let users read Fanbases confirmation page
   useEffect(() => {
-    confirmPayment();
-  }, [confirmPayment]);
+    // Start with 5 second countdown
+    const countdownInterval = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(countdownInterval);
+          setStatus("processing");
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(countdownInterval);
+  }, []);
+
+  // Start confirmation when status changes to processing
+  useEffect(() => {
+    if (status === "processing") {
+      confirmPayment();
+    }
+  }, [status, confirmPayment]);
 
   const handleClose = () => {
     window.close();
@@ -494,6 +515,24 @@ export default function PaymentConfirm() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <div className="w-full max-w-md">
+        {status === "waiting" && (
+          <div className="text-center p-6">
+            <CheckCircle className="h-12 w-12 text-accent mx-auto mb-4" />
+            <p className="text-lg font-semibold text-foreground">Payment Successful!</p>
+            <p className="text-sm text-muted-foreground mt-2">
+              Confirming your purchase in {countdown} seconds...
+            </p>
+            <div className="mt-4">
+              <div className="w-full bg-muted rounded-full h-2">
+                <div 
+                  className="bg-accent h-2 rounded-full transition-all duration-1000" 
+                  style={{ width: `${((5 - countdown) / 5) * 100}%` }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
         {status === "processing" && (
           <div className="text-center p-6">
             <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
