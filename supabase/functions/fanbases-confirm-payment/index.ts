@@ -380,12 +380,22 @@ Deno.serve(async (req) => {
       updateData.amount_cents = priceCents;
     }
     
-    await supabase
-      .from("checkout_sessions")
-      .update(updateData)
-      .eq("user_id", userId)
-      .eq("product_id", internal_reference)
-      .eq("status", "pending");
+    // Update by checkout_session_id if provided, otherwise by product_id
+    if (checkout_session_id) {
+      await supabase
+        .from("checkout_sessions")
+        .update(updateData)
+        .eq("user_id", userId)
+        .eq("checkout_session_id", checkout_session_id)
+        .eq("status", "pending");
+    } else {
+      await supabase
+        .from("checkout_sessions")
+        .update(updateData)
+        .eq("user_id", userId)
+        .eq("product_id", internal_reference)
+        .eq("status", "pending");
+    }
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
