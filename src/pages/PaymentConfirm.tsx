@@ -74,9 +74,10 @@ export default function PaymentConfirm() {
     const urlInternalReference = searchParams.get("metadata[internal_reference]") || searchParams.get("internal_reference");
     const urlFanbasesProductId = searchParams.get("metadata[fanbases_product_id]") || searchParams.get("fanbases_product_id");
     const urlUserId = searchParams.get("metadata[user_id]") || searchParams.get("user_id");
+    const urlCheckoutSessionId = searchParams.get("checkout_session_id");
     
     console.log("[PaymentConfirm] URL params:", Object.fromEntries(searchParams.entries()));
-    console.log("[PaymentConfirm] Extracted:", { paymentIntent, redirectStatus, urlProductType, urlInternalReference, urlUserId, urlFanbasesProductId });
+    console.log("[PaymentConfirm] Extracted:", { paymentIntent, redirectStatus, urlProductType, urlInternalReference, urlUserId, urlFanbasesProductId, urlCheckoutSessionId });
 
     if (!paymentIntent) {
       setStatus("error");
@@ -113,7 +114,7 @@ export default function PaymentConfirm() {
       // If we have metadata from URL, use it directly
       let fetchedProductType = urlProductType;
       let internalReference = urlInternalReference;
-      let checkoutSessionId: string | undefined;
+      let checkoutSessionId: string | undefined = urlCheckoutSessionId || undefined;
 
       // If we don't have metadata from URL, look up from checkout_sessions table
       if (!fetchedProductType || !internalReference) {
@@ -144,7 +145,7 @@ export default function PaymentConfirm() {
         console.log("[PaymentConfirm] Found checkout session:", checkoutSession);
         fetchedProductType = checkoutSession.product_type;
         internalReference = checkoutSession.product_id;
-        checkoutSessionId = checkoutSession.id;
+        checkoutSessionId = checkoutSession.checkout_session_id;
       }
 
       setProductType(fetchedProductType || null);

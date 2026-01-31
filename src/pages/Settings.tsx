@@ -180,6 +180,13 @@ export default function Settings() {
       // Ensure we have the required params for the confirmation flow
       confirmUrl.searchParams.set('redirect_status', 'succeeded');
       
+      // Add checkout_session_id from localStorage if available (stored before redirect)
+      const storedSessionId = localStorage.getItem('fanbases_checkout_session');
+      if (storedSessionId) {
+        confirmUrl.searchParams.set('checkout_session_id', storedSessionId);
+        localStorage.removeItem('fanbases_checkout_session'); // Clean up
+      }
+      
       console.log('[Settings] Redirecting to:', confirmUrl.toString());
       window.location.href = confirmUrl.toString();
       return;
@@ -415,8 +422,9 @@ export default function Settings() {
           </CardHeader>
           <CardContent>
             {(() => {
-              // Deduplicate payment methods by last4 + brand (show each card only once)
-              const uniquePaymentMethods = paymentMethods.reduce((acc, pm) => {
+              // Filter out "link" type payment methods (only show cards), then deduplicate by last4 + brand
+              const cardMethods = paymentMethods.filter(pm => pm.type === 'card' && pm.last4);
+              const uniquePaymentMethods = cardMethods.reduce((acc, pm) => {
                 const key = `${pm.brand || ''}-${pm.last4 || ''}`;
                 if (!acc.has(key)) {
                   acc.set(key, pm);
