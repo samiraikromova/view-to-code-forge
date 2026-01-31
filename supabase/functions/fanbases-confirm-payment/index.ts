@@ -96,17 +96,89 @@ async function fetchCheckoutSessionAmount(
     const data = await response.json();
     console.log(`[Fanbases Confirm] Checkout session response:`, JSON.stringify(data));
 
-    // Get amount_cents from product in checkout session
-    const amountCents = data.data?.product?.amount_cents;
+    // Try multiple paths to get the amount
+    // Path 1: data.data.product.amount_cents
+    let amountCents = data.data?.product?.amount_cents;
     if (amountCents) {
-      console.log(`[Fanbases Confirm] Found amount_cents from checkout session: ${amountCents}`);
+      console.log(`[Fanbases Confirm] Found amount_cents from product: ${amountCents}`);
+      return amountCents;
+    }
+
+    // Path 2: data.data.amount_cents directly
+    amountCents = data.data?.amount_cents;
+    if (amountCents) {
+      console.log(`[Fanbases Confirm] Found amount_cents directly: ${amountCents}`);
+      return amountCents;
+    }
+
+    // Path 3: data.data.total or data.data.amount (convert from dollars to cents)
+    const amountDollars = data.data?.total || data.data?.amount;
+    if (amountDollars) {
+      amountCents = Math.round(parseFloat(amountDollars) * 100);
+      console.log(`[Fanbases Confirm] Converted amount from dollars: ${amountCents}`);
+      return amountCents;
+    }
+
+    // Path 4: data.data.product.price (convert from string like "10.00" to cents)
+    const priceStr = data.data?.product?.price;
+    if (priceStr) {
+      amountCents = Math.round(parseFloat(priceStr) * 100);
+      console.log(`[Fanbases Confirm] Converted price from product: ${amountCents}`);
+      return amountCents;
+    }
+
+    console.log(`[Fanbases Confirm] No amount found in checkout session response`);
+    return null;
+  } catch (err) {
+    const error = err as Error;
+    console.error(`[Fanbases Confirm] Checkout session fetch error:`, error);
+    return null;
+  }
+}
+
+// Fetch transaction details from Fanbases API to get amount
+async function fetchTransactionAmount(
+  transactionId: string,
+  apiKey: string,
+): Promise<number | null> {
+  try {
+    console.log(`[Fanbases Confirm] Fetching transaction for amount: ${transactionId}`);
+
+    const response = await fetch(`${FANBASES_API_URL}/transactions/${transactionId}`, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        "x-api-key": apiKey,
+      },
+    });
+
+    if (!response.ok) {
+      console.error(`[Fanbases Confirm] Transaction fetch error: ${response.status}`);
+      return null;
+    }
+
+    const data = await response.json();
+    console.log(`[Fanbases Confirm] Transaction response for amount:`, JSON.stringify(data));
+
+    // Try multiple paths to get the amount
+    let amountCents = data.data?.amount_cents;
+    if (amountCents) {
+      console.log(`[Fanbases Confirm] Found amount_cents from transaction: ${amountCents}`);
+      return amountCents;
+    }
+
+    // Try amount field (might be in dollars)
+    const amountDollars = data.data?.amount || data.data?.total;
+    if (amountDollars) {
+      amountCents = Math.round(parseFloat(amountDollars) * 100);
+      console.log(`[Fanbases Confirm] Converted transaction amount: ${amountCents}`);
       return amountCents;
     }
 
     return null;
   } catch (err) {
     const error = err as Error;
-    console.error(`[Fanbases Confirm] Checkout session fetch error:`, error);
+    console.error(`[Fanbases Confirm] Transaction amount fetch error:`, error);
     return null;
   }
 }
@@ -251,18 +323,33 @@ Deno.serve(async (req) => {
       }
     }
 
-    // If still no price and we have checkout_session_id, fetch from Fanbases API
-    if (priceCents === 0 && checkoutSession?.checkout_session_id) {
-      const apiAmount = await fetchCheckoutSessionAmount(checkoutSession.checkout_session_id, FANBASES_API_KEY);
-      if (apiAmount) {
-        priceCents = apiAmount;
-        console.log(`[Fanbases Confirm] Got price from Fanbases API: ${priceCents} cents`);
-        
-        // Update checkout_sessions with the fetched amount
+    // If still no price, try fetching from Fanbases API
+    if (priceCents === 0) {
+      // First try checkout session if we have the ID
+      if (checkoutSession?.checkout_session_id) {
+        const apiAmount = await fetchCheckoutSessionAmount(checkoutSession.checkout_session_id, FANBASES_API_KEY);
+        if (apiAmount) {
+          priceCents = apiAmount;
+          console.log(`[Fanbases Confirm] Got price from checkout session API: ${priceCents} cents`);
+        }
+      }
+      
+      // If still no price, try transaction API using payment_intent
+      if (priceCents === 0 && payment_intent) {
+        const txAmount = await fetchTransactionAmount(payment_intent, FANBASES_API_KEY);
+        if (txAmount) {
+          priceCents = txAmount;
+          console.log(`[Fanbases Confirm] Got price from transaction API: ${priceCents} cents`);
+        }
+      }
+      
+      // Update checkout_sessions with the fetched amount if we have one
+      if (priceCents > 0 && checkoutSession?.id) {
         await supabase
           .from("checkout_sessions")
           .update({ amount_cents: priceCents })
           .eq("id", checkoutSession.id);
+        console.log(`[Fanbases Confirm] Updated checkout session with amount: ${priceCents} cents`);
       }
     }
 

@@ -302,6 +302,13 @@ Deno.serve(async (req) => {
         });
       }
 
+      // Get price from Fanbases product (convert from string like "1.00" to cents)
+      const cardSetupPriceCents = fanbasesProduct.price 
+        ? Math.round(parseFloat(fanbasesProduct.price) * 100) 
+        : (cardSetupProduct.price_cents || 100); // Default to $1.00 (100 cents)
+
+      console.log(`[Fanbases Checkout] Card setup price: ${cardSetupPriceCents} cents`);
+
       // Build the redirect URL with metadata and prefill
       const paymentUrl = new URL(paymentLink);
       
@@ -325,7 +332,16 @@ Deno.serve(async (req) => {
 
       console.log(`[Fanbases Checkout] Redirecting to card setup payment link: ${paymentUrl.toString()}`);
 
-      // Store checkout session reference
+      // Sync price to fanbases_products if different
+      if (cardSetupPriceCents && cardSetupPriceCents !== cardSetupProduct.price_cents) {
+        await supabase
+          .from("fanbases_products")
+          .update({ price_cents: cardSetupPriceCents })
+          .eq("id", cardSetupProduct.id);
+        console.log(`[Fanbases Checkout] Synced card setup price ${cardSetupPriceCents} cents`);
+      }
+
+      // Store checkout session reference with actual price from Fanbases
       const sessionId = `card_setup_${Date.now()}_${user.id.slice(0, 8)}`;
       await supabase.from("checkout_sessions").insert({
         user_id: user.id,
@@ -333,7 +349,7 @@ Deno.serve(async (req) => {
         payment_link: paymentUrl.toString(),
         product_type: "card_setup",
         product_id: cardSetupProduct.internal_reference,
-        amount_cents: cardSetupProduct.price_cents,
+        amount_cents: cardSetupPriceCents,
         status: "pending",
         metadata: {
           fanbases_product_id: cardSetupProduct.fanbases_product_id,
