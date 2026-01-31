@@ -162,40 +162,46 @@ export default function Settings() {
     // Fanbases uses payment_id for card setup returns
     const paymentId = searchParams.get('payment_id');
     
-    // Handle successful card setup - redirect to payment-confirm
+    // Handle successful card setup - redirect to payment-confirm after a delay
+    // so users can read the Fanbases confirmation page first
     if (setup === 'complete') {
-      console.log('[Settings] Card setup complete, redirecting to payment-confirm');
+      console.log('[Settings] Card setup complete, will redirect to payment-confirm after delay');
       console.log('[Settings] All params:', Object.fromEntries(searchParams.entries()));
       
-      // Forward all params to payment-confirm page
-      const confirmUrl = new URL('/payment-confirm', window.location.origin);
-      
-      // Copy ALL params from the current URL
-      searchParams.forEach((value, key) => {
-        // Skip setup param itself and success/cancel URLs
-        if (key !== 'setup' && !key.includes('success_url') && !key.includes('cancel_url')) {
-          confirmUrl.searchParams.set(key, value);
+      // Delay redirect by 4 seconds so users can read the Fanbases confirmation text
+      const redirectTimeout = setTimeout(() => {
+        // Forward all params to payment-confirm page
+        const confirmUrl = new URL('/payment-confirm', window.location.origin);
+        
+        // Copy ALL params from the current URL
+        searchParams.forEach((value, key) => {
+          // Skip setup param itself and success/cancel URLs
+          if (key !== 'setup' && !key.includes('success_url') && !key.includes('cancel_url')) {
+            confirmUrl.searchParams.set(key, value);
+          }
+        });
+        
+        // Ensure we have the required params for the confirmation flow
+        confirmUrl.searchParams.set('redirect_status', 'succeeded');
+        
+        // If payment_id exists but not payment_intent, copy it as payment_intent too
+        if (paymentId && !searchParams.get('payment_intent')) {
+          confirmUrl.searchParams.set('payment_intent', paymentId);
         }
-      });
+        
+        // Add checkout_session_id from localStorage if available (stored before redirect)
+        const storedSessionId = localStorage.getItem('fanbases_checkout_session');
+        if (storedSessionId) {
+          confirmUrl.searchParams.set('checkout_session_id', storedSessionId);
+          localStorage.removeItem('fanbases_checkout_session'); // Clean up
+        }
+        
+        console.log('[Settings] Redirecting to:', confirmUrl.toString());
+        window.location.href = confirmUrl.toString();
+      }, 4000); // 4 second delay
       
-      // Ensure we have the required params for the confirmation flow
-      confirmUrl.searchParams.set('redirect_status', 'succeeded');
-      
-      // If payment_id exists but not payment_intent, copy it as payment_intent too
-      if (paymentId && !searchParams.get('payment_intent')) {
-        confirmUrl.searchParams.set('payment_intent', paymentId);
-      }
-      
-      // Add checkout_session_id from localStorage if available (stored before redirect)
-      const storedSessionId = localStorage.getItem('fanbases_checkout_session');
-      if (storedSessionId) {
-        confirmUrl.searchParams.set('checkout_session_id', storedSessionId);
-        localStorage.removeItem('fanbases_checkout_session'); // Clean up
-      }
-      
-      console.log('[Settings] Redirecting to:', confirmUrl.toString());
-      window.location.href = confirmUrl.toString();
-      return;
+      // Cleanup timeout if component unmounts
+      return () => clearTimeout(redirectTimeout);
     } else if (setup === 'cancelled') {
       setSearchParams({});
       toast.error('Card setup was cancelled');
