@@ -119,7 +119,7 @@ export function TransactionHistory() {
 
       const { data, error } = await supabase
         .from("checkout_sessions")
-        .select("*")
+        .select("id, checkout_session_id, product_type, product_id, amount_cents, status, created_at, metadata")
         .eq("user_id", user.id)
         .eq("status", "completed")
         .order("created_at", { ascending: false })
@@ -130,6 +130,7 @@ export function TransactionHistory() {
         return;
       }
 
+      console.log("[TransactionHistory] Fetched transactions:", data);
       setTransactions(data || []);
     } catch (error) {
       console.error("Error fetching transactions:", error);

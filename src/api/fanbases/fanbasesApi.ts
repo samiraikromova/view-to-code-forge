@@ -46,7 +46,8 @@ export async function setupPaymentMethod(): Promise<{ success: boolean; checkout
     body: { 
       action: 'setup_card',
       base_url: window.location.origin,
-      success_url: `${window.location.origin}/settings?setup=complete`,
+      // Redirect to payment-confirm page (same as other payment types)
+      success_url: `${window.location.origin}/payment-confirm`,
       cancel_url: `${window.location.origin}/settings?setup=cancelled`,
     },
   });
