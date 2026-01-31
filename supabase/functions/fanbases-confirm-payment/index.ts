@@ -633,7 +633,7 @@ async function recordCardSetup(
   const { data: userProfile } = await supabase.from("users").select("email").eq("id", userId).maybeSingle();
   const userEmail = userProfile?.email;
   
-  console.log(`[Fanbases Confirm] Card setup - User: ${userId}, Email: ${userEmail}`);
+  console.log(`[Fanbases Confirm] Card setup - User: ${userId}, Email: ${userEmail}, PaymentIntent: ${paymentIntent}`);
   
   // Get existing customer record
   const { data: existingCustomer } = await supabase
@@ -648,7 +648,56 @@ async function recordCardSetup(
   
   console.log(`[Fanbases Confirm] Existing customer record:`, existingCustomer);
   
-  // Try to find customer by email if we don't have their Fanbases ID
+  // STEP 1: Get transaction details to find the payment method used in THIS transaction
+  let transactionPaymentMethodId: string | null = null;
+  let transactionCardDetails: { brand?: string; last4?: string; exp_month?: number; exp_year?: number } = {};
+  
+  if (FANBASES_API_KEY && paymentIntent) {
+    try {
+      console.log(`[Fanbases Confirm] Fetching transaction ${paymentIntent} for payment method details`);
+      
+      const txResponse = await fetch(`${FANBASES_API_URL}/transactions/${paymentIntent}`, {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          "x-api-key": FANBASES_API_KEY,
+        },
+      });
+      
+      if (txResponse.ok) {
+        const txData = await txResponse.json();
+        console.log(`[Fanbases Confirm] Transaction response:`, JSON.stringify(txData));
+        
+        // Extract payment method from transaction
+        const txPaymentMethod = txData.data?.payment_method || txData.data?.paymentMethod;
+        if (txPaymentMethod) {
+          transactionPaymentMethodId = txPaymentMethod.id || txPaymentMethod;
+          transactionCardDetails = {
+            brand: txPaymentMethod.brand || txPaymentMethod.card_brand || txPaymentMethod.type,
+            last4: txPaymentMethod.last4 || txPaymentMethod.last_four || txPaymentMethod.lastFour,
+            exp_month: txPaymentMethod.exp_month || txPaymentMethod.expMonth,
+            exp_year: txPaymentMethod.exp_year || txPaymentMethod.expYear,
+          };
+          console.log(`[Fanbases Confirm] Transaction payment method:`, transactionPaymentMethodId, transactionCardDetails);
+        }
+        
+        // Also extract customer ID from transaction if we don't have it
+        if (!customerId) {
+          const txCustomer = txData.data?.customer || txData.data?.customer_id;
+          if (txCustomer) {
+            customerId = typeof txCustomer === 'object' ? txCustomer.id : txCustomer;
+            console.log(`[Fanbases Confirm] Got customer ID from transaction: ${customerId}`);
+          }
+        }
+      } else {
+        console.log(`[Fanbases Confirm] Transaction fetch failed: ${txResponse.status}`);
+      }
+    } catch (txError) {
+      console.error("[Fanbases Confirm] Error fetching transaction:", txError);
+    }
+  }
+  
+  // STEP 2: Try to find customer by email if we still don't have their Fanbases ID
   if (!customerId && userEmail && FANBASES_API_KEY) {
     try {
       console.log(`[Fanbases Confirm] Looking up customer by email: ${userEmail}`);
@@ -707,7 +756,7 @@ async function recordCardSetup(
     }
   }
   
-  // Fetch payment methods from Fanbases and sync to database
+  // STEP 3: Fetch payment methods from Fanbases to find the newly added card
   if (customerId && FANBASES_API_KEY) {
     try {
       console.log(`[Fanbases Confirm] Fetching payment methods for customer: ${customerId}`);
@@ -731,17 +780,46 @@ async function recordCardSetup(
         console.log(`[Fanbases Confirm] Found ${paymentMethods.length} payment methods`);
         
         if (paymentMethods.length > 0) {
-          // Get the most recent payment method (likely the one just added)
-          const latestMethod = paymentMethods.find((pm: { is_default?: boolean }) => pm.is_default) || paymentMethods[paymentMethods.length - 1];
+          // Priority 1: Match by transaction payment method ID if available
+          // Priority 2: Match by transaction card last4 if available
+          // Priority 3: Get the NEWEST payment method (last in list, most recently created)
+          // Priority 4: Fallback to default
           
-          console.log(`[Fanbases Confirm] Latest payment method:`, JSON.stringify(latestMethod));
+          let matchedMethod = null;
           
-          paymentMethodId = latestMethod.id;
+          // Try to match by payment method ID from transaction
+          if (transactionPaymentMethodId) {
+            matchedMethod = paymentMethods.find((pm: { id?: string }) => pm.id === transactionPaymentMethodId);
+            if (matchedMethod) {
+              console.log(`[Fanbases Confirm] Matched payment method by transaction ID`);
+            }
+          }
+          
+          // Try to match by last4 from transaction
+          if (!matchedMethod && transactionCardDetails.last4) {
+            matchedMethod = paymentMethods.find((pm: { last4?: string; last_four?: string; lastFour?: string }) => {
+              const pmLast4 = pm.last4 || pm.last_four || pm.lastFour;
+              return pmLast4 === transactionCardDetails.last4;
+            });
+            if (matchedMethod) {
+              console.log(`[Fanbases Confirm] Matched payment method by transaction last4: ${transactionCardDetails.last4}`);
+            }
+          }
+          
+          // Get the newest payment method (last in the list - typically most recently added)
+          if (!matchedMethod) {
+            matchedMethod = paymentMethods[paymentMethods.length - 1];
+            console.log(`[Fanbases Confirm] Using newest payment method (last in list)`);
+          }
+          
+          console.log(`[Fanbases Confirm] Selected payment method:`, JSON.stringify(matchedMethod));
+          
+          paymentMethodId = matchedMethod.id;
           cardDetails = {
-            brand: latestMethod.brand || latestMethod.card_brand || latestMethod.type,
-            last4: latestMethod.last4 || latestMethod.last_four || latestMethod.lastFour,
-            exp_month: latestMethod.exp_month || latestMethod.expMonth,
-            exp_year: latestMethod.exp_year || latestMethod.expYear,
+            brand: matchedMethod.brand || matchedMethod.card_brand || matchedMethod.type,
+            last4: matchedMethod.last4 || matchedMethod.last_four || matchedMethod.lastFour,
+            exp_month: matchedMethod.exp_month || matchedMethod.expMonth,
+            exp_year: matchedMethod.exp_year || matchedMethod.expYear,
           };
           
           console.log(`[Fanbases Confirm] Extracted card details:`, cardDetails);
@@ -755,6 +833,13 @@ async function recordCardSetup(
     }
   } else {
     console.log(`[Fanbases Confirm] Cannot fetch payment methods - customerId: ${customerId}, hasApiKey: ${!!FANBASES_API_KEY}`);
+  }
+  
+  // Use transaction card details as fallback if we couldn't get from payment methods
+  if (!cardDetails.last4 && transactionCardDetails.last4) {
+    console.log(`[Fanbases Confirm] Using card details from transaction as fallback`);
+    cardDetails = transactionCardDetails;
+    paymentMethodId = transactionPaymentMethodId;
   }
   
   // Update or create fanbases_customers record with card details
