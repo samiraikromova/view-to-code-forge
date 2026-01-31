@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { PanelLeft, Search, PlayCircle, CheckCircle2, UserIcon, Sparkles, CreditCard, LogOut, ChevronUp, TrendingUp, Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   Dialog,
   DialogContent,
