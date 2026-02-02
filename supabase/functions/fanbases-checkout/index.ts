@@ -149,7 +149,7 @@ Deno.serve(async (req) => {
 
       if (!product) {
         console.error(`[Fanbases Checkout] Product not found for internal_reference: ${internal_reference}, fanbases_product_id: ${fanbases_product_id}`);
-        return new Response(JSON.stringify({ error: `Product not found: ${internal_reference}` }), {
+        return new Response(JSON.stringify({ error: "Product not found. Please check product configuration." }), {
           status: 404,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
@@ -406,7 +406,8 @@ Deno.serve(async (req) => {
       const product = await lookupProductByInternalRef(supabase, internal_reference);
 
       if (!product) {
-        return new Response(JSON.stringify({ error: `Product not found: ${internal_reference}` }), {
+        console.error(`[Fanbases Checkout] Product not found for one_click_charge: ${internal_reference}`);
+        return new Response(JSON.stringify({ error: "Product not found. Please check product configuration." }), {
           status: 404,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
