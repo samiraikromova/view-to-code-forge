@@ -17,42 +17,20 @@ interface FanbasesProduct {
   price_cents: number | null;
 }
 
-// Look up product from fanbases_products table by internal_reference or fanbases_product_id
+// Look up product from fanbases_products table by internal_reference
 // deno-lint-ignore no-explicit-any
-async function lookupProduct(supabase: any, identifier: string): Promise<FanbasesProduct | null> {
-  // First try by internal_reference
-  const { data: byInternalRef, error: error1 } = await supabase
+async function lookupProductByInternalRef(supabase: any, internalReference: string): Promise<FanbasesProduct | null> {
+  const { data, error } = await supabase
     .from("fanbases_products")
     .select("fanbases_product_id, product_type, internal_reference, price_cents")
-    .eq("internal_reference", identifier)
+    .eq("internal_reference", internalReference)
     .maybeSingle();
 
-  if (error1) {
-    console.error("[Fanbases Charge] Error looking up product by internal_reference:", error1);
+  if (error) {
+    console.error("[Fanbases Charge] Error looking up product:", error);
+    return null;
   }
-  
-  if (byInternalRef) {
-    console.log(`[Fanbases Charge] Found product by internal_reference: ${identifier}`);
-    return byInternalRef;
-  }
-  
-  // Fallback: try by fanbases_product_id
-  const { data: byFanbasesId, error: error2 } = await supabase
-    .from("fanbases_products")
-    .select("fanbases_product_id, product_type, internal_reference, price_cents")
-    .eq("fanbases_product_id", identifier)
-    .maybeSingle();
-
-  if (error2) {
-    console.error("[Fanbases Charge] Error looking up product by fanbases_product_id:", error2);
-  }
-  
-  if (byFanbasesId) {
-    console.log(`[Fanbases Charge] Found product by fanbases_product_id: ${identifier}`);
-    return byFanbasesId;
-  }
-  
-  return null;
+  return data;
 }
 
 // Get tier and credits from internal_reference
@@ -116,12 +94,12 @@ Deno.serve(async (req) => {
 
     console.log(`[Fanbases Charge] Internal Ref: ${internal_reference}, User: ${user.id}`);
 
-    // Look up product from fanbases_products table (by internal_reference or fanbases_product_id)
-    const product = await lookupProduct(supabase, internal_reference);
+    // Look up product from fanbases_products table
+    const product = await lookupProductByInternalRef(supabase, internal_reference);
 
     if (!product) {
-      console.error(`[Fanbases Charge] Product not found for identifier: ${internal_reference}`);
-      return new Response(JSON.stringify({ error: "Product not found. Please check product configuration." }), {
+      console.error(`[Fanbases Charge] Product not found: ${internal_reference}`);
+      return new Response(JSON.stringify({ error: `Product not found: ${internal_reference}` }), {
         status: 404,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
