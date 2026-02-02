@@ -40,14 +40,24 @@ export default function Profile() {
   const handleSaveProfile = async () => {
     if (!user) return
     
+    if (!fullName.trim()) {
+      toast.error("Full name is required")
+      return
+    }
+    
+    if (!businessName.trim()) {
+      toast.error("Business name is required")
+      return
+    }
+    
     setLoading(true)
     try {
       const { error } = await supabase
         .from('users')
         .update({ 
-          name: fullName,
-          address: address,
-          business_name: businessName
+          name: fullName.trim(),
+          address: address.trim(),
+          business_name: businessName.trim()
         })
         .eq('id', user.id)
 
@@ -144,24 +154,26 @@ export default function Profile() {
             {/* Editable fields */}
             <div className="space-y-4 pt-4 border-t border-border">
               <div className="grid gap-2">
-                <Label htmlFor="fullName">Full Name</Label>
+                <Label htmlFor="fullName">Full Name <span className="text-destructive">*</span></Label>
                 <Input
                   id="fullName"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   placeholder="Enter your full name"
                   className="bg-surface border-border"
+                  required
                 />
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="businessName">Business Name</Label>
+                <Label htmlFor="businessName">Business Name <span className="text-destructive">*</span></Label>
                 <Input
                   id="businessName"
                   value={businessName}
                   onChange={(e) => setBusinessName(e.target.value)}
                   placeholder="Enter your business name"
                   className="bg-surface border-border"
+                  required
                 />
               </div>
 
