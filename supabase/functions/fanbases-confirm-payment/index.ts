@@ -590,13 +590,33 @@ async function grantModuleAccess(
   }
 
   // Try to get module name from modules table
-  const { data: moduleData } = await supabase
-    .from("modules")
-    .select("title")
-    .eq("id", internalReference)
-    .maybeSingle();
-
-  const moduleName = moduleData?.title || internalReference;
+  // First try by UUID (id), then by fanbases_product_id
+  let moduleData = null;
+  
+  // Check if internalReference looks like a UUID
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(internalReference);
+  
+  if (isUuid) {
+    const { data } = await supabase
+      .from("modules")
+      .select("id, name, fanbases_product_id")
+      .eq("id", internalReference)
+      .maybeSingle();
+    moduleData = data;
+  }
+  
+  // If not found by UUID, try by fanbases_product_id
+  if (!moduleData) {
+    const { data } = await supabase
+      .from("modules")
+      .select("id, name, fanbases_product_id")
+      .eq("fanbases_product_id", internalReference)
+      .maybeSingle();
+    moduleData = data;
+  }
+  
+  const moduleName = moduleData?.name || internalReference;
+  const moduleId = moduleData?.id || internalReference;
 
   // Record purchase
   await supabase.from("user_purchases").insert({
@@ -613,7 +633,7 @@ async function grantModuleAccess(
   return {
     success: true,
     message: `Successfully unlocked module: ${moduleName}`,
-    details: { module_id: internalReference, module_name: moduleName },
+    details: { module_id: moduleId, module_name: moduleName },
   };
 }
 
