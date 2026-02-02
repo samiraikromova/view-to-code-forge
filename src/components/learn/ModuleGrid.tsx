@@ -62,14 +62,15 @@ export function ModuleGrid({ modules, onModuleSelect, isLoading, contentType }: 
     );
   }
 
-  const handleModuleClick = async (module: ModuleCardData & { bookingUrl?: string; productId?: string }) => {
+  const handleModuleClick = async (module: ModuleCardData & { bookingUrl?: string; productId?: string; fanbasesProductId?: string }) => {
     if (module.isLocked) {
       if (module.requiresCall) {
         setSelectedBookingUrl(module.bookingUrl);
         setSelectedModuleName(module.title);
         setShowBookCallModal(true);
-      } else if (module.productId) {
+      } else if (module.fanbasesProductId || module.productId) {
         // Use fanbases-checkout edge function to get full URL with prefill
+        // IMPORTANT: Use module.id (UUID) as the product_id for consistent access checking
         try {
           // Simple success URL - we look up the checkout session from DB instead of relying on URL params
           const successUrl = `${window.location.origin}/payment-confirm`;
@@ -77,7 +78,9 @@ export function ModuleGrid({ modules, onModuleSelect, isLoading, contentType }: 
           const { data, error } = await supabase.functions.invoke('fanbases-checkout', {
             body: {
               action: 'create_checkout',
-              internal_reference: module.productId,
+              internal_reference: module.id, // Use module UUID as internal_reference
+              fanbases_product_id: module.fanbasesProductId, // Pass the actual fanbases product ID
+              product_type: 'module',
               success_url: successUrl,
               cancel_url: `${window.location.origin}/chat?payment=cancelled`,
               base_url: window.location.origin,
@@ -107,9 +110,11 @@ export function ModuleGrid({ modules, onModuleSelect, isLoading, contentType }: 
   };
 
   // Transform modules to ModuleCardData with real access checks based on access_type
-  const moduleCards: ModuleCardData[] = modules.map((module) => {
-    // Pass access_type and productId from the module to checkModuleAccess
-    const accessInfo = checkModuleAccess(module.id, module.accessType, module.productId);
+  // IMPORTANT: For access checks, we use module.id (UUID) as the primary identifier
+  const moduleCards = modules.map((module) => {
+    // Pass access_type and module.id to checkModuleAccess
+    // The module.id (UUID) should match product_id in checkout_sessions
+    const accessInfo = checkModuleAccess(module.id, module.accessType, module.id);
     const isLocked = !accessInfo.hasAccess;
 
     let unlockMessage: string | undefined;
@@ -118,7 +123,7 @@ export function ModuleGrid({ modules, onModuleSelect, isLoading, contentType }: 
         unlockMessage = "Book a call to unlock";
       } else if (module.priceCents) {
         unlockMessage = `Unlock for $${(module.priceCents / 100).toFixed(0)}`;
-      } else if (accessInfo.fanbasesCheckoutUrl) {
+      } else if (accessInfo.fanbasesCheckoutUrl || module.fanbasesProductId) {
         unlockMessage = "Click to unlock";
       } else {
         unlockMessage = undefined; // Free modules shouldn't show unlock message
@@ -136,7 +141,8 @@ export function ModuleGrid({ modules, onModuleSelect, isLoading, contentType }: 
       unlockMessage,
       requiresCall: accessInfo.requiresCall,
       fanbasesCheckoutUrl: accessInfo.fanbasesCheckoutUrl,
-      productId: module.productId || module.id,
+      fanbasesProductId: module.fanbasesProductId, // Pass the fanbases product ID for checkout
+      productId: module.id, // Use module UUID consistently
       priceCents: module.priceCents,
       bookingUrl: module.bookingUrl,
     };
