@@ -24,20 +24,30 @@ export function FreeTrialModal({
     setLoading(true);
     try {
       const now = new Date();
-      const trialEndDate = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000); // 2 days from now (testing)
+      const trialEndDate = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days from now
+
+      // Update user with trial info and add 1000 credits
+      const { data: currentUser } = await supabase
+        .from('users')
+        .select('credits')
+        .eq('id', userId)
+        .single();
+
+      const currentCredits = Number(currentUser?.credits) || 0;
 
       const { error } = await supabase
         .from('users')
         .update({
           trial_started_at: now.toISOString(),
           trial_ends_at: trialEndDate.toISOString(),
-          subscription_tier: 'trial'
+          subscription_tier: 'trial',
+          credits: currentCredits + 1000
         })
         .eq('id', userId);
 
       if (error) throw error;
 
-      toast.success('Your 7-day free trial has started!');
+      toast.success('Your 7-day free trial has started with 1,000 credits!');
       onSuccess?.();
       onClose();
     } catch (error) {
@@ -68,9 +78,9 @@ export function FreeTrialModal({
             <div className="flex items-start gap-3">
               <MessageSquare className="h-5 w-5 text-accent mt-0.5" />
               <div>
-                <p className="text-sm font-medium text-foreground">Unlimited AI Chat</p>
+                <p className="text-sm font-medium text-foreground">1,000 Free Credits</p>
                 <p className="text-sm text-muted-foreground">
-                  Ask questions about any lesson, get personalized advice, and more.
+                  Get 1,000 credits to use with AI chat, image generation, and more.
                 </p>
               </div>
             </div>
@@ -86,7 +96,7 @@ export function FreeTrialModal({
           </div>
 
           <p className="text-xs text-muted-foreground text-center">
-            After your trial ends, you'll need to subscribe at $29/month to continue using AI features.
+            Credits are consumed as you use AI features. After your trial ends, subscribe at $29/month to continue.
           </p>
         </div>
 
