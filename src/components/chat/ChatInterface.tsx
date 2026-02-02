@@ -933,7 +933,7 @@ export function ChatInterface({
           </div>
         </div>
       ) : <div className="flex flex-1 flex-col min-h-0 overflow-hidden animate-fade-in relative">
-          <div ref={messagesContainerRef} className="flex-1 overflow-y-auto relative">
+          <div ref={messagesContainerRef} className="flex-1 overflow-y-auto relative scrollbar-thin-purple">
             <MessageList messages={messages} isStreaming={isStreaming} onDeleteImage={handleDeleteImage} />
             <div ref={messagesEndRef} />
             
