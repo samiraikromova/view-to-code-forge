@@ -239,7 +239,12 @@ export function useAccess() {
       }
 
       // PRIORITY 3: Default - check if purchased (backward compatibility)
-      if (accessState.purchasedModules.includes(moduleSlug)) {
+      // Check both moduleSlug AND productId against purchased modules
+      const hasPurchasedFallback =
+        accessState.purchasedModules.includes(moduleSlug) ||
+        (productId && accessState.purchasedModules.includes(productId));
+      
+      if (hasPurchasedFallback) {
         return { hasAccess: true, requiresCall: false };
       }
 
