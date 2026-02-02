@@ -52,7 +52,7 @@ export default function Profile() {
     
     setLoading(true)
     try {
-      const { error } = await supabase
+      const { data, error, count } = await supabase
         .from('users')
         .update({ 
           name: fullName.trim(),
@@ -60,9 +60,21 @@ export default function Profile() {
           business_name: businessName.trim()
         })
         .eq('id', user.id)
+        .select()
 
-      if (error) throw error
+      if (error) {
+        console.error("Supabase update error:", error)
+        throw error
+      }
 
+      // Check if any rows were actually updated
+      if (!data || data.length === 0) {
+        console.error("No rows updated - possible RLS policy issue for user:", user.id, user.email)
+        toast.error("Failed to update profile. Please contact support.")
+        return
+      }
+
+      console.log("Profile updated successfully:", data[0])
       toast.success("Profile updated successfully")
       refreshProfile()
     } catch (error) {
