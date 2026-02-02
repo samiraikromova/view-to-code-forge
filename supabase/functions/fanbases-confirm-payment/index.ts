@@ -589,6 +589,22 @@ async function grantModuleAccess(
     };
   }
 
+  // Try to get original_internal_reference from checkout_sessions metadata
+  let originalInternalReference: string | null = null;
+  const { data: checkoutSession } = await supabase
+    .from("checkout_sessions")
+    .select("metadata")
+    .eq("user_id", userId)
+    .eq("product_id", internalReference)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  
+  if (checkoutSession?.metadata?.original_internal_reference) {
+    originalInternalReference = checkoutSession.metadata.original_internal_reference as string;
+    console.log(`[Fanbases Confirm] Found original_internal_reference: ${originalInternalReference}`);
+  }
+
   // Try to get module name from modules table
   // First try by UUID (id), then by fanbases_product_id
   let moduleData = null;
@@ -626,10 +642,11 @@ async function grantModuleAccess(
     moduleData = data;
   }
   
-  const moduleName = moduleData?.name || "Module";
+  // Use module name from DB, or fallback to original_internal_reference, or generic "Module"
+  const moduleName = moduleData?.name || originalInternalReference || "Module";
   const moduleId = moduleData?.id || internalReference;
   
-  console.log(`[Fanbases Confirm] Module lookup - internalReference: ${internalReference}, found: ${moduleData?.name || 'NOT FOUND'}, moduleId: ${moduleId}`);
+  console.log(`[Fanbases Confirm] Module lookup - internalReference: ${internalReference}, found: ${moduleData?.name || 'NOT FOUND'}, originalRef: ${originalInternalReference}, moduleId: ${moduleId}`);
 
   // Record purchase
   await supabase.from("user_purchases").insert({
@@ -646,7 +663,11 @@ async function grantModuleAccess(
   return {
     success: true,
     message: `Successfully unlocked module: ${moduleName}`,
-    details: { module_id: moduleId, module_name: moduleName },
+    details: { 
+      module_id: moduleId, 
+      module_name: moduleName,
+      original_internal_reference: originalInternalReference,
+    },
   };
 }
 
