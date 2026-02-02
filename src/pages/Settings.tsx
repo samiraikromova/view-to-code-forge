@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, CreditCard, Check, Zap, Loader2, RefreshCw, ExternalLink } from "lucide-react";
+import { ArrowLeft, CreditCard, Check, Zap, Loader2, RefreshCw } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { PLANS, SubscriptionTier } from "@/types/subscription";
 import { useAuth } from "@/hooks/useAuth";
@@ -456,9 +456,6 @@ export default function Settings() {
               }, new Map<string, PaymentMethod>());
               const deduplicatedMethods = Array.from(uniquePaymentMethods.values());
 
-              // Customer portal URL - for production use: https://fanbasis.com/portal/customer/settings?token=...
-              const customerPortalUrl = "https://qa.dev-fan-basis.com/portal/customer/settings?token=cc8a871002290d3cc4e93bdafe136d0fb6a807eb8b5a41b6c11a51d4fa3a4826";
-
               return loadingPaymentMethods ? (
                 <div className="flex items-center justify-center py-6">
                   <Loader2 className="h-8 w-8 text-primary animate-spin" />
@@ -506,23 +503,6 @@ export default function Settings() {
                     )}
                     Add Another Card
                   </Button>
-                  
-                  <Separator className="my-4" />
-                  
-                  <Button
-                    variant="outline"
-                    className="w-full gap-2 border-primary/30 hover:bg-primary/10"
-                    asChild
-                  >
-                    <a 
-                      href={customerPortalUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <ExternalLink className="h-4 w-4" />
-                      Manage Cards (Set Default, Remove)
-                    </a>
-                  </Button>
                 </div>
               ) : (
                 <div className="text-center py-6">
@@ -541,23 +521,6 @@ export default function Settings() {
                       <CreditCard className="h-4 w-4" />
                     )}
                     Add Card
-                  </Button>
-                  
-                  <Separator className="my-4" />
-                  
-                  <Button
-                    variant="outline"
-                    className="w-full gap-2 border-primary/30 hover:bg-primary/10"
-                    asChild
-                  >
-                    <a 
-                      href={customerPortalUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <ExternalLink className="h-4 w-4" />
-                      Manage Cards (Set Default, Remove)
-                    </a>
                   </Button>
                 </div>
               );
