@@ -3,8 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, RefreshCw, Zap, Crown, BookOpen, CreditCard, Receipt, ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
-import { Separator } from "@/components/ui/separator";
+import { Loader2, RefreshCw, Zap, Crown, BookOpen, CreditCard, Receipt, ChevronLeft, ChevronRight } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -79,9 +78,6 @@ function formatAmount(amountCents: number | null): string {
   }
   return `$${(amountCents / 100).toFixed(2)}`;
 }
-
-// Customer portal URL - for production use: https://fanbasis.com/portal/customer/login?token=...
-const CUSTOMER_ORDERS_URL = "https://qa.dev-fan-basis.com/portal/customer/login?token=cc8a871002290d3cc4e93bdafe136d0fb6a807eb8b5a41b6c11a51d4fa3a4826";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -266,23 +262,6 @@ export function TransactionHistory() {
                 </div>
               </div>
             )}
-            
-            <Separator className="my-4" />
-            
-            <Button
-              variant="outline"
-              className="w-full gap-2 border-primary/30 hover:bg-primary/10"
-              asChild
-            >
-              <a 
-                href={CUSTOMER_ORDERS_URL}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <ExternalLink className="h-4 w-4" />
-                View & Manage All Orders
-              </a>
-            </Button>
               </>
             );
           })()
