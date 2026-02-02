@@ -480,4 +480,27 @@
     background: hsl(var(--accent) / 0.2);
     color: hsl(var(--accent));
   }
+
+  /* Thin dark purple scrollbar for chat */
+  .scrollbar-thin-purple {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(310 47% 20%) transparent;
+  }
+
+  .scrollbar-thin-purple::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .scrollbar-thin-purple::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin-purple::-webkit-scrollbar-thumb {
+    background: hsl(310 47% 20%);
+    border-radius: 2px;
+  }
+
+  .scrollbar-thin-purple::-webkit-scrollbar-thumb:hover {
+    background: hsl(310 47% 28%);
+  }
 }
