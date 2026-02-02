@@ -4,9 +4,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { ArrowLeft, Loader2, Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, Loader2, Mail, Lock, Eye, EyeOff, AlertCircle, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 const LoginPage = () => {
   const navigate = useNavigate();
@@ -15,6 +16,7 @@ const LoginPage = () => {
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showEmailVerificationAlert, setShowEmailVerificationAlert] = useState(false);
 
   // Redirect if already logged in
   useEffect(() => {
@@ -43,7 +45,8 @@ const LoginPage = () => {
         if (error.message.includes("Invalid login credentials")) {
           toast.error("Invalid email or password");
         } else if (error.message.includes("Email not confirmed")) {
-          toast.error("Please verify your email before signing in");
+          setShowEmailVerificationAlert(true);
+          return;
         } else {
           toast.error(error.message);
         }
@@ -88,6 +91,31 @@ const LoginPage = () => {
               Sign in to your account to continue
             </p>
           </div>
+
+          {showEmailVerificationAlert && (
+            <div className="relative bg-surface border border-border rounded-lg p-4 shadow-lg">
+              <button
+                onClick={() => setShowEmailVerificationAlert(false)}
+                className="absolute top-3 right-3 text-muted-foreground hover:text-foreground"
+              >
+                <X className="h-4 w-4" />
+              </button>
+              <div className="flex items-start gap-3">
+                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-warning/20 flex items-center justify-center">
+                  <Mail className="h-5 w-5 text-warning" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="font-semibold text-foreground mb-1">Email Verification Required</h3>
+                  <p className="text-sm text-muted-foreground mb-3">
+                    Please check your inbox and click the verification link we sent to your email address before signing in.
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Didn't receive the email? Check your spam folder or try signing up again.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
