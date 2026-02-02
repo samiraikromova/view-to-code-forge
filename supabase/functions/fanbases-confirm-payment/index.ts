@@ -597,15 +597,26 @@ async function grantModuleAccess(
   const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(internalReference);
   
   if (isUuid) {
-    const { data } = await supabase
+    // First try by module id
+    const { data: dataById } = await supabase
       .from("modules")
       .select("id, name, fanbases_product_id")
       .eq("id", internalReference)
       .maybeSingle();
-    moduleData = data;
+    moduleData = dataById;
+    
+    // If not found by id, also try by fanbases_product_id (UUID format)
+    if (!moduleData) {
+      const { data: dataByFanbases } = await supabase
+        .from("modules")
+        .select("id, name, fanbases_product_id")
+        .eq("fanbases_product_id", internalReference)
+        .maybeSingle();
+      moduleData = dataByFanbases;
+    }
   }
   
-  // If not found by UUID, try by fanbases_product_id
+  // If not found and not a UUID, try by fanbases_product_id (non-UUID string)
   if (!moduleData) {
     const { data } = await supabase
       .from("modules")
@@ -615,8 +626,10 @@ async function grantModuleAccess(
     moduleData = data;
   }
   
-  const moduleName = moduleData?.name || internalReference;
+  const moduleName = moduleData?.name || "Module";
   const moduleId = moduleData?.id || internalReference;
+  
+  console.log(`[Fanbases Confirm] Module lookup - internalReference: ${internalReference}, found: ${moduleData?.name || 'NOT FOUND'}, moduleId: ${moduleId}`);
 
   // Record purchase
   await supabase.from("user_purchases").insert({
