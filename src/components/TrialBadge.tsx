@@ -15,8 +15,9 @@ export function TrialBadge({ trialEndsAt, variant = "compact" }: TrialBadgeProps
   if (endDate <= now) return null;
 
   const diffMs = endDate.getTime() - now.getTime();
-  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-  const diffHours = Math.ceil(diffMs / (1000 * 60 * 60));
+  const totalHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffDays = Math.floor(totalHours / 24);
+  const remainingHours = totalHours % 24;
 
   // Format the end date
   const formattedEndDate = endDate.toLocaleDateString('en-US', {
@@ -25,14 +26,19 @@ export function TrialBadge({ trialEndsAt, variant = "compact" }: TrialBadgeProps
     year: 'numeric'
   });
 
-  // Display logic
+  // Display logic - show hours when less than 1 day, otherwise show days + hours
   let timeRemaining: string;
-  if (diffDays <= 0) {
-    timeRemaining = diffHours > 0 ? `${diffHours}h left` : "Expires soon";
+  if (totalHours <= 0) {
+    timeRemaining = "Expires soon";
+  } else if (diffDays < 1) {
+    // Less than 1 day - show only hours
+    timeRemaining = `${totalHours}h left`;
   } else if (diffDays === 1) {
-    timeRemaining = "1 day left";
+    // 1 day + hours
+    timeRemaining = remainingHours > 0 ? `1 day ${remainingHours}h left` : "1 day left";
   } else {
-    timeRemaining = `${diffDays} days left`;
+    // Multiple days + hours
+    timeRemaining = remainingHours > 0 ? `${diffDays} days ${remainingHours}h left` : `${diffDays} days left`;
   }
 
   if (variant === "full") {

@@ -473,6 +473,18 @@ export function ChatInterface({
       });
       return;
     }
+
+    // Check if user has credits - even trial users need credits to send messages
+    const userCredits = Number(profile?.credits) || 0;
+    if (userCredits <= 0) {
+      toast({
+        title: 'No Credits',
+        description: 'You have run out of credits. Please top up to continue using the chat.',
+        variant: 'destructive'
+      });
+      navigate('/settings');
+      return;
+    }
     
     // Check if this is an image generation request
     const isImageGeneration = selectedProject?.name?.toLowerCase().includes('image') && 
