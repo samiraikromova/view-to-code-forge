@@ -158,35 +158,36 @@ export function ChatInput({
     }
   }, []);
   // Handle external files from global drag and drop
-  // Track processed external files to prevent infinite loops
-  const processedExternalFilesRef = useRef<Set<string>>(new Set());
+  // Use a ref to track the last processed external files array to detect changes
+  const lastExternalFilesRef = useRef<File[]>([]);
   
   useEffect(() => {
-    if (externalFiles.length > 0) {
-      // Check if these are new files we haven't processed yet
-      const newExternalFiles = externalFiles.filter(extFile => {
-        const fileKey = `${extFile.name}-${extFile.size}-${extFile.lastModified}`;
-        return !processedExternalFilesRef.current.has(fileKey);
-      });
+    // Only process if external files array has actually changed (by reference)
+    if (externalFiles !== lastExternalFilesRef.current && externalFiles.length > 0) {
+      console.log('[ChatInput] Processing external files:', externalFiles.length);
+      lastExternalFilesRef.current = externalFiles;
       
-      if (newExternalFiles.length > 0) {
-        // Mark these files as processed
-        newExternalFiles.forEach(file => {
-          const fileKey = `${file.name}-${file.size}-${file.lastModified}`;
-          processedExternalFilesRef.current.add(fileKey);
+      // Add external files to local files
+      setFiles(prevFiles => {
+        // Filter out duplicates based on file key
+        const existingKeys = new Set(prevFiles.map(f => `${f.name}-${f.size}-${f.lastModified}`));
+        const newFiles = externalFiles.filter(f => {
+          const key = `${f.name}-${f.size}-${f.lastModified}`;
+          return !existingKeys.has(key);
         });
         
-        // Add external files to local files (don't replace)
-        const updatedFiles = [...files, ...newExternalFiles].slice(0, MAX_FILES);
-        setFiles(updatedFiles);
-        
-        // Notify parent that we processed the files so it can clear them
-        if (onExternalFilesProcessed) {
-          onExternalFilesProcessed(newExternalFiles);
+        if (newFiles.length > 0) {
+          console.log('[ChatInput] Adding new files:', newFiles.length);
+          // Notify parent that we processed the files
+          if (onExternalFilesProcessed) {
+            onExternalFilesProcessed(newFiles);
+          }
+          return [...prevFiles, ...newFiles].slice(0, MAX_FILES);
         }
-      }
+        return prevFiles;
+      });
     }
-  }, [externalFiles, files, onExternalFilesProcessed]);
+  }, [externalFiles, onExternalFilesProcessed]);
 
   const handleSend = async () => {
     const currentMessage = message.trim();
