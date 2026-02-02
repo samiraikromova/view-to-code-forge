@@ -261,6 +261,12 @@ export function ChatInterface({
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
+  // Ref to track current chatId for drag and drop handler
+  const chatIdRef = useRef(chatId);
+  useEffect(() => {
+    chatIdRef.current = chatId;
+  }, [chatId]);
+
   // Global drag and drop handlers
   useEffect(() => {
     const handleDragEnter = (e: DragEvent) => {
@@ -296,12 +302,13 @@ export function ChatInterface({
       setDragCounter(0);
       
       const droppedFiles = Array.from(e.dataTransfer?.files || []);
+      console.log('[ChatInterface] Files dropped:', droppedFiles.length, 'chatId:', chatIdRef.current);
       if (droppedFiles.length > 0) {
-        if (chatId) {
+        if (chatIdRef.current) {
           // Add to current chat's files
           setChatFiles(prev => ({
             ...prev,
-            [chatId]: [...(prev[chatId] || []), ...droppedFiles]
+            [chatIdRef.current!]: [...(prev[chatIdRef.current!] || []), ...droppedFiles]
           }));
         } else {
           // Add to external files for new chat
