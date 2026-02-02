@@ -15,9 +15,11 @@ export function TrialBadge({ trialEndsAt, variant = "compact" }: TrialBadgeProps
   if (endDate <= now) return null;
 
   const diffMs = endDate.getTime() - now.getTime();
-  const totalHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const totalMinutes = Math.floor(diffMs / (1000 * 60));
+  const totalHours = Math.floor(totalMinutes / 60);
   const diffDays = Math.floor(totalHours / 24);
   const remainingHours = totalHours % 24;
+  const remainingMinutes = totalMinutes % 60;
 
   // Format the end date
   const formattedEndDate = endDate.toLocaleDateString('en-US', {
@@ -26,19 +28,28 @@ export function TrialBadge({ trialEndsAt, variant = "compact" }: TrialBadgeProps
     year: 'numeric'
   });
 
-  // Display logic - show hours when less than 1 day, otherwise show days + hours
+  // Display logic - show minutes when less than 1 hour, hours+minutes when less than 1 day
   let timeRemaining: string;
-  if (totalHours <= 0) {
+  if (totalMinutes <= 0) {
     timeRemaining = "Expires soon";
+  } else if (totalHours < 1) {
+    // Less than 1 hour - show only minutes
+    timeRemaining = `${totalMinutes}m left`;
   } else if (diffDays < 1) {
-    // Less than 1 day - show only hours
-    timeRemaining = `${totalHours}h left`;
+    // Less than 1 day - show hours and minutes
+    timeRemaining = remainingMinutes > 0 ? `${totalHours}h ${remainingMinutes}m left` : `${totalHours}h left`;
   } else if (diffDays === 1) {
-    // 1 day + hours
-    timeRemaining = remainingHours > 0 ? `1 day ${remainingHours}h left` : "1 day left";
+    // 1 day + hours + minutes
+    const timePart = remainingHours > 0 
+      ? (remainingMinutes > 0 ? `${remainingHours}h ${remainingMinutes}m` : `${remainingHours}h`)
+      : (remainingMinutes > 0 ? `${remainingMinutes}m` : '');
+    timeRemaining = timePart ? `1 day ${timePart} left` : "1 day left";
   } else {
-    // Multiple days + hours
-    timeRemaining = remainingHours > 0 ? `${diffDays} days ${remainingHours}h left` : `${diffDays} days left`;
+    // Multiple days + hours + minutes
+    const timePart = remainingHours > 0 
+      ? (remainingMinutes > 0 ? `${remainingHours}h ${remainingMinutes}m` : `${remainingHours}h`)
+      : (remainingMinutes > 0 ? `${remainingMinutes}m` : '');
+    timeRemaining = timePart ? `${diffDays} days ${timePart} left` : `${diffDays} days left`;
   }
 
   if (variant === "full") {
