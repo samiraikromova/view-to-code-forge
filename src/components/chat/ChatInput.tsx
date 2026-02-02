@@ -159,26 +159,34 @@ export function ChatInput({
   }, []);
   // Handle external files from global drag and drop
   // Track processed external files to prevent infinite loops
-  const processedExternalFilesRef = useRef<File[]>([]);
+  const processedExternalFilesRef = useRef<Set<string>>(new Set());
   
   useEffect(() => {
-    if (externalFiles.length > 0 && onExternalFilesProcessed) {
+    if (externalFiles.length > 0) {
       // Check if these are new files we haven't processed yet
-      const newExternalFiles = externalFiles.filter(
-        extFile => !processedExternalFilesRef.current.some(
-          procFile => procFile.name === extFile.name && procFile.size === extFile.size && procFile.lastModified === extFile.lastModified
-        )
-      );
+      const newExternalFiles = externalFiles.filter(extFile => {
+        const fileKey = `${extFile.name}-${extFile.size}-${extFile.lastModified}`;
+        return !processedExternalFilesRef.current.has(fileKey);
+      });
       
       if (newExternalFiles.length > 0) {
         // Mark these files as processed
-        processedExternalFilesRef.current = [...processedExternalFilesRef.current, ...newExternalFiles];
+        newExternalFiles.forEach(file => {
+          const fileKey = `${file.name}-${file.size}-${file.lastModified}`;
+          processedExternalFilesRef.current.add(fileKey);
+        });
+        
         // Add external files to local files (don't replace)
         const updatedFiles = [...files, ...newExternalFiles].slice(0, MAX_FILES);
         setFiles(updatedFiles);
+        
+        // Notify parent that we processed the files so it can clear them
+        if (onExternalFilesProcessed) {
+          onExternalFilesProcessed(newExternalFiles);
+        }
       }
     }
-  }, [externalFiles]);
+  }, [externalFiles, files, onExternalFilesProcessed]);
 
   const handleSend = async () => {
     const currentMessage = message.trim();
