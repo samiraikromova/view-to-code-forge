@@ -102,9 +102,9 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { action, internal_reference, success_url, cancel_url } = body;
+    const { action, internal_reference, fanbases_product_id, product_type, success_url, cancel_url } = body;
 
-    console.log(`[Fanbases Checkout] Action: ${action}, Internal Ref: ${internal_reference}, User: ${user.id}`);
+    console.log(`[Fanbases Checkout] Action: ${action}, Internal Ref: ${internal_reference}, Fanbases Product ID: ${fanbases_product_id}, User: ${user.id}`);
 
     // Get base URL for webhooks
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
@@ -122,11 +122,33 @@ Deno.serve(async (req) => {
     const fullName = userProfile?.name || authUserMeta?.full_name || authUserMeta?.name || "";
 
     if (action === "create_checkout") {
-      // Look up the product from our fanbases_products table
-      const product = await lookupProductByInternalRef(supabase, internal_reference);
+      // For module purchases, we may receive fanbases_product_id directly along with module UUID as internal_reference
+      // This allows us to store the module UUID as product_id for access verification
+      
+      let product: FanbasesProduct | null = null;
+      let productIdForCheckout: string = internal_reference; // Default to internal_reference (module UUID)
+      
+      // If fanbases_product_id is provided directly, look up by that
+      if (fanbases_product_id) {
+        const { data: byFanbasesId } = await supabase
+          .from("fanbases_products")
+          .select("id, fanbases_product_id, product_type, internal_reference, price_cents")
+          .eq("fanbases_product_id", fanbases_product_id)
+          .maybeSingle();
+        
+        if (byFanbasesId) {
+          product = byFanbasesId;
+          console.log(`[Fanbases Checkout] Found product by fanbases_product_id: ${fanbases_product_id}`);
+        }
+      }
+      
+      // Fallback: look up by internal_reference
+      if (!product) {
+        product = await lookupProductByInternalRef(supabase, internal_reference);
+      }
 
       if (!product) {
-        console.error(`[Fanbases Checkout] Product not found for internal_reference: ${internal_reference}`);
+        console.error(`[Fanbases Checkout] Product not found for internal_reference: ${internal_reference}, fanbases_product_id: ${fanbases_product_id}`);
         return new Response(JSON.stringify({ error: `Product not found: ${internal_reference}` }), {
           status: 404,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -187,10 +209,15 @@ Deno.serve(async (req) => {
       // Build the redirect URL with metadata and prefill
       const paymentUrl = new URL(paymentLink);
       
+      // For module purchases, use the passed internal_reference (module UUID) as the product_id
+      // For other products, use the product's internal_reference from fanbases_products
+      const productIdForSession = product_type === 'module' ? internal_reference : product.internal_reference;
+      
       // Add metadata for webhook/redirect processing
       paymentUrl.searchParams.set("metadata[user_id]", user.id);
       paymentUrl.searchParams.set("metadata[product_type]", product.product_type);
-      paymentUrl.searchParams.set("metadata[internal_reference]", product.internal_reference);
+      // Store the module UUID if it's a module purchase, for access verification
+      paymentUrl.searchParams.set("metadata[internal_reference]", productIdForSession);
       paymentUrl.searchParams.set("metadata[fanbases_product_id]", product.fanbases_product_id);
       
       // Add prefill for user experience
@@ -213,17 +240,19 @@ Deno.serve(async (req) => {
         : product.price_cents;
 
       // Store checkout session reference with price from Fanbases
+      // IMPORTANT: Use productIdForSession which is the module UUID for module purchases
       const sessionId = `checkout_${Date.now()}_${user.id.slice(0, 8)}`;
       await supabase.from("checkout_sessions").insert({
         user_id: user.id,
         checkout_session_id: sessionId,
         payment_link: paymentUrl.toString(),
         product_type: product.product_type,
-        product_id: product.internal_reference,
+        product_id: productIdForSession, // Module UUID for modules, internal_reference for others
         amount_cents: priceCents,
         status: "pending",
         metadata: {
           fanbases_product_id: product.fanbases_product_id,
+          original_internal_reference: product.internal_reference, // Keep original for reference
         },
       });
       
