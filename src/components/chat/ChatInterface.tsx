@@ -796,14 +796,32 @@ export function ChatInterface({
     }
   };
   
-  const handleFilesChange = (files: File[]) => {
+  const handleFilesChange = (processedFiles: File[]) => {
+    // Clear the external files after they've been processed by ChatInput
+    // This prevents them from being re-added on subsequent renders
     if (chatId) {
-      setChatFiles(prev => ({
-        ...prev,
-        [chatId]: files
-      }));
+      // Remove processed files from chatFiles
+      setChatFiles(prev => {
+        const currentChatFiles = prev[chatId] || [];
+        const remaining = currentChatFiles.filter(
+          f => !processedFiles.some(
+            pf => pf.name === f.name && pf.size === f.size && pf.lastModified === f.lastModified
+          )
+        );
+        return {
+          ...prev,
+          [chatId]: remaining
+        };
+      });
     } else {
-      setExternalFiles(files);
+      // Remove processed files from externalFiles
+      setExternalFiles(prev => 
+        prev.filter(
+          f => !processedFiles.some(
+            pf => pf.name === f.name && pf.size === f.size && pf.lastModified === f.lastModified
+          )
+        )
+      );
     }
   };
 
