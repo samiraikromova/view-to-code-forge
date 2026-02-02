@@ -17,6 +17,8 @@ export default function Profile() {
   const [loading, setLoading] = useState(false)
   const [pageLoading, setPageLoading] = useState(true)
   const [fullName, setFullName] = useState("")
+  const [address, setAddress] = useState("")
+  const [businessName, setBusinessName] = useState("")
   const [credits, setCredits] = useState(0)
   const [tier, setTier] = useState("free")
   const [createdAt, setCreatedAt] = useState<string | null>(null)
@@ -24,6 +26,8 @@ export default function Profile() {
   useEffect(() => {
     if (profile) {
       setFullName(profile.name || "")
+      setAddress(profile.address || "")
+      setBusinessName(profile.business_name || "")
       setCredits(profile.credits || 0)
       setTier(profile.subscription_tier || "free")
       setCreatedAt(profile.created_at || null)
@@ -40,7 +44,11 @@ export default function Profile() {
     try {
       const { error } = await supabase
         .from('users')
-        .update({ name: fullName })
+        .update({ 
+          name: fullName,
+          address: address,
+          business_name: businessName
+        })
         .eq('id', user.id)
 
       if (error) throw error
@@ -142,6 +150,28 @@ export default function Profile() {
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   placeholder="Enter your full name"
+                  className="bg-surface border-border"
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="businessName">Business Name</Label>
+                <Input
+                  id="businessName"
+                  value={businessName}
+                  onChange={(e) => setBusinessName(e.target.value)}
+                  placeholder="Enter your business name"
+                  className="bg-surface border-border"
+                />
+              </div>
+
+              <div className="grid gap-2">
+                <Label htmlFor="address">Address</Label>
+                <Input
+                  id="address"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  placeholder="Enter your address"
                   className="bg-surface border-border"
                 />
               </div>
