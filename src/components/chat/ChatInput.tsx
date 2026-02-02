@@ -266,10 +266,12 @@ export function ChatInput({
     }
   };
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const newFiles = [...files, ...Array.from(e.target.files)].slice(0, MAX_FILES);
+    if (e.target.files && e.target.files.length > 0) {
+      const selectedFiles = Array.from(e.target.files);
+      const newFiles = [...files, ...selectedFiles].slice(0, MAX_FILES);
       setFiles(newFiles);
-      // Don't call onExternalFilesProcessed - setFiles already updates via onPinnedFilesChange
+      // Reset input value so the same file can be selected again
+      e.target.value = '';
     }
   };
   const handleRemoveFile = (index: number) => {
