@@ -181,9 +181,12 @@ export function TransactionHistory() {
           </div>
         ) : transactions.length > 0 ? (
           (() => {
-            // Deduplicate transactions by checkout_session_id (show each transaction only once)
+            // Deduplicate transactions using composite key: checkout_session_id + product_type + product_id + timestamp
+            // This handles cases where multiple records exist for the same transaction
             const uniqueTransactions = transactions.reduce((acc, tx) => {
-              const key = tx.checkout_session_id || tx.id;
+              // Create a composite key that identifies truly unique transactions
+              const timeKey = tx.created_at ? new Date(tx.created_at).toISOString().slice(0, 16) : ''; // Round to minute
+              const key = `${tx.checkout_session_id || ''}-${tx.product_type}-${tx.product_id || ''}-${timeKey}`;
               if (!acc.has(key)) {
                 acc.set(key, tx);
               }
