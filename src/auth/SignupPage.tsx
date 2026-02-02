@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { ArrowLeft, Loader2, Mail, Lock, User, Eye, EyeOff, Building2, MapPin } from "lucide-react";
+import { ArrowLeft, Loader2, Mail, Lock, User, Eye, EyeOff, Building2, MapPin, Check, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -206,7 +206,20 @@ const SignupPage = () => {
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-              <p className="text-xs text-muted-foreground">Min 8 chars, 1 number, 1 special character</p>
+              <div className="space-y-1 text-xs">
+                <div className={`flex items-center gap-1.5 ${password.length >= 8 ? 'text-green-500' : 'text-destructive'}`}>
+                  {password.length >= 8 ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                  <span>Min 8 characters</span>
+                </div>
+                <div className={`flex items-center gap-1.5 ${/\d/.test(password) ? 'text-green-500' : 'text-destructive'}`}>
+                  {/\d/.test(password) ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                  <span>1 number</span>
+                </div>
+                <div className={`flex items-center gap-1.5 ${/[!@#$%^&*(),.?":{}|<>]/.test(password) ? 'text-green-500' : 'text-destructive'}`}>
+                  {/[!@#$%^&*(),.?":{}|<>]/.test(password) ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                  <span>1 special character</span>
+                </div>
+              </div>
             </div>
 
             <Button 
