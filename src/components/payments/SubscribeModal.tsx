@@ -77,17 +77,13 @@ export function SubscribeModal({ isOpen, onClose, trialExpired = false }: Subscr
           </div>
 
           <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
-            <li className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-accent" />
-              Unlimited AI chat access
+            <li className="flex items-start gap-2">
+              <Sparkles className="h-4 w-4 text-accent flex-shrink-0 mt-0.5" />
+              <span>Unlimited AI chat access to 5 projects: Ad Writing, CB4 (Cam's Brain v4), Contracts Writer, Copywriting Assistant, Sales Call Transcript Review</span>
             </li>
             <li className="flex items-center gap-2">
               <CreditCard className="h-4 w-4 text-accent" />
               Ask AI about any lesson
-            </li>
-            <li className="flex items-center gap-2">
-              <Lock className="h-4 w-4 text-accent" />
-              Cancel anytime
             </li>
           </ul>
         </div>
