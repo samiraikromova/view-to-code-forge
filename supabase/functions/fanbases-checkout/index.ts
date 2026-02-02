@@ -126,9 +126,9 @@ Deno.serve(async (req) => {
       // This allows us to store the module UUID as product_id for access verification
       
       let product: FanbasesProduct | null = null;
-      let productIdForCheckout: string = internal_reference; // Default to internal_reference (module UUID)
+      let directFanbasesProductId: string | null = null;
       
-      // If fanbases_product_id is provided directly, look up by that
+      // If fanbases_product_id is provided directly, try to look up in our local table first
       if (fanbases_product_id) {
         const { data: byFanbasesId } = await supabase
           .from("fanbases_products")
@@ -138,24 +138,31 @@ Deno.serve(async (req) => {
         
         if (byFanbasesId) {
           product = byFanbasesId;
-          console.log(`[Fanbases Checkout] Found product by fanbases_product_id: ${fanbases_product_id}`);
+          console.log(`[Fanbases Checkout] Found product by fanbases_product_id in local table: ${fanbases_product_id}`);
+        } else {
+          // Product not in local table, but we have the Fanbases ID - use it directly
+          directFanbasesProductId = fanbases_product_id;
+          console.log(`[Fanbases Checkout] Using direct fanbases_product_id (not in local table): ${fanbases_product_id}`);
         }
       }
       
-      // Fallback: look up by internal_reference
-      if (!product) {
+      // Fallback: look up by internal_reference if no product found yet
+      if (!product && !directFanbasesProductId) {
         product = await lookupProductByInternalRef(supabase, internal_reference);
       }
 
-      if (!product) {
-        console.error(`[Fanbases Checkout] Product not found for internal_reference: ${internal_reference}, fanbases_product_id: ${fanbases_product_id}`);
+      // Determine which Fanbases product ID to use for the API lookup
+      const fanbasesProductIdToUse = directFanbasesProductId || product?.fanbases_product_id;
+
+      if (!fanbasesProductIdToUse) {
+        console.error(`[Fanbases Checkout] No Fanbases product ID found for internal_reference: ${internal_reference}, fanbases_product_id: ${fanbases_product_id}`);
         return new Response(JSON.stringify({ error: "Product not found. Please check product configuration." }), {
           status: 404,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
-      console.log(`[Fanbases Checkout] Found product: ${product.fanbases_product_id} (${product.product_type})`);
+      console.log(`[Fanbases Checkout] Will lookup Fanbases product: ${fanbasesProductIdToUse}`);
 
       // Fetch ALL products from Fanbases using GET /products (list endpoint)
       // Then find the matching product by ID - this avoids 404 on sandbox for single product fetch
@@ -182,12 +189,12 @@ Deno.serve(async (req) => {
       console.log(`[Fanbases Checkout] Fetched ${productsList.length} products from Fanbases`);
 
       // Find the matching product by fanbases_product_id
-      const fanbasesProduct = productsList.find((p: { id: string }) => p.id === product.fanbases_product_id);
+      const fanbasesProduct = productsList.find((p: { id: string }) => p.id === fanbasesProductIdToUse);
       
       if (!fanbasesProduct) {
-        console.error(`[Fanbases Checkout] Product ${product.fanbases_product_id} not found in Fanbases products list`);
+        console.error(`[Fanbases Checkout] Product ${fanbasesProductIdToUse} not found in Fanbases products list`);
         console.log(`[Fanbases Checkout] Available product IDs:`, productsList.map((p: { id: string }) => p.id));
-        return new Response(JSON.stringify({ error: `Product ${product.fanbases_product_id} not found in payment provider` }), {
+        return new Response(JSON.stringify({ error: "Product not found in payment provider. Please check the Fanbases Product ID." }), {
           status: 404,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
@@ -199,7 +206,7 @@ Deno.serve(async (req) => {
       const paymentLink = fanbasesProduct.payment_link;
       
       if (!paymentLink) {
-        console.error(`[Fanbases Checkout] No payment_link found on product ${product.fanbases_product_id}`);
+        console.error(`[Fanbases Checkout] No payment_link found on product ${fanbasesProductIdToUse}`);
         return new Response(JSON.stringify({ error: "Product has no payment link configured" }), {
           status: 500,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -210,15 +217,18 @@ Deno.serve(async (req) => {
       const paymentUrl = new URL(paymentLink);
       
       // For module purchases, use the passed internal_reference (module UUID) as the product_id
-      // For other products, use the product's internal_reference from fanbases_products
-      const productIdForSession = product_type === 'module' ? internal_reference : product.internal_reference;
+      // For other products, use the product's internal_reference from fanbases_products (if available)
+      const productIdForSession = product_type === 'module' ? internal_reference : (product?.internal_reference || internal_reference);
+      
+      // Determine product_type for metadata - use from local product if available, else use passed value or default to 'module'
+      const effectiveProductType = product?.product_type || product_type || 'module';
       
       // Add metadata for webhook/redirect processing
       paymentUrl.searchParams.set("metadata[user_id]", user.id);
-      paymentUrl.searchParams.set("metadata[product_type]", product.product_type);
+      paymentUrl.searchParams.set("metadata[product_type]", effectiveProductType);
       // Store the module UUID if it's a module purchase, for access verification
       paymentUrl.searchParams.set("metadata[internal_reference]", productIdForSession);
-      paymentUrl.searchParams.set("metadata[fanbases_product_id]", product.fanbases_product_id);
+      paymentUrl.searchParams.set("metadata[fanbases_product_id]", fanbasesProductIdToUse);
       
       // Add prefill for user experience
       paymentUrl.searchParams.set("prefill[email]", email);
@@ -237,7 +247,7 @@ Deno.serve(async (req) => {
       // Get price from Fanbases product (convert from string like "10.00" to cents)
       const priceCents = fanbasesProduct.price 
         ? Math.round(parseFloat(fanbasesProduct.price) * 100) 
-        : product.price_cents;
+        : (product?.price_cents || null);
 
       // Store checkout session reference with price from Fanbases
       // IMPORTANT: Use productIdForSession which is the module UUID for module purchases
@@ -246,18 +256,18 @@ Deno.serve(async (req) => {
         user_id: user.id,
         checkout_session_id: sessionId,
         payment_link: paymentUrl.toString(),
-        product_type: product.product_type,
+        product_type: effectiveProductType,
         product_id: productIdForSession, // Module UUID for modules, internal_reference for others
         amount_cents: priceCents,
         status: "pending",
         metadata: {
-          fanbases_product_id: product.fanbases_product_id,
-          original_internal_reference: product.internal_reference, // Keep original for reference
+          fanbases_product_id: fanbasesProductIdToUse,
+          original_internal_reference: product?.internal_reference || internal_reference, // Keep original for reference
         },
       });
       
-      // Sync price to fanbases_products if different
-      if (priceCents && priceCents !== product.price_cents) {
+      // Sync price to fanbases_products if we have a local product record and price is different
+      if (product && priceCents && priceCents !== product.price_cents) {
         await supabase
           .from("fanbases_products")
           .update({ price_cents: priceCents })
@@ -270,7 +280,7 @@ Deno.serve(async (req) => {
           success: true,
           checkout_url: paymentUrl.toString(),
           checkout_session_id: sessionId,
-          product_type: product.product_type,
+          product_type: effectiveProductType,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
