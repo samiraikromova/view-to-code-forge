@@ -49,6 +49,16 @@ const SignupPage = () => {
       return;
     }
 
+    if (!/[A-Z]/.test(password)) {
+      toast.error("Password must contain at least one uppercase letter");
+      return;
+    }
+
+    if (!/[a-z]/.test(password)) {
+      toast.error("Password must contain at least one lowercase letter");
+      return;
+    }
+
     setIsLoading(true);
     
     try {
@@ -210,6 +220,14 @@ const SignupPage = () => {
                 <div className={`flex items-center gap-1.5 ${password.length >= 8 ? 'text-green-500' : 'text-destructive'}`}>
                   {password.length >= 8 ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
                   <span>Min 8 characters</span>
+                </div>
+                <div className={`flex items-center gap-1.5 ${/[A-Z]/.test(password) ? 'text-green-500' : 'text-destructive'}`}>
+                  {/[A-Z]/.test(password) ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                  <span>1 uppercase letter</span>
+                </div>
+                <div className={`flex items-center gap-1.5 ${/[a-z]/.test(password) ? 'text-green-500' : 'text-destructive'}`}>
+                  {/[a-z]/.test(password) ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
+                  <span>1 lowercase letter</span>
                 </div>
                 <div className={`flex items-center gap-1.5 ${/\d/.test(password) ? 'text-green-500' : 'text-destructive'}`}>
                   {/\d/.test(password) ? <Check className="h-3 w-3" /> : <X className="h-3 w-3" />}
