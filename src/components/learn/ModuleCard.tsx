@@ -1,4 +1,4 @@
-import { Lock, Clock, Play } from "lucide-react";
+import { Lock, Clock, Play, Loader2 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
 
@@ -20,9 +20,10 @@ export interface ModuleCardData {
 interface ModuleCardProps {
   module: ModuleCardData;
   onClick: () => void;
+  isUnlocking?: boolean;
 }
 
-export function ModuleCard({ module, onClick }: ModuleCardProps) {
+export function ModuleCard({ module, onClick, isUnlocking = false }: ModuleCardProps) {
   const progress = module.totalLessons > 0 
     ? Math.round((module.completedLessons / module.totalLessons) * 100) 
     : 0;
@@ -30,11 +31,13 @@ export function ModuleCard({ module, onClick }: ModuleCardProps) {
   return (
     <button
       onClick={onClick}
+      disabled={isUnlocking}
       className={cn(
         "group relative w-full text-left rounded-xl border border-border/50 bg-card/80 backdrop-blur-sm overflow-hidden transition-all duration-300",
         module.isLocked 
           ? "opacity-80 hover:opacity-100 hover:border-primary/30 cursor-pointer" 
-          : "hover:border-primary/50 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1"
+          : "hover:border-primary/50 hover:shadow-lg hover:shadow-primary/10 hover:-translate-y-1",
+        isUnlocking && "opacity-70 cursor-wait"
       )}
     >
       {/* Cover Image */}
@@ -54,11 +57,22 @@ export function ModuleCard({ module, onClick }: ModuleCardProps) {
         {/* Locked Overlay */}
         {module.isLocked && (
           <div className="absolute inset-0 bg-background/80 backdrop-blur-sm flex flex-col items-center justify-center gap-3">
-            <Lock className="w-8 h-8 text-muted-foreground" />
-            {(module.unlockMessage || module.priceCents) && (
-              <span className="bg-primary text-primary-foreground px-4 py-2 rounded-full text-sm font-medium shadow-lg hover:bg-primary/90 transition-colors">
-                {module.unlockMessage}
-              </span>
+            {isUnlocking ? (
+              <>
+                <Loader2 className="w-8 h-8 text-primary animate-spin" />
+                <span className="bg-primary text-primary-foreground px-4 py-2 rounded-full text-sm font-medium shadow-lg">
+                  Redirecting...
+                </span>
+              </>
+            ) : (
+              <>
+                <Lock className="w-8 h-8 text-muted-foreground" />
+                {(module.unlockMessage || module.priceCents) && (
+                  <span className="bg-primary text-primary-foreground px-4 py-2 rounded-full text-sm font-medium shadow-lg hover:bg-primary/90 transition-colors">
+                    {module.unlockMessage}
+                  </span>
+                )}
+              </>
             )}
           </div>
         )}

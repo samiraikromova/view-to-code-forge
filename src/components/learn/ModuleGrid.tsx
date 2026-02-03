@@ -21,6 +21,7 @@ export function ModuleGrid({ modules, onModuleSelect, isLoading, contentType }: 
   const [showBookCallModal, setShowBookCallModal] = useState(false);
   const [selectedBookingUrl, setSelectedBookingUrl] = useState<string | undefined>(undefined);
   const [selectedModuleName, setSelectedModuleName] = useState<string>("");
+  const [unlockingModuleId, setUnlockingModuleId] = useState<string | null>(null);
 
   // Refresh access when window regains focus (user returns from checkout tab)
   useEffect(() => {
@@ -69,6 +70,9 @@ export function ModuleGrid({ modules, onModuleSelect, isLoading, contentType }: 
         setSelectedModuleName(module.title);
         setShowBookCallModal(true);
       } else if (module.fanbasesProductId || module.productId) {
+        // Set loading state
+        setUnlockingModuleId(module.id);
+        
         // Use fanbases-checkout edge function to get full URL with prefill
         // IMPORTANT: Use module.id (UUID) as the product_id for consistent access checking
         try {
@@ -90,18 +94,23 @@ export function ModuleGrid({ modules, onModuleSelect, isLoading, contentType }: 
           if (error) {
             console.error('Checkout error:', error);
             toast.error('Failed to open checkout');
+            setUnlockingModuleId(null);
             return;
           }
 
           const checkoutUrl = data?.checkout_url || data?.payment_link;
           if (checkoutUrl) {
             window.open(checkoutUrl, '_blank');
+            // Reset loading after opening new tab
+            setTimeout(() => setUnlockingModuleId(null), 2000);
           } else {
             toast.error('Failed to get checkout link');
+            setUnlockingModuleId(null);
           }
         } catch (err) {
           console.error('Module checkout error:', err);
           toast.error('Something went wrong');
+          setUnlockingModuleId(null);
         }
       }
     } else {
@@ -162,7 +171,12 @@ export function ModuleGrid({ modules, onModuleSelect, isLoading, contentType }: 
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {moduleCards.map((module) => (
-            <ModuleCard key={module.id} module={module} onClick={() => handleModuleClick(module)} />
+            <ModuleCard 
+              key={module.id} 
+              module={module} 
+              onClick={() => handleModuleClick(module)}
+              isUnlocking={unlockingModuleId === module.id}
+            />
           ))}
         </div>
       </div>
