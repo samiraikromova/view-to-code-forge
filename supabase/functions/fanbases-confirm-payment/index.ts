@@ -572,12 +572,48 @@ async function grantModuleAccess(
   paymentIntent: string,
   priceCents: number,
 ) {
-  // Check if already purchased
+  console.log(`[Fanbases Confirm] grantModuleAccess called - internalReference: ${internalReference}`);
+  
+  // STEP 1: Look up fanbases_products to get the actual internal_reference (product name/slug)
+  // The internalReference coming in might be a fanbases_product_id (UUID)
+  let productName: string | null = null;
+  let actualInternalReference = internalReference;
+  
+  // Try to find in fanbases_products by fanbases_product_id first
+  const { data: fanbasesProduct } = await supabase
+    .from("fanbases_products")
+    .select("internal_reference, fanbases_product_id")
+    .eq("fanbases_product_id", internalReference)
+    .maybeSingle();
+  
+  if (fanbasesProduct) {
+    productName = fanbasesProduct.internal_reference;
+    console.log(`[Fanbases Confirm] Found in fanbases_products by fanbases_product_id: ${productName}`);
+  } else {
+    // Try by internal_reference (in case the passed value is already the internal_reference)
+    const { data: productByRef } = await supabase
+      .from("fanbases_products")
+      .select("internal_reference, fanbases_product_id")
+      .eq("internal_reference", internalReference)
+      .maybeSingle();
+    
+    if (productByRef) {
+      productName = productByRef.internal_reference;
+      console.log(`[Fanbases Confirm] Found in fanbases_products by internal_reference: ${productName}`);
+    }
+  }
+  
+  // If we found a product name, use it as the actual reference for access checking
+  if (productName) {
+    actualInternalReference = productName;
+  }
+  
+  // Check if already purchased using both the original and actual reference
   const { data: existingPurchase } = await supabase
     .from("user_purchases")
     .select("id")
     .eq("user_id", userId)
-    .eq("product_id", internalReference)
+    .or(`product_id.eq.${internalReference},product_id.eq.${actualInternalReference}`)
     .eq("status", "completed")
     .maybeSingle();
 
@@ -585,7 +621,25 @@ async function grantModuleAccess(
     return {
       success: true,
       message: "Module already purchased",
-      details: { module_id: internalReference, already_owned: true },
+      details: { module_id: actualInternalReference, module_name: productName, already_owned: true },
+    };
+  }
+  
+  // Also check checkout_sessions for existing completed access
+  const { data: existingAccess } = await supabase
+    .from("checkout_sessions")
+    .select("id")
+    .eq("user_id", userId)
+    .eq("product_type", "module")
+    .or(`product_id.eq.${internalReference},product_id.eq.${actualInternalReference}`)
+    .eq("status", "completed")
+    .maybeSingle();
+    
+  if (existingAccess) {
+    return {
+      success: true,
+      message: "Module access already granted",
+      details: { module_id: actualInternalReference, module_name: productName, already_owned: true },
     };
   }
 
@@ -593,20 +647,19 @@ async function grantModuleAccess(
   let originalInternalReference: string | null = null;
   const { data: checkoutSession } = await supabase
     .from("checkout_sessions")
-    .select("metadata")
+    .select("id, metadata")
     .eq("user_id", userId)
-    .eq("product_id", internalReference)
+    .or(`product_id.eq.${internalReference},product_id.eq.${actualInternalReference}`)
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
   
   if (checkoutSession?.metadata?.original_internal_reference) {
     originalInternalReference = checkoutSession.metadata.original_internal_reference as string;
-    console.log(`[Fanbases Confirm] Found original_internal_reference: ${originalInternalReference}`);
+    console.log(`[Fanbases Confirm] Found original_internal_reference from metadata: ${originalInternalReference}`);
   }
 
   // Try to get module name from modules table
-  // First try by UUID (id), then by fanbases_product_id
   let moduleData = null;
   
   // Check if internalReference looks like a UUID
@@ -642,23 +695,52 @@ async function grantModuleAccess(
     moduleData = data;
   }
   
-  // Use module name from DB, or fallback to original_internal_reference, or generic "Module"
-  const moduleName = moduleData?.name || originalInternalReference || "Module";
-  const moduleId = moduleData?.id || internalReference;
+  // Build the display name with priority: modules.name > fanbases_products.internal_reference > metadata > fallback
+  const moduleName = moduleData?.name || productName || originalInternalReference || "Module";
+  const moduleId = moduleData?.id || actualInternalReference;
   
-  console.log(`[Fanbases Confirm] Module lookup - internalReference: ${internalReference}, found: ${moduleData?.name || 'NOT FOUND'}, originalRef: ${originalInternalReference}, moduleId: ${moduleId}`);
+  console.log(`[Fanbases Confirm] Module lookup - internalReference: ${internalReference}, productName: ${productName}, moduleName: ${moduleName}, moduleId: ${moduleId}`);
 
-  // Record purchase
+  // Record purchase in user_purchases - use the actual internal reference for consistency
   await supabase.from("user_purchases").insert({
     user_id: userId,
-    product_id: internalReference,
+    product_id: actualInternalReference, // Use the resolved internal_reference
     product_type: "module",
     amount_cents: priceCents,
     charge_id: paymentIntent,
     status: "completed",
   });
+  
+  // CRITICAL: Create/update checkout_sessions record with completed status
+  // This is what useAccess checks for module access
+  if (checkoutSession?.id) {
+    // Update existing pending session
+    await supabase
+      .from("checkout_sessions")
+      .update({ 
+        status: "completed", 
+        product_id: actualInternalReference, // Ensure product_id is the internal_reference
+        updated_at: new Date().toISOString() 
+      })
+      .eq("id", checkoutSession.id);
+    console.log(`[Fanbases Confirm] Updated checkout_session ${checkoutSession.id} to completed`);
+  } else {
+    // Create new completed checkout session for access tracking
+    await supabase.from("checkout_sessions").insert({
+      user_id: userId,
+      product_id: actualInternalReference,
+      product_type: "module",
+      amount_cents: priceCents,
+      status: "completed",
+      metadata: { 
+        original_fanbases_product_id: internalReference,
+        payment_intent: paymentIntent,
+      },
+    });
+    console.log(`[Fanbases Confirm] Created new checkout_session for module access`);
+  }
 
-  console.log(`[Fanbases Confirm] Module ${internalReference} (${moduleName}) unlocked for user ${userId}`);
+  console.log(`[Fanbases Confirm] Module ${actualInternalReference} (${moduleName}) unlocked for user ${userId}`);
 
   return {
     success: true,
@@ -666,6 +748,7 @@ async function grantModuleAccess(
     details: { 
       module_id: moduleId, 
       module_name: moduleName,
+      product_name: productName,
       original_internal_reference: originalInternalReference,
     },
   };

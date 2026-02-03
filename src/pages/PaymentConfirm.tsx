@@ -14,6 +14,7 @@ interface PaymentDetails {
   tier?: string;
   module_id?: string;
   module_name?: string;
+  product_name?: string;
   original_internal_reference?: string;
   period_start?: string;
   period_end?: string;
@@ -382,8 +383,8 @@ export default function PaymentConfirm() {
         );
 
       case "module":
-        // Use module_name from DB, fallback to original_internal_reference, then module_id
-        const moduleName = details.module_name || details.original_internal_reference || details.module_id || "your module";
+        // Priority: module_name (from modules table) > product_name (from fanbases_products) > original_internal_reference > module_id
+        const moduleName = details.module_name || details.product_name || details.original_internal_reference || details.module_id || "your module";
         const moduleId = details.module_id;
         
         return (
