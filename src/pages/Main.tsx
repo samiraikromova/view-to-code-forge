@@ -52,7 +52,7 @@ interface Chat {
 
 const Main = () => {
   const { user, profile, signOut } = useAuth();
-  const { purchasedModules, hasActiveSubscription, checkModuleAccess, refreshAccess, loading: accessLoading } = useAccess();
+  const { purchasedModules, hasActiveSubscription, checkModuleAccess, refreshAccess } = useAccess();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [mode, setMode] = useState<NavigationMode>("chat");
@@ -63,7 +63,6 @@ const Main = () => {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
   const [askAILoading, setAskAILoading] = useState(false);
-  const [modeTransitionLoading, setModeTransitionLoading] = useState(false);
 
   // Dashboard state (lifted from Dashboard.tsx)
   const [dashboardView, setDashboardView] = useState<ViewType>("metrics");
@@ -507,19 +506,8 @@ const Main = () => {
   };
 
   const handleModeChange = (newMode: NavigationMode) => {
-    // Show loading state when switching to dashboard or learn (they need access data)
-    if ((newMode === "dashboard" || newMode === "learn") && mode === "chat") {
-      setModeTransitionLoading(true);
-    }
     setMode(newMode);
   };
-
-  // Clear transition loading when access data is loaded
-  useEffect(() => {
-    if (!accessLoading && modeTransitionLoading) {
-      setModeTransitionLoading(false);
-    }
-  }, [accessLoading, modeTransitionLoading]);
 
   const handleAskAIDashboard = useCallback((csvData: string) => {
     const blob = new Blob([csvData], { type: "text/csv" });
@@ -733,17 +721,7 @@ const Main = () => {
 
         {/* Content */}
         <div className="flex flex-1 min-h-0 overflow-hidden">
-          {/* Mode transition loading overlay */}
-          {modeTransitionLoading && (mode === "dashboard" || mode === "learn") && (
-            <div className="flex-1 flex items-center justify-center">
-              <div className="flex flex-col items-center gap-3">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                <p className="text-sm text-muted-foreground">Loading...</p>
-              </div>
-            </div>
-          )}
-
-          {mode === "dashboard" && !modeTransitionLoading && (
+          {mode === "dashboard" && (
             <Dashboard 
               onAskAI={handleAskAIDashboard}
               currentView={dashboardView}
@@ -764,7 +742,7 @@ const Main = () => {
             />
           )}
           
-          {mode === "learn" && !modeTransitionLoading && (
+          {mode === "learn" && (
             <div className="flex-1 flex flex-col min-w-0">
               <LearnInterface
                 selectedModuleId={selectedModuleId}

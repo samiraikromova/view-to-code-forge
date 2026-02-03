@@ -1,4 +1,4 @@
-import { BookOpen } from "lucide-react";
+import { BookOpen, Loader2 } from "lucide-react";
 import { VideoPlayer } from "./VideoPlayer";
 import { ModuleGrid } from "./ModuleGrid";
 import { LessonListPanel } from "./LessonListPanel";
@@ -28,7 +28,10 @@ export const LearnInterface = ({
   onAskAI, 
   onVideoComplete 
 }: LearnInterfaceProps) => {
-  const { checkModuleAccess } = useAccess();
+  const { checkModuleAccess, loading: accessLoading } = useAccess();
+
+  // Show loading state while access data or videos are loading
+  const isFullyLoading = isLoading || accessLoading;
 
   // If no module is selected, show the grid view
   if (!selectedModuleId) {
@@ -36,9 +39,21 @@ export const LearnInterface = ({
       <ModuleGrid
         modules={modules}
         onModuleSelect={onModuleSelect}
-        isLoading={isLoading}
+        isLoading={isFullyLoading}
         contentType={contentType}
       />
+    );
+  }
+
+  // Show loading state when access is still loading for selected module
+  if (accessLoading) {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-background">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">Loading...</p>
+        </div>
+      </div>
     );
   }
 
