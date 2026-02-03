@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -7,7 +8,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Sparkles, CreditCard, Lock } from "lucide-react";
+import { Sparkles, CreditCard, Lock, Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 
 interface SubscribeModalProps {
@@ -17,7 +18,10 @@ interface SubscribeModalProps {
 }
 
 export function SubscribeModal({ isOpen, onClose, trialExpired = false }: SubscribeModalProps) {
+  const [loading, setLoading] = useState(false);
+
   const handleSubscribe = async () => {
+    setLoading(true);
     try {
       // Simple success URL - we look up the checkout session from DB instead of relying on URL params
       const successUrl = `${window.location.origin}/payment-confirm`;
@@ -45,6 +49,8 @@ export function SubscribeModal({ isOpen, onClose, trialExpired = false }: Subscr
       }
     } catch (error) {
       console.error('Subscription error:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -89,12 +95,21 @@ export function SubscribeModal({ isOpen, onClose, trialExpired = false }: Subscr
         </div>
 
         <DialogFooter className="flex gap-2">
-          <Button variant="outline" onClick={onClose}>
+          <Button variant="outline" onClick={onClose} disabled={loading}>
             Maybe Later
           </Button>
-          <Button onClick={handleSubscribe} className="gap-2">
-            <CreditCard className="h-4 w-4" />
-            Subscribe Now
+          <Button onClick={handleSubscribe} disabled={loading} className="gap-2">
+            {loading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Redirecting...
+              </>
+            ) : (
+              <>
+                <CreditCard className="h-4 w-4" />
+                Subscribe Now
+              </>
+            )}
           </Button>
         </DialogFooter>
       </DialogContent>
