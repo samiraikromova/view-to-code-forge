@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { Play, ExternalLink, MessageSquare, Calendar, Clock, Users, Download, FileText, File, Image, FileSpreadsheet, Presentation, Lock } from "lucide-react";
+import { Play, ExternalLink, MessageSquare, Calendar, Clock, Users, Download, FileText, File, Image, FileSpreadsheet, Presentation, Lock, Loader2 } from "lucide-react";
 import { Lesson, LessonFileItem } from "./LearnSidebar";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -56,6 +56,7 @@ export const VideoPlayer = ({
   const [playbackInfo, setPlaybackInfo] = useState<string | null>(null);
   const [videoLoading, setVideoLoading] = useState(false);
   const [videoError, setVideoError] = useState<string | null>(null);
+  const [unlockLoading, setUnlockLoading] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const hasMarkedComplete = useRef(false);
 
@@ -258,11 +259,26 @@ export const VideoPlayer = ({
               </div>
               {fanbasesCheckoutUrl && (
                 <Button
-                  onClick={() => window.open(fanbasesCheckoutUrl, '_blank')}
+                  onClick={() => {
+                    setUnlockLoading(true);
+                    window.open(fanbasesCheckoutUrl, '_blank');
+                    // Reset loading after a short delay since we're opening new tab
+                    setTimeout(() => setUnlockLoading(false), 2000);
+                  }}
                   className="gap-2"
+                  disabled={unlockLoading}
                 >
-                  <Lock className="h-4 w-4" />
-                  Unlock for {modulePriceCents ? `$${(modulePriceCents / 100).toFixed(0)}` : 'Purchase'}
+                  {unlockLoading ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Redirecting...
+                    </>
+                  ) : (
+                    <>
+                      <Lock className="h-4 w-4" />
+                      Unlock for {modulePriceCents ? `$${(modulePriceCents / 100).toFixed(0)}` : 'Purchase'}
+                    </>
+                  )}
                 </Button>
               )}
             </div>
