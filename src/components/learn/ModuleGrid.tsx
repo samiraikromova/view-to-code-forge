@@ -16,7 +16,7 @@ interface ModuleGridProps {
 }
 
 export function ModuleGrid({ modules, onModuleSelect, isLoading, contentType }: ModuleGridProps) {
-  const { checkModuleAccess, refreshAccess, hasDashboardAccess } = useAccess();
+  const { checkModuleAccess, refreshAccess, hasDashboardAccess, loading: accessLoading } = useAccess();
   const { user, profile } = useAuth();
   const [showBookCallModal, setShowBookCallModal] = useState(false);
   const [selectedBookingUrl, setSelectedBookingUrl] = useState<string | undefined>(undefined);
@@ -33,10 +33,14 @@ export function ModuleGrid({ modules, onModuleSelect, isLoading, contentType }: 
     return () => window.removeEventListener('focus', handleFocus);
   }, [refreshAccess]);
 
-  if (isLoading) {
+  // Show loading while access data or videos are loading
+  if (isLoading || accessLoading) {
     return (
       <div className="flex-1 flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          <p className="text-sm text-muted-foreground">Loading...</p>
+        </div>
       </div>
     );
   }
