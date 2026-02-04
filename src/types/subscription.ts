@@ -14,7 +14,6 @@ export const PLANS: Record<SubscriptionTier, SubscriptionPlan> = {
     price: 0,
     features: [
       "Basic tools access",
-      "5 chats per day",
       "Community support"
     ]
   },
