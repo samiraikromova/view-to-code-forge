@@ -143,7 +143,7 @@ Deno.serve(async (req) => {
           });
 
           if (!customersResponse.ok || customersResponse.status === 400) {
-            customersResponse = await fetch(`${FANBASES_API_URL}/customers?per_page=200`, {
+            customersResponse = await fetch(`${FANBASES_API_URL}/customers?per_page=1000`, {
               method: "GET",
               headers: {
                 Accept: "application/json",
