@@ -164,9 +164,9 @@ Deno.serve(async (req) => {
       // Fetch ALL products from Fanbases using pagination (max 100 per page)
       let productsList: Array<{ id: string; name?: string; price?: string; payment_link?: string }> = [];
       let currentPage = 1;
-      let hasMorePages = true;
+      let lastPage = 1;
 
-      while (hasMorePages) {
+      while (currentPage <= lastPage) {
         const productsResponse = await fetch(`${FANBASES_API_URL}/products?per_page=100&page=${currentPage}`, {
           method: "GET",
           headers: {
@@ -187,18 +187,11 @@ Deno.serve(async (req) => {
         const productsData = await productsResponse.json();
         const pageProducts = productsData.data?.data || productsData.data || [];
         productsList = productsList.concat(pageProducts);
-        console.log(`[Fanbases Checkout] Fetched page ${currentPage}, got ${pageProducts.length} products, total: ${productsList.length}`);
 
-        // Stop if we got fewer than 100 products (last page)
-        if (pageProducts.length < 100) {
-          hasMorePages = false;
-        } else {
-          currentPage++;
-          if (currentPage > 50) {
-            console.warn("[Fanbases Checkout] Reached max pagination limit");
-            hasMorePages = false;
-          }
-        }
+        // Use API's pagination metadata
+        lastPage = productsData.data?.last_page || 1;
+        console.log(`[Fanbases Checkout] Fetched page ${currentPage}/${lastPage}, got ${pageProducts.length} products, total: ${productsList.length}`);
+        currentPage++;
       }
 
       console.log(`[Fanbases Checkout] Total products fetched: ${productsList.length}`);
@@ -315,11 +308,11 @@ Deno.serve(async (req) => {
 
       // Fetch ALL products from Fanbases using pagination (max 100 per page)
       let productsList: Array<{ id: string; name?: string; price?: string; payment_link?: string }> = [];
-      let currentPage = 1;
-      let hasMorePages = true;
+      let cardCurrentPage = 1;
+      let cardLastPage = 1;
 
-      while (hasMorePages) {
-        const productsResponse = await fetch(`${FANBASES_API_URL}/products?per_page=100&page=${currentPage}`, {
+      while (cardCurrentPage <= cardLastPage) {
+        const productsResponse = await fetch(`${FANBASES_API_URL}/products?per_page=100&page=${cardCurrentPage}`, {
           method: "GET",
           headers: {
             Accept: "application/json",
@@ -339,16 +332,11 @@ Deno.serve(async (req) => {
         const productsData = await productsResponse.json();
         const pageProducts = productsData.data?.data || productsData.data || [];
         productsList = productsList.concat(pageProducts);
-        console.log(`[Fanbases Checkout] Card setup page ${currentPage}, got ${pageProducts.length} products, total: ${productsList.length}`);
 
-        if (pageProducts.length < 100) {
-          hasMorePages = false;
-        } else {
-          currentPage++;
-          if (currentPage > 50) {
-            hasMorePages = false;
-          }
-        }
+        // Use API's pagination metadata
+        cardLastPage = productsData.data?.last_page || 1;
+        console.log(`[Fanbases Checkout] Card setup page ${cardCurrentPage}/${cardLastPage}, got ${pageProducts.length} products, total: ${productsList.length}`);
+        cardCurrentPage++;
       }
 
       console.log(`[Fanbases Checkout] Total products for card setup: ${productsList.length}`);
