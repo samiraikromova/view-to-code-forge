@@ -162,12 +162,14 @@ Deno.serve(async (req) => {
       console.log(`[Fanbases Checkout] Found product: ${product.fanbases_product_id} (${product.product_type})`);
 
       // Fetch ALL products from Fanbases using pagination (max 100 per page)
+      console.log(`[Fanbases Checkout] Starting product fetch with pagination...`);
       let productsList: Array<{ id: string; name?: string; price?: string; payment_link?: string }> = [];
       let currentPage = 1;
       let lastPage = 1;
 
       // Use do-while to ensure we fetch at least once and get the actual lastPage value
       do {
+        console.log(`[Fanbases Checkout] Fetching products page ${currentPage}...`);
         const productsResponse = await fetch(`${FANBASES_API_URL}/products?per_page=100&page=${currentPage}`, {
           method: "GET",
           headers: {
@@ -178,7 +180,7 @@ Deno.serve(async (req) => {
 
         if (!productsResponse.ok) {
           const errorText = await productsResponse.text();
-          console.error(`[Fanbases Checkout] Failed to fetch products list: ${errorText}`);
+          console.error(`[Fanbases Checkout] Failed to fetch products page ${currentPage}: ${errorText}`);
           return new Response(JSON.stringify({ error: "Failed to fetch products from payment provider" }), {
             status: 500,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -186,16 +188,17 @@ Deno.serve(async (req) => {
         }
 
         const productsData = await productsResponse.json();
+        console.log(`[Fanbases Checkout] API response structure: last_page=${productsData.data?.last_page}, total=${productsData.data?.total}`);
         const pageProducts = productsData.data?.data || productsData.data || [];
         productsList = productsList.concat(pageProducts);
 
         // Use API's pagination metadata - this updates lastPage after first fetch
         lastPage = productsData.data?.last_page || 1;
-        console.log(`[Fanbases Checkout] Fetched page ${currentPage}/${lastPage}, got ${pageProducts.length} products, total: ${productsList.length}`);
+        console.log(`[Fanbases Checkout] Page ${currentPage}/${lastPage} complete: ${pageProducts.length} products, running total: ${productsList.length}`);
         currentPage++;
       } while (currentPage <= lastPage);
 
-      console.log(`[Fanbases Checkout] Total products fetched: ${productsList.length}`);
+      console.log(`[Fanbases Checkout] Pagination complete! Total products fetched: ${productsList.length}`);
 
       // Find the matching product by fanbases_product_id
       const fanbasesProduct = productsList.find((p: { id: string }) => p.id === product.fanbases_product_id);
@@ -308,12 +311,14 @@ Deno.serve(async (req) => {
       console.log(`[Fanbases Checkout] Using card setup product: ${cardSetupProduct.fanbases_product_id}`);
 
       // Fetch ALL products from Fanbases using pagination (max 100 per page)
+      console.log(`[Fanbases Checkout] Starting card setup product fetch with pagination...`);
       let productsList: Array<{ id: string; name?: string; price?: string; payment_link?: string }> = [];
       let cardCurrentPage = 1;
       let cardLastPage = 1;
 
       // Use do-while to ensure we fetch at least once and get the actual lastPage value
       do {
+        console.log(`[Fanbases Checkout] Card setup: fetching products page ${cardCurrentPage}...`);
         const productsResponse = await fetch(`${FANBASES_API_URL}/products?per_page=100&page=${cardCurrentPage}`, {
           method: "GET",
           headers: {
@@ -324,7 +329,7 @@ Deno.serve(async (req) => {
 
         if (!productsResponse.ok) {
           const errorText = await productsResponse.text();
-          console.error(`[Fanbases Checkout] Failed to fetch products list: ${errorText}`);
+          console.error(`[Fanbases Checkout] Failed to fetch products page ${cardCurrentPage}: ${errorText}`);
           return new Response(JSON.stringify({ error: "Failed to fetch products from payment provider" }), {
             status: 500,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -332,16 +337,17 @@ Deno.serve(async (req) => {
         }
 
         const productsData = await productsResponse.json();
+        console.log(`[Fanbases Checkout] Card setup API response: last_page=${productsData.data?.last_page}, total=${productsData.data?.total}`);
         const pageProducts = productsData.data?.data || productsData.data || [];
         productsList = productsList.concat(pageProducts);
 
         // Use API's pagination metadata - this updates cardLastPage after first fetch
         cardLastPage = productsData.data?.last_page || 1;
-        console.log(`[Fanbases Checkout] Card setup page ${cardCurrentPage}/${cardLastPage}, got ${pageProducts.length} products, total: ${productsList.length}`);
+        console.log(`[Fanbases Checkout] Card setup page ${cardCurrentPage}/${cardLastPage} complete: ${pageProducts.length} products, running total: ${productsList.length}`);
         cardCurrentPage++;
       } while (cardCurrentPage <= cardLastPage);
 
-      console.log(`[Fanbases Checkout] Total products for card setup: ${productsList.length}`);
+      console.log(`[Fanbases Checkout] Card setup pagination complete! Total products: ${productsList.length}`);
 
       // Find the card setup product by fanbases_product_id
       const fanbasesProduct = productsList.find((p: { id: string }) => p.id === cardSetupProduct.fanbases_product_id);
