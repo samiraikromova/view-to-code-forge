@@ -26,7 +26,7 @@ export const PLANS: Record<SubscriptionTier, SubscriptionPlan> = {
       "10,000 monthly credits",
       "AI Chat access",
       "Ask AI on lessons",
-      "Priority support"
+      "Access to 5 projects: Ad Writing, CB4 (Cam's Brain v4), Contracts Writer, Copywriting Assistant, Sales Call Transcript Review"
     ]
   },
   pro: {
@@ -37,8 +37,8 @@ export const PLANS: Record<SubscriptionTier, SubscriptionPlan> = {
       "40,000 monthly credits",
       "AI Chat access",
       "Ask AI on lessons",
-      "Priority support",
-      "Advanced AI models"
+      "Access for Image Ad Generator",
+      "Access for AI Hooks Generator"
     ]
   }
 };
