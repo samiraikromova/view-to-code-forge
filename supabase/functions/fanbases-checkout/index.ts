@@ -163,7 +163,7 @@ Deno.serve(async (req) => {
 
       // Fetch ALL products from Fanbases using GET /products (list endpoint)
       // Then find the matching product by ID - this avoids 404 on sandbox for single product fetch
-      const productsResponse = await fetch(`${FANBASES_API_URL}/products?per_page=100`, {
+      const productsResponse = await fetch(`${FANBASES_API_URL}/products?per_page=1000`, {
         method: "GET",
         headers: {
           Accept: "application/json",
@@ -296,7 +296,7 @@ Deno.serve(async (req) => {
       console.log(`[Fanbases Checkout] Using card setup product: ${cardSetupProduct.fanbases_product_id}`);
 
       // Fetch ALL products from Fanbases to get the payment link
-      const productsResponse = await fetch(`${FANBASES_API_URL}/products?per_page=100`, {
+      const productsResponse = await fetch(`${FANBASES_API_URL}/products?per_page=1000`, {
         method: "GET",
         headers: {
           Accept: "application/json",
