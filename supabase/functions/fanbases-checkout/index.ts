@@ -161,29 +161,47 @@ Deno.serve(async (req) => {
 
       console.log(`[Fanbases Checkout] Found product: ${product.fanbases_product_id} (${product.product_type})`);
 
-      // Fetch ALL products from Fanbases using GET /products (list endpoint)
-      // Then find the matching product by ID - this avoids 404 on sandbox for single product fetch
-      const productsResponse = await fetch(`${FANBASES_API_URL}/products?per_page=1000`, {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-          "x-api-key": FANBASES_API_KEY,
-        },
-      });
+      // Fetch ALL products from Fanbases using pagination (max 100 per page)
+      let productsList: Array<{ id: string; name?: string; price?: string; payment_link?: string }> = [];
+      let currentPage = 1;
+      let hasMorePages = true;
 
-      if (!productsResponse.ok) {
-        const errorText = await productsResponse.text();
-        console.error(`[Fanbases Checkout] Failed to fetch products list: ${errorText}`);
-        return new Response(JSON.stringify({ error: "Failed to fetch products from payment provider" }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+      while (hasMorePages) {
+        const productsResponse = await fetch(`${FANBASES_API_URL}/products?per_page=100&page=${currentPage}`, {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+            "x-api-key": FANBASES_API_KEY,
+          },
         });
+
+        if (!productsResponse.ok) {
+          const errorText = await productsResponse.text();
+          console.error(`[Fanbases Checkout] Failed to fetch products list: ${errorText}`);
+          return new Response(JSON.stringify({ error: "Failed to fetch products from payment provider" }), {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        const productsData = await productsResponse.json();
+        const pageProducts = productsData.data?.data || productsData.data || [];
+        productsList = productsList.concat(pageProducts);
+        console.log(`[Fanbases Checkout] Fetched page ${currentPage}, got ${pageProducts.length} products, total: ${productsList.length}`);
+
+        // Stop if we got fewer than 100 products (last page)
+        if (pageProducts.length < 100) {
+          hasMorePages = false;
+        } else {
+          currentPage++;
+          if (currentPage > 50) {
+            console.warn("[Fanbases Checkout] Reached max pagination limit");
+            hasMorePages = false;
+          }
+        }
       }
 
-      const productsData = await productsResponse.json();
-      const productsList = productsData.data?.data || productsData.data || [];
-
-      console.log(`[Fanbases Checkout] Fetched ${productsList.length} products from Fanbases`);
+      console.log(`[Fanbases Checkout] Total products fetched: ${productsList.length}`);
 
       // Find the matching product by fanbases_product_id
       const fanbasesProduct = productsList.find((p: { id: string }) => p.id === product.fanbases_product_id);
@@ -295,28 +313,45 @@ Deno.serve(async (req) => {
 
       console.log(`[Fanbases Checkout] Using card setup product: ${cardSetupProduct.fanbases_product_id}`);
 
-      // Fetch ALL products from Fanbases to get the payment link
-      const productsResponse = await fetch(`${FANBASES_API_URL}/products?per_page=1000`, {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-          "x-api-key": FANBASES_API_KEY,
-        },
-      });
+      // Fetch ALL products from Fanbases using pagination (max 100 per page)
+      let productsList: Array<{ id: string; name?: string; price?: string; payment_link?: string }> = [];
+      let currentPage = 1;
+      let hasMorePages = true;
 
-      if (!productsResponse.ok) {
-        const errorText = await productsResponse.text();
-        console.error(`[Fanbases Checkout] Failed to fetch products list: ${errorText}`);
-        return new Response(JSON.stringify({ error: "Failed to fetch products from payment provider" }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+      while (hasMorePages) {
+        const productsResponse = await fetch(`${FANBASES_API_URL}/products?per_page=100&page=${currentPage}`, {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+            "x-api-key": FANBASES_API_KEY,
+          },
         });
+
+        if (!productsResponse.ok) {
+          const errorText = await productsResponse.text();
+          console.error(`[Fanbases Checkout] Failed to fetch products list: ${errorText}`);
+          return new Response(JSON.stringify({ error: "Failed to fetch products from payment provider" }), {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        const productsData = await productsResponse.json();
+        const pageProducts = productsData.data?.data || productsData.data || [];
+        productsList = productsList.concat(pageProducts);
+        console.log(`[Fanbases Checkout] Card setup page ${currentPage}, got ${pageProducts.length} products, total: ${productsList.length}`);
+
+        if (pageProducts.length < 100) {
+          hasMorePages = false;
+        } else {
+          currentPage++;
+          if (currentPage > 50) {
+            hasMorePages = false;
+          }
+        }
       }
 
-      const productsData = await productsResponse.json();
-      const productsList = productsData.data?.data || productsData.data || [];
-
-      console.log(`[Fanbases Checkout] Fetched ${productsList.length} products from Fanbases for card setup`);
+      console.log(`[Fanbases Checkout] Total products for card setup: ${productsList.length}`);
 
       // Find the card setup product by fanbases_product_id
       const fanbasesProduct = productsList.find((p: { id: string }) => p.id === cardSetupProduct.fanbases_product_id);
