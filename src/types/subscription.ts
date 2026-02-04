@@ -23,10 +23,10 @@ export const PLANS: Record<SubscriptionTier, SubscriptionPlan> = {
     name: "Starter",
     price: 29,
     features: [
-      "All basic tools",
-      "Unlimited chats",
-      "Email support",
-      "50 AI requests per day"
+      "10,000 monthly credits",
+      "AI Chat access",
+      "Ask AI on lessons",
+      "Priority support"
     ]
   },
   pro: {
@@ -34,12 +34,11 @@ export const PLANS: Record<SubscriptionTier, SubscriptionPlan> = {
     name: "Pro",
     price: 99,
     features: [
-      "All tools including premium",
-      "Unlimited chats",
+      "40,000 monthly credits",
+      "AI Chat access",
+      "Ask AI on lessons",
       "Priority support",
-      "Unlimited AI requests",
-      "Early access to new features",
-      "Advanced analytics"
+      "Advanced AI models"
     ]
   }
 };
