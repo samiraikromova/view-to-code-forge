@@ -161,56 +161,69 @@ Deno.serve(async (req) => {
 
       console.log(`[Fanbases Checkout] Found product: ${product.fanbases_product_id} (${product.product_type})`);
 
-      // Fetch ALL products from Fanbases using pagination (max 100 per page)
-      console.log(`[Fanbases Checkout] Starting product fetch with pagination...`);
-      let productsList: Array<{ id: string; name?: string; price?: string; payment_link?: string }> = [];
-      let currentPage = 1;
-      let lastPage = 1;
+      // Try single product lookup first (more efficient than pagination)
+      console.log(`[Fanbases Checkout] Trying direct product lookup: ${product.fanbases_product_id}`);
+      let fanbasesProduct: { id: string; name?: string; price?: string; payment_link?: string } | null = null;
+      
+      const singleProductResponse = await fetch(`${FANBASES_API_URL}/products/${product.fanbases_product_id}`, {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          "x-api-key": FANBASES_API_KEY,
+        },
+      });
 
-      // Use do-while to ensure we fetch at least once and get the actual lastPage value
-      do {
-        console.log(`[Fanbases Checkout] Fetching products page ${currentPage}...`);
-        const productsResponse = await fetch(`${FANBASES_API_URL}/products?per_page=100&page=${currentPage}`, {
-          method: "GET",
-          headers: {
-            Accept: "application/json",
-            "x-api-key": FANBASES_API_KEY,
-          },
-        });
+      if (singleProductResponse.ok) {
+        const singleProductData = await singleProductResponse.json();
+        // Handle nested response structure: data.data or data
+        fanbasesProduct = singleProductData.data?.data || singleProductData.data || singleProductData;
+        console.log(`[Fanbases Checkout] Direct lookup succeeded for ${product.fanbases_product_id}`);
+      } else {
+        console.log(`[Fanbases Checkout] Direct lookup failed (status: ${singleProductResponse.status}), falling back to pagination`);
+        await singleProductResponse.text(); // Consume response body
+        
+        // Fallback: Fetch ALL products using pagination
+        let productsList: Array<{ id: string; name?: string; price?: string; payment_link?: string }> = [];
+        let currentPage = 1;
+        let lastPage = 1;
 
-        if (!productsResponse.ok) {
-          const errorText = await productsResponse.text();
-          console.error(`[Fanbases Checkout] Failed to fetch products page ${currentPage}: ${errorText}`);
-          return new Response(JSON.stringify({ error: "Failed to fetch products from payment provider" }), {
-            status: 500,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
+        do {
+          console.log(`[Fanbases Checkout] Fetching products page ${currentPage}...`);
+          const productsResponse = await fetch(`${FANBASES_API_URL}/products?per_page=100&page=${currentPage}`, {
+            method: "GET",
+            headers: {
+              Accept: "application/json",
+              "x-api-key": FANBASES_API_KEY,
+            },
           });
-        }
 
-        const productsData = await productsResponse.json();
-        console.log(`[Fanbases Checkout] API response structure: last_page=${productsData.data?.last_page}, total=${productsData.data?.total}`);
-        const pageProducts = productsData.data?.data || productsData.data || [];
-        productsList = productsList.concat(pageProducts);
+          if (!productsResponse.ok) {
+            const errorText = await productsResponse.text();
+            console.error(`[Fanbases Checkout] Failed to fetch products page ${currentPage}: ${errorText}`);
+            return new Response(JSON.stringify({ error: "Failed to fetch products from payment provider" }), {
+              status: 500,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
 
-        // Use API's pagination metadata - this updates lastPage after first fetch
-        lastPage = productsData.data?.last_page || 1;
-        console.log(`[Fanbases Checkout] Page ${currentPage}/${lastPage} complete: ${pageProducts.length} products, running total: ${productsList.length}`);
-        currentPage++;
-      } while (currentPage <= lastPage);
+          const productsData = await productsResponse.json();
+          // Handle nested response: data.data is the array, data.last_page is pagination
+          const pageProducts = productsData.data?.data || productsData.data || [];
+          lastPage = productsData.data?.last_page || 1;
+          
+          console.log(`[Fanbases Checkout] Page ${currentPage}/${lastPage}: ${pageProducts.length} products`);
+          productsList = productsList.concat(pageProducts);
+          currentPage++;
+        } while (currentPage <= lastPage);
 
-      console.log(`[Fanbases Checkout] Pagination complete! Total products fetched: ${productsList.length}`);
-
-      // Find the matching product by fanbases_product_id
-      const fanbasesProduct = productsList.find((p: { id: string }) => p.id === product.fanbases_product_id);
+        console.log(`[Fanbases Checkout] Pagination complete: ${productsList.length} total products fetched`);
+        fanbasesProduct = productsList.find((p: { id: string }) => p.id === product.fanbases_product_id) || null;
+      }
 
       if (!fanbasesProduct) {
-        console.error(`[Fanbases Checkout] Product ${product.fanbases_product_id} not found in Fanbases products list`);
-        console.log(
-          `[Fanbases Checkout] Available product IDs:`,
-          productsList.map((p: { id: string }) => p.id),
-        );
+        console.error(`[Fanbases Checkout] Product ${product.fanbases_product_id} not found in Fanbases`);
         return new Response(
-          JSON.stringify({ error: `Product ${product.fanbases_product_id} not found in payment provider` }),
+          JSON.stringify({ error: "Product not found in payment provider" }),
           {
             status: 404,
             headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -310,56 +323,65 @@ Deno.serve(async (req) => {
 
       console.log(`[Fanbases Checkout] Using card setup product: ${cardSetupProduct.fanbases_product_id}`);
 
-      // Fetch ALL products from Fanbases using pagination (max 100 per page)
-      console.log(`[Fanbases Checkout] Starting card setup product fetch with pagination...`);
-      let productsList: Array<{ id: string; name?: string; price?: string; payment_link?: string }> = [];
-      let cardCurrentPage = 1;
-      let cardLastPage = 1;
+      // Try single product lookup first (more efficient than pagination)
+      console.log(`[Fanbases Checkout] Trying direct product lookup for card setup: ${cardSetupProduct.fanbases_product_id}`);
+      let fanbasesProduct: { id: string; name?: string; price?: string; payment_link?: string } | null = null;
+      
+      const singleProductResponse = await fetch(`${FANBASES_API_URL}/products/${cardSetupProduct.fanbases_product_id}`, {
+        method: "GET",
+        headers: {
+          Accept: "application/json",
+          "x-api-key": FANBASES_API_KEY,
+        },
+      });
 
-      // Use do-while to ensure we fetch at least once and get the actual lastPage value
-      do {
-        console.log(`[Fanbases Checkout] Card setup: fetching products page ${cardCurrentPage}...`);
-        const productsResponse = await fetch(`${FANBASES_API_URL}/products?per_page=100&page=${cardCurrentPage}`, {
-          method: "GET",
-          headers: {
-            Accept: "application/json",
-            "x-api-key": FANBASES_API_KEY,
-          },
-        });
+      if (singleProductResponse.ok) {
+        const singleProductData = await singleProductResponse.json();
+        fanbasesProduct = singleProductData.data?.data || singleProductData.data || singleProductData;
+        console.log(`[Fanbases Checkout] Direct lookup succeeded for card setup product`);
+      } else {
+        console.log(`[Fanbases Checkout] Direct lookup failed (status: ${singleProductResponse.status}), falling back to pagination`);
+        await singleProductResponse.text(); // Consume response body
+        
+        // Fallback: Fetch ALL products using pagination
+        let productsList: Array<{ id: string; name?: string; price?: string; payment_link?: string }> = [];
+        let cardCurrentPage = 1;
+        let cardLastPage = 1;
 
-        if (!productsResponse.ok) {
-          const errorText = await productsResponse.text();
-          console.error(`[Fanbases Checkout] Failed to fetch products page ${cardCurrentPage}: ${errorText}`);
-          return new Response(JSON.stringify({ error: "Failed to fetch products from payment provider" }), {
-            status: 500,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
+        do {
+          console.log(`[Fanbases Checkout] Card setup: fetching products page ${cardCurrentPage}...`);
+          const productsResponse = await fetch(`${FANBASES_API_URL}/products?per_page=100&page=${cardCurrentPage}`, {
+            method: "GET",
+            headers: {
+              Accept: "application/json",
+              "x-api-key": FANBASES_API_KEY,
+            },
           });
-        }
 
-        const productsData = await productsResponse.json();
-        console.log(`[Fanbases Checkout] Card setup API response: last_page=${productsData.data?.last_page}, total=${productsData.data?.total}`);
-        const pageProducts = productsData.data?.data || productsData.data || [];
-        productsList = productsList.concat(pageProducts);
+          if (!productsResponse.ok) {
+            const errorText = await productsResponse.text();
+            console.error(`[Fanbases Checkout] Failed to fetch products page ${cardCurrentPage}: ${errorText}`);
+            return new Response(JSON.stringify({ error: "Failed to fetch products from payment provider" }), {
+              status: 500,
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+            });
+          }
 
-        // Use API's pagination metadata - this updates cardLastPage after first fetch
-        cardLastPage = productsData.data?.last_page || 1;
-        console.log(`[Fanbases Checkout] Card setup page ${cardCurrentPage}/${cardLastPage} complete: ${pageProducts.length} products, running total: ${productsList.length}`);
-        cardCurrentPage++;
-      } while (cardCurrentPage <= cardLastPage);
+          const productsData = await productsResponse.json();
+          const pageProducts = productsData.data?.data || productsData.data || [];
+          cardLastPage = productsData.data?.last_page || 1;
+          
+          console.log(`[Fanbases Checkout] Card setup page ${cardCurrentPage}/${cardLastPage}: ${pageProducts.length} products`);
+          productsList = productsList.concat(pageProducts);
+          cardCurrentPage++;
+        } while (cardCurrentPage <= cardLastPage);
 
-      console.log(`[Fanbases Checkout] Card setup pagination complete! Total products: ${productsList.length}`);
-
-      // Find the card setup product by fanbases_product_id
-      const fanbasesProduct = productsList.find((p: { id: string }) => p.id === cardSetupProduct.fanbases_product_id);
+        console.log(`[Fanbases Checkout] Card setup pagination complete: ${productsList.length} total products`);
+        fanbasesProduct = productsList.find((p: { id: string }) => p.id === cardSetupProduct.fanbases_product_id) || null;
+      }
 
       if (!fanbasesProduct) {
-        console.error(
-          `[Fanbases Checkout] Card setup product ${cardSetupProduct.fanbases_product_id} not found in Fanbases`,
-        );
-        console.log(
-          `[Fanbases Checkout] Available product IDs:`,
-          productsList.map((p: { id: string }) => p.id),
-        );
+        console.error(`[Fanbases Checkout] Card setup product ${cardSetupProduct.fanbases_product_id} not found in Fanbases`);
         return new Response(JSON.stringify({ error: "Card setup product not found in payment provider" }), {
           status: 404,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
