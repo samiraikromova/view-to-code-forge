@@ -223,10 +223,8 @@ export function useAccess() {
           productId: productId || moduleSlug,
           fanbasesProductId: product?.fanbases_product_id,
           fanbasesCheckoutUrl: product
-            ? fanbasesCheckoutUrl
-            : product
-              ? `https://www.fanbasis.com/agency-checkout/leveragedcreator/${product.fanbases_product_id}`
-              : undefined,
+            ? `https://www.fanbasis.com/agency-checkout/leveragedcreator/${product.fanbases_product_id}`
+            : undefined,
         };
       }
       //`https://qa.dev-fan-basis.com/agency-checkout/lc-sandbox/${product.fanbases_product_id}`
