@@ -52,41 +52,12 @@ async function lookupProductByInternalRef(supabase: any, internalReference: stri
   return null;
 }
 
-// Fetch a single product from Fanbases by ID, with pagination fallback
+// Fetch a single product from Fanbases by ID using pagination
 async function fetchFanbasesProduct(
   productId: string,
   apiKey: string
 ): Promise<{ id: string; name?: string; price?: string; payment_link?: string } | null> {
-  // Strategy 1: Try direct single product lookup (most efficient)
-  console.log(`[Fanbases Checkout] Trying direct product lookup: ${productId}`);
-  
-  try {
-    const singleResponse = await fetch(`${FANBASES_API_URL}/products/${productId}`, {
-      method: "GET",
-      headers: {
-        Accept: "application/json",
-        "x-api-key": apiKey,
-      },
-    });
-
-    if (singleResponse.ok) {
-      const singleData = await singleResponse.json();
-      // Handle nested response: data.data or data or direct
-      const product = singleData.data?.data || singleData.data || singleData;
-      if (product && product.id) {
-        console.log(`[Fanbases Checkout] Direct lookup succeeded for ${productId}`);
-        return product;
-      }
-    } else {
-      console.log(`[Fanbases Checkout] Direct lookup failed (status: ${singleResponse.status}), trying pagination...`);
-      await singleResponse.text(); // Consume body
-    }
-  } catch (err) {
-    console.log(`[Fanbases Checkout] Direct lookup error: ${err}, trying pagination...`);
-  }
-
-  // Strategy 2: Pagination fallback - fetch all products page by page
-  console.log(`[Fanbases Checkout] Starting paginated product search for ${productId}...`);
+  console.log(`[Fanbases Checkout] Searching for product ${productId} using pagination...`);
   
   let currentPage = 1;
   let lastPage = 1;
