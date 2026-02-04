@@ -2,7 +2,8 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 // Product type definitions
@@ -27,8 +28,8 @@ const TOPUP_CONFIG: Record<string, ProductConfig> = {
 };
 
 // Fanbases API configuration
-//const FANBASES_API_URL = "https://www.fanbasis.com/public-api";
-const FANBASES_API_URL = "https://qa.dev-fan-basis.com/public-api";
+const FANBASES_API_URL = "https://www.fanbasis.com/public-api";
+//const FANBASES_API_URL = "https://qa.dev-fan-basis.com/public-api";
 
 // Verify transaction with Fanbases API
 async function verifyTransactionWithFanbases(
@@ -73,10 +74,7 @@ async function verifyTransactionWithFanbases(
 }
 
 // Fetch checkout session from Fanbases API to get amount_cents
-async function fetchCheckoutSessionAmount(
-  checkoutSessionId: string,
-  apiKey: string,
-): Promise<number | null> {
+async function fetchCheckoutSessionAmount(checkoutSessionId: string, apiKey: string): Promise<number | null> {
   try {
     console.log(`[Fanbases Confirm] Fetching checkout session: ${checkoutSessionId}`);
 
@@ -137,10 +135,7 @@ async function fetchCheckoutSessionAmount(
 }
 
 // Fetch transaction details from Fanbases API to get amount
-async function fetchTransactionAmount(
-  transactionId: string,
-  apiKey: string,
-): Promise<number | null> {
+async function fetchTransactionAmount(transactionId: string, apiKey: string): Promise<number | null> {
   try {
     console.log(`[Fanbases Confirm] Fetching transaction for amount: ${transactionId}`);
 
@@ -202,7 +197,15 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    const { payment_intent, redirect_status, product_type, internal_reference, fanbases_product_id, user_id: bodyUserId, checkout_session_id } = body;
+    const {
+      payment_intent,
+      redirect_status,
+      product_type,
+      internal_reference,
+      fanbases_product_id,
+      user_id: bodyUserId,
+      checkout_session_id,
+    } = body;
 
     console.log(`[Fanbases Confirm] Request body:`, JSON.stringify(body));
 
@@ -333,7 +336,7 @@ Deno.serve(async (req) => {
           console.log(`[Fanbases Confirm] Got price from checkout session API: ${priceCents} cents`);
         }
       }
-      
+
       // If still no price, try transaction API using payment_intent
       if (priceCents === 0 && payment_intent) {
         const txAmount = await fetchTransactionAmount(payment_intent, FANBASES_API_KEY);
@@ -342,13 +345,10 @@ Deno.serve(async (req) => {
           console.log(`[Fanbases Confirm] Got price from transaction API: ${priceCents} cents`);
         }
       }
-      
+
       // Update checkout_sessions with the fetched amount if we have one
       if (priceCents > 0 && checkoutSession?.id) {
-        await supabase
-          .from("checkout_sessions")
-          .update({ amount_cents: priceCents })
-          .eq("id", checkoutSession.id);
+        await supabase.from("checkout_sessions").update({ amount_cents: priceCents }).eq("id", checkoutSession.id);
         console.log(`[Fanbases Confirm] Updated checkout session with amount: ${priceCents} cents`);
       }
     }
@@ -372,14 +372,14 @@ Deno.serve(async (req) => {
     console.log(`[Fanbases Confirm] Result:`, result);
 
     // Update checkout session status if exists and also update amount_cents if we have it
-    const updateData: { status: string; updated_at: string; amount_cents?: number } = { 
-      status: "completed", 
-      updated_at: new Date().toISOString() 
+    const updateData: { status: string; updated_at: string; amount_cents?: number } = {
+      status: "completed",
+      updated_at: new Date().toISOString(),
     };
     if (priceCents > 0) {
       updateData.amount_cents = priceCents;
     }
-    
+
     // Update by checkout_session_id if provided, otherwise by product_id or product_type
     if (checkout_session_id) {
       const { error: updateError } = await supabase
@@ -388,7 +388,7 @@ Deno.serve(async (req) => {
         .eq("user_id", userId)
         .eq("checkout_session_id", checkout_session_id)
         .eq("status", "pending");
-      
+
       if (updateError) {
         console.error("[Fanbases Confirm] Error updating checkout session by checkout_session_id:", updateError);
       } else {
@@ -403,7 +403,7 @@ Deno.serve(async (req) => {
         .eq("product_id", internal_reference)
         .eq("status", "pending")
         .select("id");
-      
+
       if (updateError1) {
         console.error("[Fanbases Confirm] Error updating checkout session by product_id:", updateError1);
       } else if (updatedByProductId && updatedByProductId.length > 0) {
@@ -419,7 +419,7 @@ Deno.serve(async (req) => {
           .order("created_at", { ascending: false })
           .limit(1)
           .select("id");
-          
+
         if (updateError2) {
           console.error("[Fanbases Confirm] Error updating checkout session by product_type:", updateError2);
         } else if (updatedByType && updatedByType.length > 0) {
@@ -519,11 +519,14 @@ async function grantSubscription(
   const newCredits = currentCredits + (config.monthlyCredits || 0);
 
   // Update users table subscription_tier AND add credits
-  await supabase.from("users").update({ 
-    subscription_tier: config.tier,
-    credits: newCredits,
-    last_credit_update: new Date().toISOString(),
-  }).eq("id", userId);
+  await supabase
+    .from("users")
+    .update({
+      subscription_tier: config.tier,
+      credits: newCredits,
+      last_credit_update: new Date().toISOString(),
+    })
+    .eq("id", userId);
 
   // Upsert user_subscriptions (NOT user_credits)
   await supabase.from("user_subscriptions").upsert(
@@ -548,7 +551,9 @@ async function grantSubscription(
     status: "completed",
   });
 
-  console.log(`[Fanbases Confirm] Subscription ${config.tier} activated for user ${userId}. Added ${config.monthlyCredits} credits. New balance: ${newCredits}`);
+  console.log(
+    `[Fanbases Confirm] Subscription ${config.tier} activated for user ${userId}. Added ${config.monthlyCredits} credits. New balance: ${newCredits}`,
+  );
 
   return {
     success: true,
@@ -573,19 +578,19 @@ async function grantModuleAccess(
   priceCents: number,
 ) {
   console.log(`[Fanbases Confirm] grantModuleAccess called - internalReference: ${internalReference}`);
-  
+
   // STEP 1: Look up fanbases_products to get the actual internal_reference (product name/slug)
   // The internalReference coming in might be a fanbases_product_id (UUID)
   let productName: string | null = null;
   let actualInternalReference = internalReference;
-  
+
   // Try to find in fanbases_products by fanbases_product_id first
   const { data: fanbasesProduct } = await supabase
     .from("fanbases_products")
     .select("internal_reference, fanbases_product_id")
     .eq("fanbases_product_id", internalReference)
     .maybeSingle();
-  
+
   if (fanbasesProduct) {
     productName = fanbasesProduct.internal_reference;
     console.log(`[Fanbases Confirm] Found in fanbases_products by fanbases_product_id: ${productName}`);
@@ -596,18 +601,18 @@ async function grantModuleAccess(
       .select("internal_reference, fanbases_product_id")
       .eq("internal_reference", internalReference)
       .maybeSingle();
-    
+
     if (productByRef) {
       productName = productByRef.internal_reference;
       console.log(`[Fanbases Confirm] Found in fanbases_products by internal_reference: ${productName}`);
     }
   }
-  
+
   // If we found a product name, use it as the actual reference for access checking
   if (productName) {
     actualInternalReference = productName;
   }
-  
+
   // Check if already purchased using both the original and actual reference
   const { data: existingPurchase } = await supabase
     .from("user_purchases")
@@ -624,7 +629,7 @@ async function grantModuleAccess(
       details: { module_id: actualInternalReference, module_name: productName, already_owned: true },
     };
   }
-  
+
   // Also check checkout_sessions for existing completed access
   const { data: existingAccess } = await supabase
     .from("checkout_sessions")
@@ -634,7 +639,7 @@ async function grantModuleAccess(
     .or(`product_id.eq.${internalReference},product_id.eq.${actualInternalReference}`)
     .eq("status", "completed")
     .maybeSingle();
-    
+
   if (existingAccess) {
     return {
       success: true,
@@ -653,7 +658,7 @@ async function grantModuleAccess(
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();
-  
+
   if (checkoutSession?.metadata?.original_internal_reference) {
     originalInternalReference = checkoutSession.metadata.original_internal_reference as string;
     console.log(`[Fanbases Confirm] Found original_internal_reference from metadata: ${originalInternalReference}`);
@@ -661,10 +666,10 @@ async function grantModuleAccess(
 
   // Try to get module name from modules table
   let moduleData = null;
-  
+
   // Check if internalReference looks like a UUID
   const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(internalReference);
-  
+
   if (isUuid) {
     // First try by module id
     const { data: dataById } = await supabase
@@ -673,7 +678,7 @@ async function grantModuleAccess(
       .eq("id", internalReference)
       .maybeSingle();
     moduleData = dataById;
-    
+
     // If not found by id, also try by fanbases_product_id (UUID format)
     if (!moduleData) {
       const { data: dataByFanbases } = await supabase
@@ -684,7 +689,7 @@ async function grantModuleAccess(
       moduleData = dataByFanbases;
     }
   }
-  
+
   // If not found and not a UUID, try by fanbases_product_id (non-UUID string)
   if (!moduleData) {
     const { data } = await supabase
@@ -694,12 +699,14 @@ async function grantModuleAccess(
       .maybeSingle();
     moduleData = data;
   }
-  
+
   // Build the display name with priority: modules.name > fanbases_products.internal_reference > metadata > fallback
   const moduleName = moduleData?.name || productName || originalInternalReference || "Module";
   const moduleId = moduleData?.id || actualInternalReference;
-  
-  console.log(`[Fanbases Confirm] Module lookup - internalReference: ${internalReference}, productName: ${productName}, moduleName: ${moduleName}, moduleId: ${moduleId}`);
+
+  console.log(
+    `[Fanbases Confirm] Module lookup - internalReference: ${internalReference}, productName: ${productName}, moduleName: ${moduleName}, moduleId: ${moduleId}`,
+  );
 
   // Record purchase in user_purchases - use the actual internal reference for consistency
   await supabase.from("user_purchases").insert({
@@ -710,17 +717,17 @@ async function grantModuleAccess(
     charge_id: paymentIntent,
     status: "completed",
   });
-  
+
   // CRITICAL: Create/update checkout_sessions record with completed status
   // This is what useAccess checks for module access
   if (checkoutSession?.id) {
     // Update existing pending session
     await supabase
       .from("checkout_sessions")
-      .update({ 
-        status: "completed", 
+      .update({
+        status: "completed",
         product_id: actualInternalReference, // Ensure product_id is the internal_reference
-        updated_at: new Date().toISOString() 
+        updated_at: new Date().toISOString(),
       })
       .eq("id", checkoutSession.id);
     console.log(`[Fanbases Confirm] Updated checkout_session ${checkoutSession.id} to completed`);
@@ -732,7 +739,7 @@ async function grantModuleAccess(
       product_type: "module",
       amount_cents: priceCents,
       status: "completed",
-      metadata: { 
+      metadata: {
         original_fanbases_product_id: internalReference,
         payment_intent: paymentIntent,
       },
@@ -745,8 +752,8 @@ async function grantModuleAccess(
   return {
     success: true,
     message: `Successfully unlocked module: ${moduleName}`,
-    details: { 
-      module_id: moduleId, 
+    details: {
+      module_id: moduleId,
       module_name: moduleName,
       product_name: productName,
       original_internal_reference: originalInternalReference,
@@ -764,35 +771,37 @@ async function recordCardSetup(
   priceCents: number,
 ) {
   const FANBASES_API_KEY = Deno.env.get("FANBASES_API_KEY");
-  const FANBASES_API_URL = "https://qa.dev-fan-basis.com/public-api";
-  
+  const FANBASES_API_URL = "https://www.fanbasis.com/public-api";
+
+  //const FANBASES_API_URL = "https://qa.dev-fan-basis.com/public-api";
+
   // Get user email for customer lookup
   const { data: userProfile } = await supabase.from("users").select("email").eq("id", userId).maybeSingle();
   const userEmail = userProfile?.email;
-  
+
   console.log(`[Fanbases Confirm] Card setup - User: ${userId}, Email: ${userEmail}, PaymentIntent: ${paymentIntent}`);
-  
+
   // Get existing customer record
   const { data: existingCustomer } = await supabase
     .from("fanbases_customers")
     .select("*")
     .eq("user_id", userId)
     .maybeSingle();
-  
+
   let customerId = existingCustomer?.fanbases_customer_id;
   let paymentMethodId: string | null = null;
   let cardDetails: { brand?: string; last4?: string; exp_month?: number; exp_year?: number } = {};
-  
+
   console.log(`[Fanbases Confirm] Existing customer record:`, existingCustomer);
-  
+
   // STEP 1: Get transaction details to find the payment method used in THIS transaction
   let transactionPaymentMethodId: string | null = null;
   let transactionCardDetails: { brand?: string; last4?: string; exp_month?: number; exp_year?: number } = {};
-  
+
   if (FANBASES_API_KEY && paymentIntent) {
     try {
       console.log(`[Fanbases Confirm] Fetching transaction ${paymentIntent} for payment method details`);
-      
+
       const txResponse = await fetch(`${FANBASES_API_URL}/transactions/${paymentIntent}`, {
         method: "GET",
         headers: {
@@ -800,11 +809,11 @@ async function recordCardSetup(
           "x-api-key": FANBASES_API_KEY,
         },
       });
-      
+
       if (txResponse.ok) {
         const txData = await txResponse.json();
         console.log(`[Fanbases Confirm] Transaction response:`, JSON.stringify(txData));
-        
+
         // Extract payment method from transaction
         const txPaymentMethod = txData.data?.payment_method || txData.data?.paymentMethod;
         if (txPaymentMethod) {
@@ -815,14 +824,18 @@ async function recordCardSetup(
             exp_month: txPaymentMethod.exp_month || txPaymentMethod.expMonth,
             exp_year: txPaymentMethod.exp_year || txPaymentMethod.expYear,
           };
-          console.log(`[Fanbases Confirm] Transaction payment method:`, transactionPaymentMethodId, transactionCardDetails);
+          console.log(
+            `[Fanbases Confirm] Transaction payment method:`,
+            transactionPaymentMethodId,
+            transactionCardDetails,
+          );
         }
-        
+
         // Also extract customer ID from transaction if we don't have it
         if (!customerId) {
           const txCustomer = txData.data?.customer || txData.data?.customer_id;
           if (txCustomer) {
-            customerId = typeof txCustomer === 'object' ? txCustomer.id : txCustomer;
+            customerId = typeof txCustomer === "object" ? txCustomer.id : txCustomer;
             console.log(`[Fanbases Confirm] Got customer ID from transaction: ${customerId}`);
           }
         }
@@ -833,12 +846,12 @@ async function recordCardSetup(
       console.error("[Fanbases Confirm] Error fetching transaction:", txError);
     }
   }
-  
+
   // STEP 2: Try to find customer by email if we still don't have their Fanbases ID
   if (!customerId && userEmail && FANBASES_API_KEY) {
     try {
       console.log(`[Fanbases Confirm] Looking up customer by email: ${userEmail}`);
-      
+
       // First try search endpoint
       let customersResponse = await fetch(`${FANBASES_API_URL}/customers?search=${encodeURIComponent(userEmail)}`, {
         method: "GET",
@@ -847,7 +860,7 @@ async function recordCardSetup(
           "x-api-key": FANBASES_API_KEY,
         },
       });
-      
+
       // Fallback to full list if search fails
       if (!customersResponse.ok || customersResponse.status === 400) {
         console.log(`[Fanbases Confirm] Search failed, trying full list`);
@@ -859,13 +872,13 @@ async function recordCardSetup(
           },
         });
       }
-      
+
       if (customersResponse.ok) {
         const customersData = await customersResponse.json();
         console.log(`[Fanbases Confirm] Customers API response structure:`, Object.keys(customersData));
-        
+
         let customers: Array<{ id: string; email?: string }> = [];
-        
+
         if (Array.isArray(customersData)) {
           customers = customersData;
         } else if (customersData.data?.customers) {
@@ -875,9 +888,9 @@ async function recordCardSetup(
         } else if (customersData.data && Array.isArray(customersData.data)) {
           customers = customersData.data;
         }
-        
+
         console.log(`[Fanbases Confirm] Found ${customers.length} customers in API`);
-        
+
         const matchedCustomer = customers.find((c) => c.email?.toLowerCase() === userEmail.toLowerCase());
         if (matchedCustomer) {
           customerId = matchedCustomer.id;
@@ -892,12 +905,12 @@ async function recordCardSetup(
       console.error("[Fanbases Confirm] Error looking up customer:", e);
     }
   }
-  
+
   // STEP 3: Fetch payment methods from Fanbases to find the newly added card
   if (customerId && FANBASES_API_KEY) {
     try {
       console.log(`[Fanbases Confirm] Fetching payment methods for customer: ${customerId}`);
-      
+
       const pmResponse = await fetch(`${FANBASES_API_URL}/customers/${customerId}/payment-methods`, {
         method: "GET",
         headers: {
@@ -905,25 +918,25 @@ async function recordCardSetup(
           "x-api-key": FANBASES_API_KEY,
         },
       });
-      
+
       console.log(`[Fanbases Confirm] Payment methods API status: ${pmResponse.status}`);
-      
+
       if (pmResponse.ok) {
         const pmData = await pmResponse.json();
         console.log(`[Fanbases Confirm] Payment methods API response:`, JSON.stringify(pmData));
-        
+
         const paymentMethods = pmData.data?.payment_methods || pmData.payment_methods || pmData.data || [];
-        
+
         console.log(`[Fanbases Confirm] Found ${paymentMethods.length} payment methods`);
-        
+
         if (paymentMethods.length > 0) {
           // Priority 1: Match by transaction payment method ID if available
           // Priority 2: Match by transaction card last4 if available
           // Priority 3: Get the NEWEST payment method (last in list, most recently created)
           // Priority 4: Fallback to default
-          
+
           let matchedMethod = null;
-          
+
           // Try to match by payment method ID from transaction
           if (transactionPaymentMethodId) {
             matchedMethod = paymentMethods.find((pm: { id?: string }) => pm.id === transactionPaymentMethodId);
@@ -931,7 +944,7 @@ async function recordCardSetup(
               console.log(`[Fanbases Confirm] Matched payment method by transaction ID`);
             }
           }
-          
+
           // Try to match by last4 from transaction
           if (!matchedMethod && transactionCardDetails.last4) {
             matchedMethod = paymentMethods.find((pm: { last4?: string; last_four?: string; lastFour?: string }) => {
@@ -939,18 +952,20 @@ async function recordCardSetup(
               return pmLast4 === transactionCardDetails.last4;
             });
             if (matchedMethod) {
-              console.log(`[Fanbases Confirm] Matched payment method by transaction last4: ${transactionCardDetails.last4}`);
+              console.log(
+                `[Fanbases Confirm] Matched payment method by transaction last4: ${transactionCardDetails.last4}`,
+              );
             }
           }
-          
+
           // Get the newest payment method (last in the list - typically most recently added)
           if (!matchedMethod) {
             matchedMethod = paymentMethods[paymentMethods.length - 1];
             console.log(`[Fanbases Confirm] Using newest payment method (last in list)`);
           }
-          
+
           console.log(`[Fanbases Confirm] Selected payment method:`, JSON.stringify(matchedMethod));
-          
+
           paymentMethodId = matchedMethod.id;
           cardDetails = {
             brand: matchedMethod.brand || matchedMethod.card_brand || matchedMethod.type,
@@ -958,7 +973,7 @@ async function recordCardSetup(
             exp_month: matchedMethod.exp_month || matchedMethod.expMonth,
             exp_year: matchedMethod.exp_year || matchedMethod.expYear,
           };
-          
+
           console.log(`[Fanbases Confirm] Extracted card details:`, cardDetails);
         }
       } else {
@@ -969,16 +984,18 @@ async function recordCardSetup(
       console.error("[Fanbases Confirm] Error fetching payment methods:", pmError);
     }
   } else {
-    console.log(`[Fanbases Confirm] Cannot fetch payment methods - customerId: ${customerId}, hasApiKey: ${!!FANBASES_API_KEY}`);
+    console.log(
+      `[Fanbases Confirm] Cannot fetch payment methods - customerId: ${customerId}, hasApiKey: ${!!FANBASES_API_KEY}`,
+    );
   }
-  
+
   // Use transaction card details as fallback if we couldn't get from payment methods
   if (!cardDetails.last4 && transactionCardDetails.last4) {
     console.log(`[Fanbases Confirm] Using card details from transaction as fallback`);
     cardDetails = transactionCardDetails;
     paymentMethodId = transactionPaymentMethodId;
   }
-  
+
   // Update or create fanbases_customers record with card details
   const customerData = {
     fanbases_customer_id: customerId,
@@ -989,14 +1006,11 @@ async function recordCardSetup(
     card_exp_year: cardDetails.exp_year || null,
     updated_at: new Date().toISOString(),
   };
-  
+
   if (existingCustomer) {
     console.log(`[Fanbases Confirm] Updating existing customer record`);
-    const { error: updateError } = await supabase
-      .from("fanbases_customers")
-      .update(customerData)
-      .eq("user_id", userId);
-    
+    const { error: updateError } = await supabase.from("fanbases_customers").update(customerData).eq("user_id", userId);
+
     if (updateError) {
       console.error(`[Fanbases Confirm] Error updating customer:`, updateError);
     }
@@ -1007,14 +1021,14 @@ async function recordCardSetup(
       email: userEmail,
       ...customerData,
     });
-    
+
     if (insertError) {
       console.error(`[Fanbases Confirm] Error inserting customer:`, insertError);
     }
   }
-  
+
   console.log(`[Fanbases Confirm] Customer record updated with card details`);
-  
+
   // Record purchase for audit trail
   await supabase.from("user_purchases").insert({
     user_id: userId,
@@ -1034,7 +1048,7 @@ async function recordCardSetup(
   return {
     success: true,
     message: "Card saved successfully",
-    details: { 
+    details: {
       product_id: internalReference,
       card_brand: cardDetails.brand,
       card_last4: cardDetails.last4,

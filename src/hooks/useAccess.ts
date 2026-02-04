@@ -223,11 +223,13 @@ export function useAccess() {
           productId: productId || moduleSlug,
           fanbasesProductId: product?.fanbases_product_id,
           fanbasesCheckoutUrl: product
-            ? `https://qa.dev-fan-basis.com/agency-checkout/lc-sandbox/${product.fanbases_product_id}`
-            : undefined,
-          //fanbasesCheckoutUrl: product ? `https://www.fanbasis.com/agency-checkout/leveragedcreator/${product.fanbases_product_id}` : undefined,
+            ? fanbasesCheckoutUrl
+            : product
+              ? `https://www.fanbasis.com/agency-checkout/leveragedcreator/${product.fanbases_product_id}`
+              : undefined,
         };
       }
+      //`https://qa.dev-fan-basis.com/agency-checkout/lc-sandbox/${product.fanbases_product_id}`
 
       // PRIORITY 2: Fallback pattern matching (only if no accessType provided)
       // Call-required modules (call recordings) - require call booking
@@ -243,7 +245,7 @@ export function useAccess() {
       const hasPurchasedFallback =
         accessState.purchasedModules.includes(moduleSlug) ||
         (productId && accessState.purchasedModules.includes(productId));
-      
+
       if (hasPurchasedFallback) {
         return { hasAccess: true, requiresCall: false };
       }
@@ -264,10 +266,10 @@ export function useAccess() {
         productId: productId || moduleSlug,
         fanbasesProductId: product?.fanbases_product_id,
         fanbasesCheckoutUrl: product
-          ? `https://qa.dev-fan-basis.com/agency-checkout/lc-sandbox/${product.fanbases_product_id}`
+          ? `https://www.fanbasis.com/agency-checkout/leveragedcreator/${product.fanbases_product_id}`
           : undefined,
 
-        //fanbasesCheckoutUrl: product ? `https://www.fanbasis.com/agency-checkout/leveragedcreator/${product.fanbases_product_id}` : undefined,
+        //fanbasesCheckoutUrl: product ? `https://qa.dev-fan-basis.com/agency-checkout/lc-sandbox/${product.fanbases_product_id}` : undefined,
       };
     },
     [

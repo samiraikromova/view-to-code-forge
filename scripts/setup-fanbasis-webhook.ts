@@ -15,9 +15,9 @@
  * Or manually call the API using curl/Postman with your API key.
  */
 
-//const FANBASES_API_URL = "https://www.fanbasis.com/public-api";
+const FANBASES_API_URL = "https://www.fanbasis.com/public-api";
 // Use QA for testing:
-const FANBASES_API_URL = "https://qa.dev-fan-basis.com/public-api";
+// const FANBASES_API_URL = "https://qa.dev-fan-basis.com/public-api";
 
 async function setupWebhook() {
   const supabaseUrl = process.env.VITE_SUPABASE_URL || Deno.env.get("VITE_SUPABASE_URL");

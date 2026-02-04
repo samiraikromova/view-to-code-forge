@@ -6,8 +6,8 @@ const corsHeaders = {
 };
 
 // Fanbases API base URL - Production
-//const FANBASES_API_URL = "https://www.fanbasis.com/public-api";
-const FANBASES_API_URL = "https://qa.dev-fan-basis.com/public-api";
+const FANBASES_API_URL = "https://www.fanbasis.com/public-api";
+//const FANBASES_API_URL = "https://qa.dev-fan-basis.com/public-api";
 
 // Product mapping interface
 interface FanbasesProduct {
@@ -81,7 +81,7 @@ Deno.serve(async (req) => {
     }
 
     const token = authHeader.replace("Bearer ", "");
-    
+
     // Decode JWT payload (base64url encoded)
     let user: { id: string; email: string };
     try {
@@ -104,7 +104,9 @@ Deno.serve(async (req) => {
     const body = await req.json();
     const { action, internal_reference, fanbases_product_id, product_type, success_url, cancel_url } = body;
 
-    console.log(`[Fanbases Checkout] Action: ${action}, Internal Ref: ${internal_reference}, Fanbases Product ID: ${fanbases_product_id}, User: ${user.id}`);
+    console.log(
+      `[Fanbases Checkout] Action: ${action}, Internal Ref: ${internal_reference}, Fanbases Product ID: ${fanbases_product_id}, User: ${user.id}`,
+    );
 
     // Get base URL for webhooks
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
@@ -124,10 +126,10 @@ Deno.serve(async (req) => {
     if (action === "create_checkout") {
       // For module purchases, we may receive fanbases_product_id directly along with module UUID as internal_reference
       // This allows us to store the module UUID as product_id for access verification
-      
+
       let product: FanbasesProduct | null = null;
       let productIdForCheckout: string = internal_reference; // Default to internal_reference (module UUID)
-      
+
       // If fanbases_product_id is provided directly, look up by that
       if (fanbases_product_id) {
         const { data: byFanbasesId } = await supabase
@@ -135,20 +137,22 @@ Deno.serve(async (req) => {
           .select("id, fanbases_product_id, product_type, internal_reference, price_cents")
           .eq("fanbases_product_id", fanbases_product_id)
           .maybeSingle();
-        
+
         if (byFanbasesId) {
           product = byFanbasesId;
           console.log(`[Fanbases Checkout] Found product by fanbases_product_id: ${fanbases_product_id}`);
         }
       }
-      
+
       // Fallback: look up by internal_reference
       if (!product) {
         product = await lookupProductByInternalRef(supabase, internal_reference);
       }
 
       if (!product) {
-        console.error(`[Fanbases Checkout] Product not found for internal_reference: ${internal_reference}, fanbases_product_id: ${fanbases_product_id}`);
+        console.error(
+          `[Fanbases Checkout] Product not found for internal_reference: ${internal_reference}, fanbases_product_id: ${fanbases_product_id}`,
+        );
         return new Response(JSON.stringify({ error: `Product not found: ${internal_reference}` }), {
           status: 404,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -178,26 +182,32 @@ Deno.serve(async (req) => {
 
       const productsData = await productsResponse.json();
       const productsList = productsData.data?.data || productsData.data || [];
-      
+
       console.log(`[Fanbases Checkout] Fetched ${productsList.length} products from Fanbases`);
 
       // Find the matching product by fanbases_product_id
       const fanbasesProduct = productsList.find((p: { id: string }) => p.id === product.fanbases_product_id);
-      
+
       if (!fanbasesProduct) {
         console.error(`[Fanbases Checkout] Product ${product.fanbases_product_id} not found in Fanbases products list`);
-        console.log(`[Fanbases Checkout] Available product IDs:`, productsList.map((p: { id: string }) => p.id));
-        return new Response(JSON.stringify({ error: `Product ${product.fanbases_product_id} not found in payment provider` }), {
-          status: 404,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+        console.log(
+          `[Fanbases Checkout] Available product IDs:`,
+          productsList.map((p: { id: string }) => p.id),
+        );
+        return new Response(
+          JSON.stringify({ error: `Product ${product.fanbases_product_id} not found in payment provider` }),
+          {
+            status: 404,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          },
+        );
       }
-      
+
       console.log(`[Fanbases Checkout] Found Fanbases product:`, JSON.stringify(fanbasesProduct));
 
       // Get the payment link from the product
       const paymentLink = fanbasesProduct.payment_link;
-      
+
       if (!paymentLink) {
         console.error(`[Fanbases Checkout] No payment_link found on product ${product.fanbases_product_id}`);
         return new Response(JSON.stringify({ error: "Product has no payment link configured" }), {
@@ -208,35 +218,35 @@ Deno.serve(async (req) => {
 
       // Build the redirect URL with metadata and prefill
       const paymentUrl = new URL(paymentLink);
-      
+
       // For module purchases, use the passed internal_reference (module UUID) as the product_id
       // For other products, use the product's internal_reference from fanbases_products
-      const productIdForSession = product_type === 'module' ? internal_reference : product.internal_reference;
-      
+      const productIdForSession = product_type === "module" ? internal_reference : product.internal_reference;
+
       // Add metadata for webhook/redirect processing
       paymentUrl.searchParams.set("metadata[user_id]", user.id);
       paymentUrl.searchParams.set("metadata[product_type]", product.product_type);
       // Store the module UUID if it's a module purchase, for access verification
       paymentUrl.searchParams.set("metadata[internal_reference]", productIdForSession);
       paymentUrl.searchParams.set("metadata[fanbases_product_id]", product.fanbases_product_id);
-      
+
       // Add prefill for user experience
       paymentUrl.searchParams.set("prefill[email]", email);
       paymentUrl.searchParams.set("prefill[name]", fullName);
-      
+
       // Add success/cancel URLs - redirect to payment-confirm page for proper processing
       const appBaseUrl = body.base_url || "https://view-to-code-forge.lovable.app";
       const finalSuccessUrl = success_url || `${appBaseUrl}/payment-confirm`;
       const finalCancelUrl = cancel_url || `${appBaseUrl}/settings?payment=cancelled`;
-      
+
       paymentUrl.searchParams.set("success_url", finalSuccessUrl);
       paymentUrl.searchParams.set("cancel_url", finalCancelUrl);
 
       console.log(`[Fanbases Checkout] Redirecting to payment link: ${paymentUrl.toString()}`);
 
       // Get price from Fanbases product (convert from string like "10.00" to cents)
-      const priceCents = fanbasesProduct.price 
-        ? Math.round(parseFloat(fanbasesProduct.price) * 100) 
+      const priceCents = fanbasesProduct.price
+        ? Math.round(parseFloat(fanbasesProduct.price) * 100)
         : product.price_cents;
 
       // Store checkout session reference with price from Fanbases
@@ -255,13 +265,10 @@ Deno.serve(async (req) => {
           original_internal_reference: product.internal_reference, // Keep original for reference
         },
       });
-      
+
       // Sync price to fanbases_products if different
       if (priceCents && priceCents !== product.price_cents) {
-        await supabase
-          .from("fanbases_products")
-          .update({ price_cents: priceCents })
-          .eq("id", product.id);
+        await supabase.from("fanbases_products").update({ price_cents: priceCents }).eq("id", product.id);
         console.log(`[Fanbases Checkout] Synced price ${priceCents} cents for ${product.internal_reference}`);
       }
 
@@ -308,26 +315,31 @@ Deno.serve(async (req) => {
 
       const productsData = await productsResponse.json();
       const productsList = productsData.data?.data || productsData.data || [];
-      
+
       console.log(`[Fanbases Checkout] Fetched ${productsList.length} products from Fanbases for card setup`);
 
       // Find the card setup product by fanbases_product_id
       const fanbasesProduct = productsList.find((p: { id: string }) => p.id === cardSetupProduct.fanbases_product_id);
-      
+
       if (!fanbasesProduct) {
-        console.error(`[Fanbases Checkout] Card setup product ${cardSetupProduct.fanbases_product_id} not found in Fanbases`);
-        console.log(`[Fanbases Checkout] Available product IDs:`, productsList.map((p: { id: string }) => p.id));
+        console.error(
+          `[Fanbases Checkout] Card setup product ${cardSetupProduct.fanbases_product_id} not found in Fanbases`,
+        );
+        console.log(
+          `[Fanbases Checkout] Available product IDs:`,
+          productsList.map((p: { id: string }) => p.id),
+        );
         return new Response(JSON.stringify({ error: "Card setup product not found in payment provider" }), {
           status: 404,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      
+
       console.log(`[Fanbases Checkout] Found card setup product:`, JSON.stringify(fanbasesProduct));
 
       // Get the payment link from the product
       const paymentLink = fanbasesProduct.payment_link;
-      
+
       if (!paymentLink) {
         console.error(`[Fanbases Checkout] No payment_link found on card setup product`);
         return new Response(JSON.stringify({ error: "Card setup product has no payment link configured" }), {
@@ -337,31 +349,31 @@ Deno.serve(async (req) => {
       }
 
       // Get price from Fanbases product (convert from string like "1.00" to cents)
-      const cardSetupPriceCents = fanbasesProduct.price 
-        ? Math.round(parseFloat(fanbasesProduct.price) * 100) 
-        : (cardSetupProduct.price_cents || 100); // Default to $1.00 (100 cents)
+      const cardSetupPriceCents = fanbasesProduct.price
+        ? Math.round(parseFloat(fanbasesProduct.price) * 100)
+        : cardSetupProduct.price_cents || 100; // Default to $1.00 (100 cents)
 
       console.log(`[Fanbases Checkout] Card setup price: ${cardSetupPriceCents} cents`);
 
       // Build the redirect URL with metadata and prefill
       const paymentUrl = new URL(paymentLink);
-      
+
       // Add metadata for webhook/redirect processing
       paymentUrl.searchParams.set("metadata[user_id]", user.id);
       paymentUrl.searchParams.set("metadata[product_type]", "card_setup");
       paymentUrl.searchParams.set("metadata[internal_reference]", cardSetupProduct.internal_reference);
       paymentUrl.searchParams.set("metadata[fanbases_product_id]", cardSetupProduct.fanbases_product_id);
-      
+
       // Add prefill for user experience
       paymentUrl.searchParams.set("prefill[email]", email);
       paymentUrl.searchParams.set("prefill[name]", fullName);
-      
+
       // Add success/cancel URLs - redirect to payment-confirm page for proper processing
       const appBaseUrl = body.base_url || "https://view-to-code-forge.lovable.app";
       // Card setup goes to payment-confirm page just like other payment types
       const finalSuccessUrl = success_url || `${appBaseUrl}/payment-confirm`;
       const finalCancelUrl = cancel_url || `${appBaseUrl}/settings?setup=cancelled`;
-      
+
       paymentUrl.searchParams.set("success_url", finalSuccessUrl);
       paymentUrl.searchParams.set("cancel_url", finalCancelUrl);
 

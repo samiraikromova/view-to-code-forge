@@ -6,8 +6,8 @@ const corsHeaders = {
 };
 
 // Fanbases API base URL - Production (NOT sandbox)
-//const FANBASES_API_URL = "https://www.fanbasis.com/public-api";
-const FANBASES_API_URL = "https://qa.dev-fan-basis.com/public-api";
+const FANBASES_API_URL = "https://www.fanbasis.com/public-api";
+//const FANBASES_API_URL = "https://qa.dev-fan-basis.com/public-api";
 
 Deno.serve(async (req) => {
   // Handle CORS preflight
@@ -37,7 +37,7 @@ Deno.serve(async (req) => {
     }
 
     const token = authHeader.replace("Bearer ", "");
-    
+
     // Decode JWT payload (base64url encoded)
     let user: { id: string; email: string };
     try {
@@ -329,19 +329,19 @@ Deno.serve(async (req) => {
     } else if (action === "setup_payment_method") {
       // Setup a new payment method via Fanbases checkout
       const { success_url, cancel_url, base_url } = body;
-      
+
       // Get user profile for prefill
       const { data: userProfile } = await supabase.from("users").select("email, name").eq("id", user.id).maybeSingle();
       const email = userProfile?.email || user.email;
       const fullName = userProfile?.name || "";
-      
+
       // Look up the card_setup product
       const { data: cardSetupProduct } = await supabase
         .from("fanbases_products")
         .select("fanbases_product_id, price_cents")
         .eq("internal_reference", "card_setup_fee")
         .maybeSingle();
-      
+
       if (!cardSetupProduct) {
         console.error("[Fanbases Customer] Card setup product not found");
         return new Response(JSON.stringify({ error: "Card setup product not configured" }), {
@@ -349,9 +349,9 @@ Deno.serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      
+
       console.log(`[Fanbases Customer] Using card setup product: ${cardSetupProduct.fanbases_product_id}`);
-      
+
       // Fetch product list from Fanbases
       const FANBASES_API_KEY = Deno.env.get("FANBASES_API_KEY");
       const productsResponse = await fetch(`${FANBASES_API_URL}/products?per_page=100`, {
@@ -361,7 +361,7 @@ Deno.serve(async (req) => {
           "x-api-key": FANBASES_API_KEY!,
         },
       });
-      
+
       if (!productsResponse.ok) {
         const errorText = await productsResponse.text();
         console.error("[Fanbases Customer] Failed to fetch products:", errorText);
@@ -370,13 +370,13 @@ Deno.serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      
+
       const productsData = await productsResponse.json();
       const productsList = productsData.data?.data || productsData.data || [];
-      
+
       // Find the card setup product by fanbases_product_id
       const fanbasesProduct = productsList.find((p: { id: string }) => p.id === cardSetupProduct.fanbases_product_id);
-      
+
       if (!fanbasesProduct || !fanbasesProduct.payment_link) {
         console.error("[Fanbases Customer] Card setup product not found in Fanbases");
         return new Response(JSON.stringify({ error: "Card setup product not found" }), {
@@ -384,7 +384,7 @@ Deno.serve(async (req) => {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
-      
+
       // Build payment URL with metadata
       const paymentUrl = new URL(fanbasesProduct.payment_link);
       paymentUrl.searchParams.set("metadata[user_id]", user.id);
@@ -393,11 +393,11 @@ Deno.serve(async (req) => {
       paymentUrl.searchParams.set("metadata[fanbases_product_id]", cardSetupProduct.fanbases_product_id);
       paymentUrl.searchParams.set("prefill[email]", email);
       paymentUrl.searchParams.set("prefill[name]", fullName);
-      
+
       const appBaseUrl = base_url || "https://view-to-code-forge.lovable.app";
       paymentUrl.searchParams.set("success_url", success_url || `${appBaseUrl}/payment-confirm`);
       paymentUrl.searchParams.set("cancel_url", cancel_url || `${appBaseUrl}/settings?setup=cancelled`);
-      
+
       // Store checkout session
       const sessionId = `card_setup_${Date.now()}_${user.id.slice(0, 8)}`;
       await supabase.from("checkout_sessions").insert({
@@ -412,9 +412,9 @@ Deno.serve(async (req) => {
           fanbases_product_id: cardSetupProduct.fanbases_product_id,
         },
       });
-      
+
       console.log(`[Fanbases Customer] Card setup URL: ${paymentUrl.toString()}`);
-      
+
       return new Response(
         JSON.stringify({
           success: true,
