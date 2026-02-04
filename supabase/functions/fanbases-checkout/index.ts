@@ -166,7 +166,8 @@ Deno.serve(async (req) => {
       let currentPage = 1;
       let lastPage = 1;
 
-      while (currentPage <= lastPage) {
+      // Use do-while to ensure we fetch at least once and get the actual lastPage value
+      do {
         const productsResponse = await fetch(`${FANBASES_API_URL}/products?per_page=100&page=${currentPage}`, {
           method: "GET",
           headers: {
@@ -188,11 +189,11 @@ Deno.serve(async (req) => {
         const pageProducts = productsData.data?.data || productsData.data || [];
         productsList = productsList.concat(pageProducts);
 
-        // Use API's pagination metadata
+        // Use API's pagination metadata - this updates lastPage after first fetch
         lastPage = productsData.data?.last_page || 1;
         console.log(`[Fanbases Checkout] Fetched page ${currentPage}/${lastPage}, got ${pageProducts.length} products, total: ${productsList.length}`);
         currentPage++;
-      }
+      } while (currentPage <= lastPage);
 
       console.log(`[Fanbases Checkout] Total products fetched: ${productsList.length}`);
 
@@ -311,7 +312,8 @@ Deno.serve(async (req) => {
       let cardCurrentPage = 1;
       let cardLastPage = 1;
 
-      while (cardCurrentPage <= cardLastPage) {
+      // Use do-while to ensure we fetch at least once and get the actual lastPage value
+      do {
         const productsResponse = await fetch(`${FANBASES_API_URL}/products?per_page=100&page=${cardCurrentPage}`, {
           method: "GET",
           headers: {
@@ -333,11 +335,11 @@ Deno.serve(async (req) => {
         const pageProducts = productsData.data?.data || productsData.data || [];
         productsList = productsList.concat(pageProducts);
 
-        // Use API's pagination metadata
+        // Use API's pagination metadata - this updates cardLastPage after first fetch
         cardLastPage = productsData.data?.last_page || 1;
         console.log(`[Fanbases Checkout] Card setup page ${cardCurrentPage}/${cardLastPage}, got ${pageProducts.length} products, total: ${productsList.length}`);
         cardCurrentPage++;
-      }
+      } while (cardCurrentPage <= cardLastPage);
 
       console.log(`[Fanbases Checkout] Total products for card setup: ${productsList.length}`);
 
