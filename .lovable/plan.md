@@ -1,85 +1,40 @@
 
-# Fix: Product Lookup Failing Due to Pagination
+# Fix: Product Lookup - IMPLEMENTED ✅
 
-## Problem Summary
-The system is looking for product `Q0QJ9` but only fetching the first 100 products from a catalog of 259+. The pagination code appears to exist but isn't working as expected.
+## Solution Applied
+Implemented **single product lookup** (`GET /products/{id}`) as the primary strategy with pagination as fallback.
 
-## Root Cause Analysis
-Based on the logs showing `"[Fanbases Checkout] Fetched 100 products from Fanbases"` (old log format), the pagination updates may not be deployed. The newer code should log `"Starting product fetch with pagination..."`.
+## Changes Made
 
-However, even if deployed, there's a better solution based on the API structure.
+### `supabase/functions/fanbases-checkout/index.ts`
 
-## Proposed Solution: Use Single Product Lookup
+**For both `create_checkout` and `setup_card` actions:**
 
-Instead of fetching all 259+ products with pagination (which is slow and resource-intensive), use the Fanbases API to get a **single product by ID**.
+1. **Primary approach**: Direct API call to `GET /products/{product_id}`
+   - Single API call instead of fetching all 259+ products
+   - Much faster response time
+   - Handles nested response structure (`data.data` or `data`)
 
-Based on standard API patterns and the Fanbases API structure, there should be an endpoint:
-```
-GET /products/{product_id}
-```
+2. **Fallback approach**: If direct lookup fails (404 or error), falls back to paginated search
+   - Properly handles `data.data` nested array structure  
+   - Correctly reads `last_page` from response
 
-This is more efficient because:
-- Single API call instead of 3+ paginated calls
-- Faster response time
-- Less memory usage
-- No pagination complexity
-
-## Implementation Plan
-
-### 1. Update `fanbases-checkout` edge function
-
-Replace the pagination loop with a direct product lookup:
-
+## Key Code Pattern
 ```typescript
-// Instead of fetching all products with pagination:
-const productResponse = await fetch(
-  `${FANBASES_API_URL}/products/${product.fanbases_product_id}`,
-  {
-    method: "GET",
-    headers: {
-      Accept: "application/json",
-      "x-api-key": FANBASES_API_KEY,
-    },
-  }
-);
+// Try single product lookup first
+const response = await fetch(`${FANBASES_API_URL}/products/${productId}`, {...});
 
-if (!productResponse.ok) {
-  // Fall back to paginated search if single lookup fails
+if (response.ok) {
+  fanbasesProduct = response.json().data?.data || response.json().data;
+} else {
+  // Fallback to pagination...
 }
-
-const fanbasesProduct = productResponse.json();
 ```
 
-### 2. Add fallback pagination with proper verification
+## Expected Logs After Deployment
+- `"Trying direct product lookup: Q0QJ9"` (new log)
+- `"Direct lookup succeeded for Q0QJ9"` (if API supports single lookup)
+- OR `"Direct lookup failed, falling back to pagination"` (if 404)
 
-If the single product endpoint doesn't exist, fix the pagination by ensuring:
-- All log messages match the code that's deployed
-- The `do-while` loop properly continues through all pages
-- Add a verification step to confirm `last_page > 1`
-
-### 3. Files to modify
-
-| File | Change |
-|------|--------|
-| `supabase/functions/fanbases-checkout/index.ts` | Replace pagination with single product lookup, add fallback |
-
-## Technical Details
-
-The key changes will be:
-
-1. **Primary approach**: Try `GET /products/{id}` first
-2. **Fallback approach**: If 404, use full pagination as backup
-3. **Logging**: Add clear logs to verify which approach is used
-
-This approach handles both cases:
-- If single product endpoint exists → fast, single API call
-- If not → graceful fallback to pagination
-
-## Alternative: Force Pagination to Work
-
-If we must keep pagination, we need to:
-1. Add more debug logging to confirm which code branch executes
-2. Verify the API response structure matches expectations
-3. Ensure the edge function is properly redeployed
-
-Would you like me to implement this solution?
+## Testing
+Test a top-up purchase and check logs for "Direct lookup" messages to confirm the new code is running.
