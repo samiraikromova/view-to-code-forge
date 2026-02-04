@@ -287,6 +287,25 @@ export default function AdminLessons() {
       return
     }
 
+    // Validate required fields based on access type
+    if (newModuleAccessType === 'purchase_required') {
+      if (!newModuleFanbasesId.trim()) {
+        toast.error('Fanbases Product ID is required for purchasable modules')
+        return
+      }
+      if (!newModulePrice || parseFloat(newModulePrice) <= 0) {
+        toast.error('Price is required for purchasable modules')
+        return
+      }
+    }
+
+    if (newModuleAccessType === 'book_a_call') {
+      if (!newModuleBookingUrl.trim()) {
+        toast.error('Booking URL or email is required for call booking modules')
+        return
+      }
+    }
+
     const payload: Partial<Module> = {
       name: newModuleName.trim(),
       access_type: newModuleAccessType,
@@ -388,6 +407,25 @@ export default function AdminLessons() {
     if (!newModuleName.trim()) {
       toast.error('Please enter a name')
       return
+    }
+
+    // Validate required fields based on access type
+    if (newModuleAccessType === 'purchase_required') {
+      if (!newModuleFanbasesId.trim()) {
+        toast.error('Fanbases Product ID is required for purchasable modules')
+        return
+      }
+      if (!newModulePrice || parseFloat(newModulePrice) <= 0) {
+        toast.error('Price is required for purchasable modules')
+        return
+      }
+    }
+
+    if (newModuleAccessType === 'book_a_call') {
+      if (!newModuleBookingUrl.trim()) {
+        toast.error('Booking URL or email is required for call booking modules')
+        return
+      }
     }
 
     const payload = {
