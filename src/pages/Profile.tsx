@@ -1,11 +1,12 @@
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { ArrowLeft, User, Mail, Calendar, CreditCard, Save } from "lucide-react"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useBlocker } from "react-router-dom"
 import { useAuth } from "@/contexts/AuthContext"
 import { supabase } from "@/lib/supabase"
 import { toast } from "sonner"
@@ -22,20 +23,64 @@ export default function Profile() {
   const [credits, setCredits] = useState(0)
   const [tier, setTier] = useState("free")
   const [createdAt, setCreatedAt] = useState<string | null>(null)
+  
+  // Track original values to detect changes
+  const [originalValues, setOriginalValues] = useState({
+    fullName: "",
+    address: "",
+    businessName: ""
+  })
+  
+  // Check if form has unsaved changes
+  const hasUnsavedChanges = 
+    fullName !== originalValues.fullName ||
+    address !== originalValues.address ||
+    businessName !== originalValues.businessName
+
+  // Block navigation when there are unsaved changes
+  const blocker = useBlocker(
+    ({ currentLocation, nextLocation }) =>
+      hasUnsavedChanges && currentLocation.pathname !== nextLocation.pathname
+  )
 
   useEffect(() => {
     if (profile) {
-      setFullName(profile.name || "")
-      setAddress(profile.address || "")
-      setBusinessName(profile.business_name || "")
+      const name = profile.name || ""
+      const addr = profile.address || ""
+      const biz = profile.business_name || ""
+      
+      setFullName(name)
+      setAddress(addr)
+      setBusinessName(biz)
       setCredits(profile.credits || 0)
       setTier(profile.subscription_tier || "free")
       setCreatedAt(profile.created_at || null)
+      
+      // Store original values for change detection
+      setOriginalValues({
+        fullName: name,
+        address: addr,
+        businessName: biz
+      })
+      
       setPageLoading(false)
     } else if (!authLoading) {
       setPageLoading(false)
     }
   }, [profile, authLoading])
+
+  // Handle browser refresh/close with unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (hasUnsavedChanges) {
+        e.preventDefault()
+        e.returnValue = ""
+      }
+    }
+
+    window.addEventListener("beforeunload", handleBeforeUnload)
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload)
+  }, [hasUnsavedChanges])
 
   const handleSaveProfile = async () => {
     if (!user) return
@@ -76,6 +121,14 @@ export default function Profile() {
 
       console.log("Profile updated successfully:", data[0])
       toast.success("Profile updated successfully")
+      
+      // Update original values after successful save
+      setOriginalValues({
+        fullName: fullName.trim(),
+        address: address.trim(),
+        businessName: businessName.trim()
+      })
+      
       refreshProfile()
     } catch (error) {
       console.error("Error updating profile:", error)
@@ -269,6 +322,29 @@ export default function Profile() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Unsaved Changes Confirmation Dialog */}
+      <AlertDialog open={blocker.state === "blocked"}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
+            <AlertDialogDescription>
+              You have unsaved changes. Are you sure you want to leave this page? Your changes will be lost.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => blocker.reset?.()}>
+              Stay on Page
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => blocker.proceed?.()}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Leave Page
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
