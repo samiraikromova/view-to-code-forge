@@ -7,7 +7,6 @@ const corsHeaders = {
 
 // Fanbases API base URL - Production
 const FANBASES_API_URL = "https://www.fanbasis.com/public-api";
-//const FANBASES_API_URL = "https://qa.dev-fan-basis.com/public-api";
 
 // Product mapping interface
 interface FanbasesProduct {
@@ -53,6 +52,85 @@ async function lookupProductByInternalRef(supabase: any, internalReference: stri
   return null;
 }
 
+// Fetch a single product from Fanbases by ID, with pagination fallback
+async function fetchFanbasesProduct(
+  productId: string,
+  apiKey: string
+): Promise<{ id: string; name?: string; price?: string; payment_link?: string } | null> {
+  // Strategy 1: Try direct single product lookup (most efficient)
+  console.log(`[Fanbases Checkout] Trying direct product lookup: ${productId}`);
+  
+  try {
+    const singleResponse = await fetch(`${FANBASES_API_URL}/products/${productId}`, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        "x-api-key": apiKey,
+      },
+    });
+
+    if (singleResponse.ok) {
+      const singleData = await singleResponse.json();
+      // Handle nested response: data.data or data or direct
+      const product = singleData.data?.data || singleData.data || singleData;
+      if (product && product.id) {
+        console.log(`[Fanbases Checkout] Direct lookup succeeded for ${productId}`);
+        return product;
+      }
+    } else {
+      console.log(`[Fanbases Checkout] Direct lookup failed (status: ${singleResponse.status}), trying pagination...`);
+      await singleResponse.text(); // Consume body
+    }
+  } catch (err) {
+    console.log(`[Fanbases Checkout] Direct lookup error: ${err}, trying pagination...`);
+  }
+
+  // Strategy 2: Pagination fallback - fetch all products page by page
+  console.log(`[Fanbases Checkout] Starting paginated product search for ${productId}...`);
+  
+  let currentPage = 1;
+  let lastPage = 1;
+  const maxPages = 50; // Safety limit
+
+  do {
+    console.log(`[Fanbases Checkout] Fetching page ${currentPage}/${lastPage}...`);
+    
+    const pageResponse = await fetch(`${FANBASES_API_URL}/products?per_page=100&page=${currentPage}`, {
+      method: "GET",
+      headers: {
+        Accept: "application/json",
+        "x-api-key": apiKey,
+      },
+    });
+
+    if (!pageResponse.ok) {
+      const errorText = await pageResponse.text();
+      console.error(`[Fanbases Checkout] Failed to fetch page ${currentPage}: ${errorText}`);
+      return null;
+    }
+
+    const pageData = await pageResponse.json();
+    
+    // Handle nested response structure: data.data is the array, data.last_page is pagination info
+    const products = pageData.data?.data || pageData.data || [];
+    lastPage = pageData.data?.last_page || pageData.last_page || 1;
+    
+    console.log(`[Fanbases Checkout] Page ${currentPage}/${lastPage}: ${products.length} products`);
+
+    // Search for our product in this page
+    const found = products.find((p: { id: string }) => p.id === productId);
+    if (found) {
+      console.log(`[Fanbases Checkout] Found product ${productId} on page ${currentPage}`);
+      return found;
+    }
+
+    currentPage++;
+  } while (currentPage <= lastPage && currentPage <= maxPages);
+
+  console.log(`[Fanbases Checkout] Product ${productId} not found after checking ${currentPage - 1} pages`);
+  return null;
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight
   if (req.method === "OPTIONS") {
@@ -60,7 +138,10 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabase = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "");
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? ""
+    );
 
     const FANBASES_API_KEY = Deno.env.get("FANBASES_API_KEY");
     if (!FANBASES_API_KEY) {
@@ -89,7 +170,6 @@ Deno.serve(async (req) => {
       if (parts.length !== 3) {
         throw new Error("Invalid JWT format");
       }
-      // Decode the payload (second part)
       const payload = JSON.parse(atob(parts[1].replace(/-/g, "+").replace(/_/g, "/")));
       user = { id: payload.sub, email: payload.email };
       console.log(`[Fanbases Checkout] Decoded user: ${user.id}`);
@@ -105,30 +185,25 @@ Deno.serve(async (req) => {
     const { action, internal_reference, fanbases_product_id, product_type, success_url, cancel_url } = body;
 
     console.log(
-      `[Fanbases Checkout] Action: ${action}, Internal Ref: ${internal_reference}, Fanbases Product ID: ${fanbases_product_id}, User: ${user.id}`,
+      `[Fanbases Checkout] Action: ${action}, Internal Ref: ${internal_reference}, Fanbases Product ID: ${fanbases_product_id}, User: ${user.id}`
     );
 
-    // Get base URL for webhooks
-    const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-    const webhookUrl = `${supabaseUrl}/functions/v1/fanbases-webhook`;
-
     // Get user profile for metadata
-    const { data: userProfile } = await supabase.from("users").select("email, name").eq("id", user.id).maybeSingle();
+    const { data: userProfile } = await supabase
+      .from("users")
+      .select("email, name")
+      .eq("id", user.id)
+      .maybeSingle();
 
     // Also get auth user metadata for fallback name
     const { data: authUserData } = await supabase.auth.admin.getUserById(user.id);
     const authUserMeta = authUserData?.user?.user_metadata;
 
     const email = userProfile?.email || user.email || "";
-    // Try profile name, then auth metadata full_name, then auth metadata name
     const fullName = userProfile?.name || authUserMeta?.full_name || authUserMeta?.name || "";
 
     if (action === "create_checkout") {
-      // For module purchases, we may receive fanbases_product_id directly along with module UUID as internal_reference
-      // This allows us to store the module UUID as product_id for access verification
-
       let product: FanbasesProduct | null = null;
-      let productIdForCheckout: string = internal_reference; // Default to internal_reference (module UUID)
 
       // If fanbases_product_id is provided directly, look up by that
       if (fanbases_product_id) {
@@ -151,9 +226,9 @@ Deno.serve(async (req) => {
 
       if (!product) {
         console.error(
-          `[Fanbases Checkout] Product not found for internal_reference: ${internal_reference}, fanbases_product_id: ${fanbases_product_id}`,
+          `[Fanbases Checkout] Product not found for internal_reference: ${internal_reference}, fanbases_product_id: ${fanbases_product_id}`
         );
-        return new Response(JSON.stringify({ error: `Product not found: ${internal_reference}` }), {
+        return new Response(JSON.stringify({ error: "Product not found" }), {
           status: 404,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
@@ -161,74 +236,15 @@ Deno.serve(async (req) => {
 
       console.log(`[Fanbases Checkout] Found product: ${product.fanbases_product_id} (${product.product_type})`);
 
-      // Try single product lookup first (more efficient than pagination)
-      console.log(`[Fanbases Checkout] Trying direct product lookup: ${product.fanbases_product_id}`);
-      let fanbasesProduct: { id: string; name?: string; price?: string; payment_link?: string } | null = null;
-      
-      const singleProductResponse = await fetch(`${FANBASES_API_URL}/products/${product.fanbases_product_id}`, {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-          "x-api-key": FANBASES_API_KEY,
-        },
-      });
-
-      if (singleProductResponse.ok) {
-        const singleProductData = await singleProductResponse.json();
-        // Handle nested response structure: data.data or data
-        fanbasesProduct = singleProductData.data?.data || singleProductData.data || singleProductData;
-        console.log(`[Fanbases Checkout] Direct lookup succeeded for ${product.fanbases_product_id}`);
-      } else {
-        console.log(`[Fanbases Checkout] Direct lookup failed (status: ${singleProductResponse.status}), falling back to pagination`);
-        await singleProductResponse.text(); // Consume response body
-        
-        // Fallback: Fetch ALL products using pagination
-        let productsList: Array<{ id: string; name?: string; price?: string; payment_link?: string }> = [];
-        let currentPage = 1;
-        let lastPage = 1;
-
-        do {
-          console.log(`[Fanbases Checkout] Fetching products page ${currentPage}...`);
-          const productsResponse = await fetch(`${FANBASES_API_URL}/products?per_page=100&page=${currentPage}`, {
-            method: "GET",
-            headers: {
-              Accept: "application/json",
-              "x-api-key": FANBASES_API_KEY,
-            },
-          });
-
-          if (!productsResponse.ok) {
-            const errorText = await productsResponse.text();
-            console.error(`[Fanbases Checkout] Failed to fetch products page ${currentPage}: ${errorText}`);
-            return new Response(JSON.stringify({ error: "Failed to fetch products from payment provider" }), {
-              status: 500,
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            });
-          }
-
-          const productsData = await productsResponse.json();
-          // Handle nested response: data.data is the array, data.last_page is pagination
-          const pageProducts = productsData.data?.data || productsData.data || [];
-          lastPage = productsData.data?.last_page || 1;
-          
-          console.log(`[Fanbases Checkout] Page ${currentPage}/${lastPage}: ${pageProducts.length} products`);
-          productsList = productsList.concat(pageProducts);
-          currentPage++;
-        } while (currentPage <= lastPage);
-
-        console.log(`[Fanbases Checkout] Pagination complete: ${productsList.length} total products fetched`);
-        fanbasesProduct = productsList.find((p: { id: string }) => p.id === product.fanbases_product_id) || null;
-      }
+      // Fetch product from Fanbases using optimized lookup
+      const fanbasesProduct = await fetchFanbasesProduct(product.fanbases_product_id, FANBASES_API_KEY);
 
       if (!fanbasesProduct) {
         console.error(`[Fanbases Checkout] Product ${product.fanbases_product_id} not found in Fanbases`);
-        return new Response(
-          JSON.stringify({ error: "Product not found in payment provider" }),
-          {
-            status: 404,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          },
-        );
+        return new Response(JSON.stringify({ error: "Product not found in payment provider" }), {
+          status: 404,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
 
       console.log(`[Fanbases Checkout] Found Fanbases product:`, JSON.stringify(fanbasesProduct));
@@ -254,7 +270,6 @@ Deno.serve(async (req) => {
       // Add metadata for webhook/redirect processing
       paymentUrl.searchParams.set("metadata[user_id]", user.id);
       paymentUrl.searchParams.set("metadata[product_type]", product.product_type);
-      // Store the module UUID if it's a module purchase, for access verification
       paymentUrl.searchParams.set("metadata[internal_reference]", productIdForSession);
       paymentUrl.searchParams.set("metadata[fanbases_product_id]", product.fanbases_product_id);
 
@@ -262,7 +277,7 @@ Deno.serve(async (req) => {
       paymentUrl.searchParams.set("prefill[email]", email);
       paymentUrl.searchParams.set("prefill[name]", fullName);
 
-      // Add success/cancel URLs - redirect to payment-confirm page for proper processing
+      // Add success/cancel URLs
       const appBaseUrl = body.base_url || "https://view-to-code-forge.lovable.app";
       const finalSuccessUrl = success_url || `${appBaseUrl}/payment-confirm`;
       const finalCancelUrl = cancel_url || `${appBaseUrl}/settings?payment=cancelled`;
@@ -272,25 +287,24 @@ Deno.serve(async (req) => {
 
       console.log(`[Fanbases Checkout] Redirecting to payment link: ${paymentUrl.toString()}`);
 
-      // Get price from Fanbases product (convert from string like "10.00" to cents)
+      // Get price from Fanbases product
       const priceCents = fanbasesProduct.price
         ? Math.round(parseFloat(fanbasesProduct.price) * 100)
         : product.price_cents;
 
-      // Store checkout session reference with price from Fanbases
-      // IMPORTANT: Use productIdForSession which is the module UUID for module purchases
+      // Store checkout session
       const sessionId = `checkout_${Date.now()}_${user.id.slice(0, 8)}`;
       await supabase.from("checkout_sessions").insert({
         user_id: user.id,
         checkout_session_id: sessionId,
         payment_link: paymentUrl.toString(),
         product_type: product.product_type,
-        product_id: productIdForSession, // Module UUID for modules, internal_reference for others
+        product_id: productIdForSession,
         amount_cents: priceCents,
         status: "pending",
         metadata: {
           fanbases_product_id: product.fanbases_product_id,
-          original_internal_reference: product.internal_reference, // Keep original for reference
+          original_internal_reference: product.internal_reference,
         },
       });
 
@@ -307,10 +321,10 @@ Deno.serve(async (req) => {
           checkout_session_id: sessionId,
           product_type: product.product_type,
         }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     } else if (action === "setup_card") {
-      // Look up the card_setup product from our fanbases_products table
+      // Look up the card_setup product
       const cardSetupProduct = await lookupProductByInternalRef(supabase, "card_setup_fee");
 
       if (!cardSetupProduct) {
@@ -323,62 +337,8 @@ Deno.serve(async (req) => {
 
       console.log(`[Fanbases Checkout] Using card setup product: ${cardSetupProduct.fanbases_product_id}`);
 
-      // Try single product lookup first (more efficient than pagination)
-      console.log(`[Fanbases Checkout] Trying direct product lookup for card setup: ${cardSetupProduct.fanbases_product_id}`);
-      let fanbasesProduct: { id: string; name?: string; price?: string; payment_link?: string } | null = null;
-      
-      const singleProductResponse = await fetch(`${FANBASES_API_URL}/products/${cardSetupProduct.fanbases_product_id}`, {
-        method: "GET",
-        headers: {
-          Accept: "application/json",
-          "x-api-key": FANBASES_API_KEY,
-        },
-      });
-
-      if (singleProductResponse.ok) {
-        const singleProductData = await singleProductResponse.json();
-        fanbasesProduct = singleProductData.data?.data || singleProductData.data || singleProductData;
-        console.log(`[Fanbases Checkout] Direct lookup succeeded for card setup product`);
-      } else {
-        console.log(`[Fanbases Checkout] Direct lookup failed (status: ${singleProductResponse.status}), falling back to pagination`);
-        await singleProductResponse.text(); // Consume response body
-        
-        // Fallback: Fetch ALL products using pagination
-        let productsList: Array<{ id: string; name?: string; price?: string; payment_link?: string }> = [];
-        let cardCurrentPage = 1;
-        let cardLastPage = 1;
-
-        do {
-          console.log(`[Fanbases Checkout] Card setup: fetching products page ${cardCurrentPage}...`);
-          const productsResponse = await fetch(`${FANBASES_API_URL}/products?per_page=100&page=${cardCurrentPage}`, {
-            method: "GET",
-            headers: {
-              Accept: "application/json",
-              "x-api-key": FANBASES_API_KEY,
-            },
-          });
-
-          if (!productsResponse.ok) {
-            const errorText = await productsResponse.text();
-            console.error(`[Fanbases Checkout] Failed to fetch products page ${cardCurrentPage}: ${errorText}`);
-            return new Response(JSON.stringify({ error: "Failed to fetch products from payment provider" }), {
-              status: 500,
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            });
-          }
-
-          const productsData = await productsResponse.json();
-          const pageProducts = productsData.data?.data || productsData.data || [];
-          cardLastPage = productsData.data?.last_page || 1;
-          
-          console.log(`[Fanbases Checkout] Card setup page ${cardCurrentPage}/${cardLastPage}: ${pageProducts.length} products`);
-          productsList = productsList.concat(pageProducts);
-          cardCurrentPage++;
-        } while (cardCurrentPage <= cardLastPage);
-
-        console.log(`[Fanbases Checkout] Card setup pagination complete: ${productsList.length} total products`);
-        fanbasesProduct = productsList.find((p: { id: string }) => p.id === cardSetupProduct.fanbases_product_id) || null;
-      }
+      // Fetch product from Fanbases using optimized lookup
+      const fanbasesProduct = await fetchFanbasesProduct(cardSetupProduct.fanbases_product_id, FANBASES_API_KEY);
 
       if (!fanbasesProduct) {
         console.error(`[Fanbases Checkout] Card setup product ${cardSetupProduct.fanbases_product_id} not found in Fanbases`);
@@ -390,7 +350,6 @@ Deno.serve(async (req) => {
 
       console.log(`[Fanbases Checkout] Found card setup product:`, JSON.stringify(fanbasesProduct));
 
-      // Get the payment link from the product
       const paymentLink = fanbasesProduct.payment_link;
 
       if (!paymentLink) {
@@ -401,29 +360,23 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Get price from Fanbases product (convert from string like "1.00" to cents)
       const cardSetupPriceCents = fanbasesProduct.price
         ? Math.round(parseFloat(fanbasesProduct.price) * 100)
-        : cardSetupProduct.price_cents || 100; // Default to $1.00 (100 cents)
+        : cardSetupProduct.price_cents || 100;
 
       console.log(`[Fanbases Checkout] Card setup price: ${cardSetupPriceCents} cents`);
 
-      // Build the redirect URL with metadata and prefill
       const paymentUrl = new URL(paymentLink);
 
-      // Add metadata for webhook/redirect processing
       paymentUrl.searchParams.set("metadata[user_id]", user.id);
       paymentUrl.searchParams.set("metadata[product_type]", "card_setup");
       paymentUrl.searchParams.set("metadata[internal_reference]", cardSetupProduct.internal_reference);
       paymentUrl.searchParams.set("metadata[fanbases_product_id]", cardSetupProduct.fanbases_product_id);
 
-      // Add prefill for user experience
       paymentUrl.searchParams.set("prefill[email]", email);
       paymentUrl.searchParams.set("prefill[name]", fullName);
 
-      // Add success/cancel URLs - redirect to payment-confirm page for proper processing
       const appBaseUrl = body.base_url || "https://view-to-code-forge.lovable.app";
-      // Card setup goes to payment-confirm page just like other payment types
       const finalSuccessUrl = success_url || `${appBaseUrl}/payment-confirm`;
       const finalCancelUrl = cancel_url || `${appBaseUrl}/settings?setup=cancelled`;
 
@@ -432,7 +385,7 @@ Deno.serve(async (req) => {
 
       console.log(`[Fanbases Checkout] Redirecting to card setup payment link: ${paymentUrl.toString()}`);
 
-      // Sync price to fanbases_products if different
+      // Sync price if different
       if (cardSetupPriceCents && cardSetupPriceCents !== cardSetupProduct.price_cents) {
         await supabase
           .from("fanbases_products")
@@ -441,7 +394,6 @@ Deno.serve(async (req) => {
         console.log(`[Fanbases Checkout] Synced card setup price ${cardSetupPriceCents} cents`);
       }
 
-      // Store checkout session reference with actual price from Fanbases
       const sessionId = `card_setup_${Date.now()}_${user.id.slice(0, 8)}`;
       await supabase.from("checkout_sessions").insert({
         user_id: user.id,
@@ -462,16 +414,13 @@ Deno.serve(async (req) => {
           checkout_session_id: sessionId,
           payment_link: paymentUrl.toString(),
         }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     } else if (action === "one_click_charge") {
-      // One-click purchase using saved payment method
-      // This requires the user to have a saved payment method and uses fanbases-charge internally
-
       const product = await lookupProductByInternalRef(supabase, internal_reference);
 
       if (!product) {
-        return new Response(JSON.stringify({ error: `Product not found: ${internal_reference}` }), {
+        return new Response(JSON.stringify({ error: "Product not found" }), {
           status: 404,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
@@ -491,7 +440,7 @@ Deno.serve(async (req) => {
             needs_payment_method: true,
             redirect_to_checkout: true,
           }),
-          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
@@ -508,7 +457,7 @@ Deno.serve(async (req) => {
 
       console.log(
         `[Fanbases Checkout] One-click charge for customer ${customer.fanbases_customer_id}:`,
-        JSON.stringify(chargePayload),
+        JSON.stringify(chargePayload)
       );
 
       const chargeResponse = await fetch(`${FANBASES_API_URL}/customers/${customer.fanbases_customer_id}/charge`, {
@@ -535,7 +484,6 @@ Deno.serve(async (req) => {
       }
 
       if (!chargeResponse.ok || chargeData.status === "error") {
-        // If manual rebilling not allowed, fall back to checkout
         if (chargeData.message?.includes("Manual rebilling is not allowed")) {
           console.log("[Fanbases Checkout] Manual rebilling not allowed, redirecting to checkout");
           return new Response(
@@ -544,7 +492,7 @@ Deno.serve(async (req) => {
               redirect_to_checkout: true,
               needs_checkout: true,
             }),
-            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
           );
         }
 
@@ -557,7 +505,7 @@ Deno.serve(async (req) => {
       const chargeId = chargeData.data?.charge_id || chargeData.charge_id || chargeData.id;
       console.log(`[Fanbases Checkout] One-click charge successful: ${chargeId}`);
 
-      // Grant access immediately based on product type
+      // Grant access immediately
       await grantAccess(supabase, user.id, product, chargeId);
 
       return new Response(
@@ -567,7 +515,7 @@ Deno.serve(async (req) => {
           product_type: product.product_type,
           message: "Payment successful",
         }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -591,7 +539,6 @@ async function grantAccess(supabase: any, userId: string, product: FanbasesProdu
   console.log(`[Fanbases Checkout] Granting access for ${product.product_type}: ${product.internal_reference}`);
 
   if (product.product_type === "module") {
-    // Check if already purchased
     const { data: existingPurchase } = await supabase
       .from("user_purchases")
       .select("id")
@@ -611,7 +558,6 @@ async function grantAccess(supabase: any, userId: string, product: FanbasesProdu
       console.log(`[Fanbases Checkout] Module ${product.internal_reference} unlocked for user ${userId}`);
     }
   } else if (product.product_type === "topup") {
-    // Parse credits from internal_reference (e.g., "1000_credits" -> 1000)
     const match = product.internal_reference.match(/(\d+)/);
     const credits = match ? parseInt(match[1]) : 0;
 
@@ -636,7 +582,6 @@ async function grantAccess(supabase: any, userId: string, product: FanbasesProdu
       console.log(`[Fanbases Checkout] ${credits} credits added for user ${userId}`);
     }
   } else if (product.product_type === "subscription") {
-    // Determine tier from internal_reference
     const tierMap: Record<string, { tier: string; credits: number }> = {
       tier1: { tier: "tier1", credits: 10000 },
       tier2: { tier: "tier2", credits: 40000 },
@@ -655,7 +600,7 @@ async function grantAccess(supabase: any, userId: string, product: FanbasesProdu
         current_period_end: renewalDate.toISOString(),
         fanbases_subscription_id: chargeId,
       },
-      { onConflict: "user_id" },
+      { onConflict: "user_id" }
     );
 
     const { data: userProfile } = await supabase.from("users").select("credits").eq("id", userId).maybeSingle();
