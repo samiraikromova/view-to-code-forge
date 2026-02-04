@@ -94,7 +94,7 @@ export function useAccess() {
           // User data for trial info
           supabase
             .from("users")
-            .select("trial_started_at, trial_ends_at, subscription_tier")
+            .select("trial_started_at, trial_ends_at, subscription_tier, credits, trial_credits_revoked")
             .eq("id", user.id)
             .single(),
           // Purchased modules from checkout_sessions (completed module purchases)
@@ -140,6 +140,25 @@ export function useAccess() {
         } else if (userData.trial_started_at) {
           trialExpired = true;
         }
+      }
+
+      // If trial just expired and credits haven't been revoked yet, remove trial credits
+      if (trialExpired && userData && !userData.trial_credits_revoked) {
+        const TRIAL_CREDITS = 1000;
+        const currentCredits = userData.credits || 0;
+        // Remove trial credits but don't go below 0 for any purchased credits
+        const newCredits = Math.max(0, currentCredits - TRIAL_CREDITS);
+        
+        console.log(`[useAccess] Trial expired for user ${user.id}. Revoking ${TRIAL_CREDITS} trial credits. ${currentCredits} -> ${newCredits}`);
+        
+        // Update user credits and mark trial credits as revoked
+        await supabase
+          .from("users")
+          .update({ 
+            credits: newCredits,
+            trial_credits_revoked: true 
+          })
+          .eq("id", user.id);
       }
 
       const purchasedModules = purchasesResult.data?.map((p) => p.product_id) || [];

@@ -54,4 +54,5 @@ export type UserProfile = {
   address?: string | null
   trial_started_at?: string | null
   trial_ends_at?: string | null
+  trial_credits_revoked?: boolean
 }
