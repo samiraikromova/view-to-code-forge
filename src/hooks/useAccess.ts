@@ -142,21 +142,22 @@ export function useAccess() {
         }
       }
 
-      // If trial just expired and credits haven't been revoked yet, remove trial credits
+      // If trial just expired and credits haven't been revoked yet, remove trial credits and reset tier
       if (trialExpired && userData && !userData.trial_credits_revoked) {
         const TRIAL_CREDITS = 1000;
         const currentCredits = userData.credits || 0;
         // Remove trial credits but don't go below 0 for any purchased credits
         const newCredits = Math.max(0, currentCredits - TRIAL_CREDITS);
         
-        console.log(`[useAccess] Trial expired for user ${user.id}. Revoking ${TRIAL_CREDITS} trial credits. ${currentCredits} -> ${newCredits}`);
+        console.log(`[useAccess] Trial expired for user ${user.id}. Revoking ${TRIAL_CREDITS} trial credits and resetting tier to free. ${currentCredits} -> ${newCredits}`);
         
-        // Update user credits and mark trial credits as revoked
+        // Update user credits, mark trial credits as revoked, and reset subscription tier to free
         await supabase
           .from("users")
           .update({ 
             credits: newCredits,
-            trial_credits_revoked: true 
+            trial_credits_revoked: true,
+            subscription_tier: 'free'
           })
           .eq("id", user.id);
       }
