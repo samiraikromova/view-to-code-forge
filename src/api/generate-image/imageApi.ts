@@ -123,13 +123,26 @@ export async function generateImageViaAPI(payload: ImageGenerationPayload): Prom
       body: JSON.stringify(n8nPayload),
     });
 
+    const responseText = await response.text();
+    console.log("📥 N8N raw response status:", response.status, "body length:", responseText.length);
+
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Image generation API error:", errorText);
+      console.error("Image generation API error:", responseText);
       return { error: "Image generation failed" };
     }
 
-    const rawResult = await response.json();
+    if (!responseText || responseText.trim() === "") {
+      console.error("❌ N8N returned empty response");
+      return { error: "Image generation returned empty response. The webhook may not be configured correctly." };
+    }
+
+    let rawResult;
+    try {
+      rawResult = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error("❌ Failed to parse N8N response:", responseText.substring(0, 500));
+      return { error: "Invalid response from image generation service" };
+    }
 
     // Handle array response format from n8n (webhook returns array)
     const result = Array.isArray(rawResult) ? rawResult[0] : rawResult;
