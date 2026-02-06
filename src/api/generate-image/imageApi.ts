@@ -3,7 +3,7 @@
 
 import { supabase } from "@/lib/supabase";
 
-const N8N_IMAGE_WEBHOOK = import.meta.env.VITE_N8N_CHAT_WEBHOOK || "https://n8n.leveragedcreator.ai/webhook/cb4-chat";
+const N8N_WEBHOOK = import.meta.env.VITE_N8N_CHAT_WEBHOOK || "https://n8n.leveragedcreator.ai/webhook/cb4-chat";
 
 // ✅ MARKUP MULTIPLIER - Charge users 3x actual cost
 const MARKUP_MULTIPLIER = 3;
@@ -115,7 +115,7 @@ export async function generateImageViaAPI(payload: ImageGenerationPayload): Prom
 
     console.log("🔄 Calling N8N image webhook with payload:", n8nPayload);
 
-    const response = await fetch(N8N_IMAGE_WEBHOOK, {
+    const response = await fetch(N8N_WEBHOOK, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

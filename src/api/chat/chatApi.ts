@@ -4,7 +4,7 @@
 import { supabase } from '@/lib/supabase'
 
 const N8N_CHAT_WEBHOOK = import.meta.env.VITE_N8N_CHAT_WEBHOOK || 'https://n8n.leveragedcreator.ai/webhook/cb4-chat'
-const N8N_IMAGE_WEBHOOK = import.meta.env.VITE_N8N_IMAGE_WEBHOOK || 'https://n8n.leveragedcreator.ai/webhook/generate-image'
+// Image generation also uses the chat webhook (VITE_N8N_CHAT_WEBHOOK)
 
 export interface ChatRequestPayload {
   message: string
