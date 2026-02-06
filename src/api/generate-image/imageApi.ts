@@ -19,6 +19,10 @@ export interface ImageGenerationPayload {
   threadId: string | null;
   isImageGeneration: boolean;
   fileUrls?: Array<{ url: string; name: string; type?: string; size?: number }>;
+  userContext?: {
+    businessName?: string | null;
+    address?: string | null;
+  };
 }
 
 export interface ImageGenerationResponse {
@@ -111,6 +115,7 @@ export async function generateImageViaAPI(payload: ImageGenerationPayload): Prom
       threadId: currentThreadId,
       isImageGeneration: true,
       fileUrls: payload.fileUrls || [],
+      userContext: payload.userContext || {},
     };
 
     console.log("🔄 Calling N8N image webhook with payload:", n8nPayload);
