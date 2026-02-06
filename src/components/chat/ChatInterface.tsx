@@ -660,7 +660,11 @@ export function ChatInterface({
           aspectRatio: imageSettings.aspectRatio,
           threadId: activeThreadId,
           isImageGeneration: true,
-          fileUrls: newFileObjs // Only send newly attached files, not history
+          fileUrls: newFileObjs, // Only send newly attached files, not history
+          userContext: {
+            businessName: profile?.business_name,
+            address: profile?.address
+          }
         });
 
         if (imageResult.error) {
