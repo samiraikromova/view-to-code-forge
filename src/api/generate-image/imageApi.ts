@@ -3,7 +3,7 @@
 
 import { supabase } from "@/lib/supabase";
 
-const N8N_IMAGE_WEBHOOK = "https://n8n.leveragedcreator.ai/webhook/cb4-chat";
+const N8N_IMAGE_WEBHOOK = import.meta.env.VITE_N8N_CHAT_WEBHOOK || "https://n8n.leveragedcreator.ai/webhook/cb4-chat";
 
 // ✅ MARKUP MULTIPLIER - Charge users 3x actual cost
 const MARKUP_MULTIPLIER = 3;
