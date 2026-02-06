@@ -116,7 +116,7 @@ export default function AdminSettings() {
               <div className="space-y-2">
                 <Label className="text-foreground">Chat Webhook</Label>
                 <Input
-                  value="https://n8n.leveragedcreator.ai/webhook/cb4-chat"
+                  value={import.meta.env.VITE_N8N_CHAT_WEBHOOK || "https://n8n.leveragedcreator.ai/webhook/cb4-chat"}
                   readOnly
                   className="bg-muted border-border text-muted-foreground font-mono text-sm"
                 />

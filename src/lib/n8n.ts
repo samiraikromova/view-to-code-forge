@@ -1,7 +1,7 @@
 // n8n webhook service for direct calls from frontend
 // Your n8n webhooks should be configured to accept CORS requests
 
-const N8N_WEBHOOK_URL = 'https://n8n.leveragedcreator.ai/webhook/cb4-chat'
+const N8N_WEBHOOK_URL = import.meta.env.VITE_N8N_CHAT_WEBHOOK || 'https://n8n.leveragedcreator.ai/webhook/cb4-chat'
 
 export interface ChatPayload {
   message: string

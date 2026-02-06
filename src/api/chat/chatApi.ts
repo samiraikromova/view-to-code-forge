@@ -3,8 +3,8 @@
 
 import { supabase } from '@/lib/supabase'
 
-const N8N_CHAT_WEBHOOK = 'https://n8n.leveragedcreator.ai/webhook/cb4-chat'
-const N8N_IMAGE_WEBHOOK = 'https://n8n.leveragedcreator.ai/webhook/generate-image'
+const N8N_CHAT_WEBHOOK = import.meta.env.VITE_N8N_CHAT_WEBHOOK || 'https://n8n.leveragedcreator.ai/webhook/cb4-chat'
+const N8N_IMAGE_WEBHOOK = import.meta.env.VITE_N8N_IMAGE_WEBHOOK || 'https://n8n.leveragedcreator.ai/webhook/generate-image'
 
 export interface ChatRequestPayload {
   message: string
