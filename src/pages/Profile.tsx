@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
 import { ArrowLeft, User, Mail, Calendar, CreditCard, Save } from "lucide-react"
-import { useNavigate, useBlocker } from "react-router-dom"
+import { useNavigate } from "react-router-dom"
 import { useAuth } from "@/contexts/AuthContext"
 import { supabase } from "@/lib/supabase"
 import { toast } from "sonner"
@@ -37,11 +37,7 @@ export default function Profile() {
     address !== originalValues.address ||
     businessName !== originalValues.businessName
 
-  // Block navigation when there are unsaved changes
-  const blocker = useBlocker(
-    ({ currentLocation, nextLocation }) =>
-      hasUnsavedChanges && currentLocation.pathname !== nextLocation.pathname
-  )
+  // Navigation guard via beforeunload only (useBlocker requires data router)
 
   useEffect(() => {
     if (profile) {
@@ -323,28 +319,6 @@ export default function Profile() {
         </Card>
       </div>
 
-      {/* Unsaved Changes Confirmation Dialog */}
-      <AlertDialog open={blocker.state === "blocked"}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Unsaved Changes</AlertDialogTitle>
-            <AlertDialogDescription>
-              You have unsaved changes. Are you sure you want to leave this page? Your changes will be lost.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => blocker.reset?.()}>
-              Stay on Page
-            </AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={() => blocker.proceed?.()}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Leave Page
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   )
 }
