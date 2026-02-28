@@ -176,23 +176,35 @@ const Chat = () => {
     // Create a map of module_id to module info
     const moduleInfoMap = new Map(dbModules.map(m => [m.id, m]));
     
-    // Group videos by module_id
-    const moduleMap = new Map<string, { lessons: Lesson[]; moduleInfo?: DbModule }>();
+    // Group videos by module_id (courses) or by month/year from call_date (call_recordings)
+    const moduleMap = new Map<string, { lessons: Lesson[]; moduleInfo?: DbModule; title: string }>();
     
     videos.forEach(video => {
-      const moduleId = video.module_id || 'uncategorized';
-      const moduleInfo = video.module_id ? moduleInfoMap.get(video.module_id) : undefined;
+      let groupKey: string;
+      let groupTitle: string;
+      let moduleInfo: DbModule | undefined;
+
+      if (video.category === 'call_recording' && video.call_date) {
+        // Group call recordings by month/year from call_date
+        const date = new Date(video.call_date);
+        const monthNames = ['JANUARY', 'FEBRUARY', 'MARCH', 'APRIL', 'MAY', 'JUNE',
+          'JULY', 'AUGUST', 'SEPTEMBER', 'OCTOBER', 'NOVEMBER', 'DECEMBER'];
+        groupTitle = `${monthNames[date.getUTCMonth()]} ${date.getUTCFullYear()}`;
+        groupKey = `recording-${date.getUTCFullYear()}-${String(date.getUTCMonth()).padStart(2, '0')}`;
+      } else {
+        // Courses: group by module_id as before
+        groupKey = video.module_id || 'uncategorized';
+        moduleInfo = video.module_id ? moduleInfoMap.get(video.module_id) : undefined;
+        groupTitle = moduleInfo?.name || 'Uncategorized';
+      }
       
-      if (!moduleMap.has(moduleId)) {
-        moduleMap.set(moduleId, { 
-          lessons: [],
-          moduleInfo
-        });
+      if (!moduleMap.has(groupKey)) {
+        moduleMap.set(groupKey, { lessons: [], moduleInfo, title: groupTitle });
       }
       
       const lesson: Lesson = {
         id: video.id,
-        moduleId: moduleId,
+        moduleId: groupKey,
         title: video.title,
         duration: video.duration_formatted || video.duration || '',
         completed: progressMap.get(video.id) || false,
@@ -212,22 +224,29 @@ const Chat = () => {
         files: video.files || undefined,
       };
       
-      moduleMap.get(moduleId)!.lessons.push(lesson);
+      moduleMap.get(groupKey)!.lessons.push(lesson);
     });
     
-    // Convert to array and sort modules
+    // Convert to array
     const modules: Module[] = [];
     moduleMap.forEach((data, moduleId) => {
-      const title = data.moduleInfo?.name || 'Uncategorized';
       modules.push({
         id: moduleId,
-        title,
+        title: data.title,
         lessons: data.lessons,
         accessType: data.moduleInfo?.access_type as any || 'free',
         productId: data.moduleInfo?.fanbases_product_id || undefined,
         priceCents: data.moduleInfo?.price_cents || undefined,
         fanbasesProductId: data.moduleInfo?.fanbases_product_id || undefined,
       });
+    });
+
+    // Sort recording groups by date (newest first)
+    modules.sort((a, b) => {
+      if (a.id.startsWith('recording-') && b.id.startsWith('recording-')) {
+        return b.id.localeCompare(a.id);
+      }
+      return 0;
     });
     
     return modules;
